@@ -1,0 +1,197 @@
+import SwiftUI
+import WidgetKit
+
+@MainActor
+final class EntryStore: ObservableObject {
+    @Published private(set) var entries: [Entry] = []
+    @Published private(set) var courses: [Course] = []
+    @Published private(set) var readOnly = false
+    @Published var error: String?
+    @Published private(set) var widgetSyncError: String?
+    @Published private(set) var calendarSync = CalendarSyncSettings()
+    private let repository: EntryRepository
+    let notifications: NotificationManager
+
+    init(notifications: NotificationManager) {
+        self.notifications = notifications
+        let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        // Keep the original on-device directory so a name change retains existing data.
+        let base = testing ? FileManager.default.temporaryDirectory.appendingPathComponent("Mikansei-UITests") :
+            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("QingdanJi")
+        repository = EntryRepository(fileURL: base.appendingPathComponent("entries.json"))
+        if testing {
+            entries = ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
+                ProcessInfo.processInfo.arguments.contains("--demo") ? Self.examples() : []
+        } else {
+            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync }
+            catch {
+                readOnly = true
+                self.error = "无法读取本地数据，原文件已保留。请勿卸载 App，以免丢失数据。\n\(error.localizedDescription)"
+            }
+        }
+        if !readOnly { notifications.update(entries: entries, courses: courses); refreshWidgets() }
+    }
+    @discardableResult
+    private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil, calendarSync nextSync: CalendarSyncSettings? = nil) -> Bool {
+        guard !readOnly else { return false }
+        do {
+            let coursesToSave = nextCourses ?? courses
+            let syncToSave = nextSync ?? calendarSync
+            try repository.saveArchive(EntryArchive(entries: next, courses: coursesToSave, calendarSync: syncToSave))
+            entries = next
+            courses = coursesToSave
+            calendarSync = syncToSave
+            error = nil
+            notifications.update(entries: next, courses: courses)
+            refreshWidgets()
+            return true
+        } catch {
+            self.error = "保存失败，修改尚未写入手机：\(error.localizedDescription)"
+            return false
+        }
+    }
+    @discardableResult
+    func save(_ draft: Entry) -> Bool {
+        let entry = draft.normalized()
+        guard !entry.title.isEmpty else { return false }
+        var next = entries
+        let wasCompleted = next.first(where: { $0.id == entry.id })?.isCompleted ?? false
+        if let index = next.firstIndex(where: { $0.id == entry.id }) { next[index] = entry }
+        else { next.append(entry) }
+        if entry.isCompleted && !wasCompleted && !next.contains(where: { $0.previousOccurrenceID == entry.id }),
+           let occurrence = entry.nextOccurrence() { next.append(occurrence) }
+        return commit(next)
+    }
+    func toggleCompletion(_ id: UUID) {
+        guard var entry = entries.first(where: { $0.id == id }), entry.isTask else { return }
+        entry.setCompleted(!entry.isCompleted)
+        _ = save(entry)
+    }
+    func toggleStep(entryID: UUID, stepID: UUID) {
+        guard var entry = entries.first(where: { $0.id == entryID }) else { return }
+        entry.toggleStep(stepID)
+        _ = save(entry)
+    }
+    @discardableResult
+    func delete(_ id: UUID) -> Bool {
+        var sync = calendarSync
+        if let identity = entries.first(where: { $0.id == id })?.calendarEvent?.event.identity,
+           !sync.suppressed.contains(identity) { sync.suppressed.append(identity) }
+        return commit(entries.filter { $0.id != id }, calendarSync: sync)
+    }
+    @discardableResult
+    func saveCalendarSyncSettings(_ settings: CalendarSyncSettings) -> Bool {
+        guard settings != calendarSync else { return true }
+        return commit(entries, calendarSync: settings)
+    }
+    func importCalendarEvents(_ events: [CalendarEventRecord], range: Range<Date>, calendars: Set<String>, availableCalendars: Set<String>? = nil) -> CalendarSyncResult? {
+        guard !readOnly else { return nil }
+        let result = CalendarImport.merge(events: events, into: entries, settings: calendarSync,
+                                          range: range, availableCalendarIDs: availableCalendars ?? calendars, queriedCalendarIDs: calendars)
+        guard result.entries != entries else { return result }
+        return commit(result.entries) ? result : nil
+    }
+    @discardableResult
+    func linkCalendarEvent(_ record: CalendarEventRecord, entryID: UUID) -> Bool {
+        guard var entry = entries.first(where: { $0.id == entryID }) else { return false }
+        // A scheduled execution block is independent of the existing deadline and Checklist.
+        entry.title = record.draft(timing: .start, now: Date()).title
+        entry.body = record.notes
+        entry.location = record.location.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !record.url.isEmpty || entry.platform == entry.calendarEvent?.event.url { entry.platform = record.url }
+        entry.plannedStart = record.start; entry.plannedEnd = record.end; entry.plannedAllDay = record.isAllDay
+        entry.calendarEvent = CalendarEventLink(event: record, timing: .start)
+        var settings = calendarSync
+        settings.suppressed.removeAll { $0.matches(record.identity) }
+        // Explicitly scheduled events must remain selected even when their calendar wasn't selected for import.
+        if !settings.selected.contains(where: { $0.id == record.identity.calendarID }) {
+            settings.selected.append(CalendarSelection(id: record.identity.calendarID, title: record.identity.calendarTitle, sourceTitle: record.identity.sourceTitle))
+        }
+        var next = entries
+        if let index = next.firstIndex(where: { $0.id == entryID }) { next[index] = entry.normalized() }
+        return commit(next, calendarSync: settings)
+    }
+    @discardableResult
+    func importBackup(_ data: Data) -> Bool {
+        do {
+            let archive = try EntryArchive.decode(data)
+            let known = Set(courses.map(\.id))
+            var sync = calendarSync
+            // Restoring a fresh install also restores calendar selection and deletion exclusions.
+            if entries.isEmpty && sync == CalendarSyncSettings() { sync = archive.calendarSync }
+            else {
+                for id in archive.calendarSync.suppressed where !sync.suppressed.contains(id) { sync.suppressed.append(id) }
+            }
+            return commit(archive.merging(into: entries), courses: courses + archive.courses.filter { !known.contains($0.id) }, calendarSync: sync)
+        }
+        catch { self.error = "导入失败：\(error.localizedDescription)"; return false }
+    }
+    func addExamples() { _ = commit(entries + Self.examples()) }
+    func refreshNotifications() {
+        if !readOnly { notifications.update(entries: entries, courses: courses); refreshWidgets() }
+    }
+    private func refreshWidgets() {
+        guard !ProcessInfo.processInfo.arguments.contains("--ui-testing") else { return }
+        do {
+            try WidgetSnapshotStore.save(WidgetSnapshot(entries: entries))
+            widgetSyncError = nil
+            WidgetCenter.shared.reloadAllTimelines()
+        } catch {
+            widgetSyncError = "小组件清单暂未同步，请重新打开 App 后重试。\n\(error.localizedDescription)"
+        }
+    }
+    func start(_ id: UUID) {
+        guard let entry = entries.first(where: { $0.id == id }) else { return }
+        setFocus(id, running: entry.startedAt == nil)
+    }
+    func setFocus(_ id: UUID, running: Bool) {
+        guard let next = FocusSession.updating(entries, id: id, isRunning: running), next != entries else { return }
+        _ = commit(next)
+    }
+    @discardableResult
+    func saveCourse(_ course: Course) -> Bool {
+        guard course.isValid else { return false }
+        var next = courses
+        if let index = next.firstIndex(where: { $0.id == course.id }) { next[index] = course }
+        else { next.append(course) }
+        return commit(entries, courses: next)
+    }
+    func deleteCourse(_ id: UUID) { _ = commit(entries, courses: courses.filter { $0.id != id }) }
+    @discardableResult
+    func importCourses(_ imported: [Course]) -> Bool {
+        var next = courses
+        for course in imported {
+            if !next.contains(where: { $0.name == course.name && $0.weekday == course.weekday && $0.startMinutes == course.startMinutes && $0.endMinutes == course.endMinutes && Calendar.current.isDate($0.firstDate, inSameDayAs: course.firstDate) && Calendar.current.isDate($0.lastDate, inSameDayAs: course.lastDate) }) { next.append(course) }
+        }
+        return commit(entries, courses: next)
+    }
+
+    private static func calendarViewExamples(now: Date = Date()) -> [Entry] {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: now)
+        func timed(_ title: String, start: Int, end: Int) -> Entry {
+            var entry = Entry(title: title)
+            entry.plannedStart = calendar.date(bySettingHour: start, minute: 0, second: 0, of: day)
+            entry.plannedEnd = calendar.date(bySettingHour: end, minute: 0, second: 0, of: day)
+            return entry
+        }
+        var allDay = Entry(title: "校园活动日")
+        allDay.plannedStart = day; allDay.plannedEnd = calendar.date(byAdding: .day, value: 1, to: day); allDay.plannedAllDay = true
+        return [timed("图书馆自习", start: 9, end: 11), timed("社团讨论", start: 10, end: 11), allDay,
+                Entry(title: "报告 DDL", dueDate: calendar.date(bySettingHour: 22, minute: 0, second: 0, of: day)), Entry(title: "买一盏阅读灯")]
+    }
+
+    static func examples(now: Date = Date()) -> [Entry] {
+        let calendar = Calendar.current
+        let tomorrow = calendar.date(byAdding: .day, value: 1, to: now)!
+        let tonight = calendar.date(bySettingHour: 23, minute: 0, second: 0, of: now)!
+        return [
+            Entry(title: "完成英语阅读作业", body: "读完文章，把不熟悉的词整理到笔记里。", kind: .homework, category: "英语", priority: .important,
+                  checklist: [ChecklistItem(title: "阅读课文", isDone: true), ChecklistItem(title: "完成课后练习"), ChecklistItem(title: "检查并提交")], dueDate: tonight),
+            Entry(title: "给自己留半小时运动", category: "生活", dueDate: tonight.addingTimeInterval(-1800)),
+            Entry(title: "准备明天的学习资料", kind: .task, category: "学习", checklist: [ChecklistItem(title: "整理课本"), ChecklistItem(title: "带好笔记本")], dueDate: tomorrow),
+            Entry(title: "买一盏阅读灯", body: "记得量一下书桌的宽度。", category: "生活"),
+            Entry(title: "一个好用的学习方法", body: "先拆成小步骤，再开始第一步。\n\n学习结束时，写下今天学到的三件事。", kind: .note, category: "灵感")
+        ]
+    }
+}
