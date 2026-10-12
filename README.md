@@ -1,0 +1,2 @@
+# Mikansei
+一款使用AI制作的试验性以待办事项和todolist看板日程管理iPhone软件。
