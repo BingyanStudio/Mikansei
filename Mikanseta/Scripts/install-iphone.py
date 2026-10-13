@@ -35,12 +35,12 @@ def main():
     log = local / 'install.log'
     with log.open('w') as stream:
         print('正在构建 Mikanseta，请保持手机解锁。', flush=True)
-        subprocess.run([str(root / 'Scripts/flutter.sh'), 'build', 'ios', '--release', '--no-codesign'], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
-        subprocess.run(['xcodebuild', '-workspace', str(root / 'ios/Runner.xcworkspace'), '-scheme', 'Runner',
+        subprocess.run([str(root / 'Scripts/flutter.sh'), 'build', 'ios', '--release', '--flavor', 'Mikanseta', '--no-codesign'], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
+        subprocess.run(['xcodebuild', '-workspace', str(root / 'ios/Mikanseta.xcworkspace'), '-scheme', 'Mikanseta',
                         '-configuration', 'Release', '-destination', 'id=' + device['hardwareProperties']['udid'],
                         '-derivedDataPath', str(local / 'DerivedData'), '-allowProvisioningUpdates',
                         '-allowProvisioningDeviceRegistration', 'build'], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
-        app = local / 'DerivedData/Build/Products/Release-iphoneos/Runner.app'
+        app = local / 'DerivedData/Build/Products/Release-iphoneos/Mikanseta.app'
         info = plistlib.loads((app / 'Info.plist').read_bytes())
         if info['CFBundleIdentifier'] == 'com.personal.mikansei':
             raise RuntimeError('安装标识与原版冲突，安装已停止。')
@@ -54,7 +54,7 @@ if __name__ == '__main__':
         sys.exit(main())
     except subprocess.CalledProcessError:
         print('构建或安装未完成。若提示 No Accounts / No profiles，请在 Xcode 登录 Apple 账号，')
-        print('打开 ios/Runner.xcworkspace，选 Runner → Signing & Capabilities → 你的 Personal Team。')
+        print('打开 ios/Mikanseta.xcworkspace，选 Mikanseta → Signing & Capabilities → 你的 Personal Team。')
         print('详细记录：' + str(root / 'LocalInstall/install.log'))
         sys.exit(1)
     except Exception as error:

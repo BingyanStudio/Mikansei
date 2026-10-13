@@ -45,13 +45,15 @@
 
 ## 安装到 iPhone
 
-1. 在 Xcode 打开 **`ios/Runner.xcworkspace`**，选择 `Runner`，在 Signing & Capabilities 中选择自己的 Personal Team，保持自动签名。
+1. 在 Xcode 打开 **`ios/Mikanseta.xcworkspace`**，选择 `Mikanseta`，在 Signing & Capabilities 中选择自己的 Personal Team，保持自动签名。
 2. 连接并解锁手机，确认信任这台 Mac。
 3. 双击 **`安装到iPhone.command`**。脚本只安装 Mikanseta，保留原版 Mikansei。
 
-本轮沿用已有 Team；新 App 的签名仍需 Xcode 账号与对应描述文件。本机目前返回 `No Accounts` / `No profiles for com.personal.mikanseta`，所以尚未安装到真机。iPhone 模拟器已经构建并验证；真机 Release 代码已通过不带签名的构建。
+本轮沿用已有 Team；新 App 的签名需要 Xcode 账号与对应描述文件。2026-10-13 已完成 Release 自动签名并安装到 XYLiPhone，手机上的版本为 0.1.0 (1)，原版 Mikansei 0.3.0 (4) 同时保留。安装后手机锁定，系统拒绝自动启动；解锁后可直接打开 Mikanseta。iPhone 模拟器已经构建并验证。
 
 免费签名的有效期与可安装数量由 Apple 管理；安装失败时脚本显示实际原因，不会卸载其他 App。
+
+Xcode 工程、运行方案和 App 目标均名为 `Mikanseta`。源码目录 `ios/Runner/` 保留 Flutter 模板的路径，供插件注册代码自动生成；这不会影响 App 名称。直接使用 Flutter 构建、运行或测试 iOS 时，加上 `--flavor Mikanseta` 选择该方案；一键安装脚本已包含这一参数。
 
 ## 数据边界
 
@@ -78,9 +80,9 @@
 TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 ./Scripts/verify-backup.sh
 ./Scripts/flutter.sh test integration_test/app_test.dart -d macos
-./Scripts/flutter.sh test integration_test/app_test.dart -d <模拟器编号>
+./Scripts/flutter.sh test integration_test/app_test.dart -d <模拟器编号> --flavor Mikanseta
 ./Scripts/flutter.sh build macos --release
-./Scripts/flutter.sh build ios --simulator
+./Scripts/flutter.sh build ios --simulator --flavor Mikanseta
 # 安装并配置 Android SDK 后：
 ./Scripts/flutter.sh build apk --debug
 ```
