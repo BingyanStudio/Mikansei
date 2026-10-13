@@ -160,6 +160,28 @@ final class MikanseiUITests: XCTestCase {
         XCTAssertTrue(pause.waitForExistence(timeout: 5))
     }
 
+    /// Starting a timer must update that card in place: one live clock, no leftover "开始做" card.
+    @MainActor
+    func testFocusStartUpdatesCardInPlace() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--demo"]
+        app.launch()
+        let title = "买一盏阅读灯"
+        let start = app.buttons["开始计时：\(title)"]
+        for _ in 0..<8 { if start.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(start.isHittable)
+        start.tap()
+        let pause = app.buttons["暂停计时：\(title)"]
+        XCTAssertTrue(pause.waitForExistence(timeout: 5))
+        XCTAssertFalse(start.exists, "开始后不应残留显示「开始做」的旧卡片")
+        XCTAssertEqual(app.staticTexts.matching(identifier: "focus-clock").count, 1)
+        let clock = app.staticTexts["focus-clock"].firstMatch
+        let initial = clock.label
+        expectation(for: NSPredicate(format: "label != %@", initial), evaluatedWith: clock)
+        waitForExpectations(timeout: 5)
+        let shot = XCTAttachment(screenshot: app.screenshot()); shot.name = "正在做"; shot.lifetime = .keepAlways; add(shot)
+    }
+
     @MainActor
     func testCalendarLongPressOpensScheduleWithDurationAndAlarmDefaults() {
         let app = XCUIApplication()

@@ -186,7 +186,8 @@ struct EntryCard: View {
                 }
                 if entry.isTask && !entry.isCompleted {
                     HStack(spacing: 12) {
-                        Button { withAnimation(reduceMotion ? nil : .smooth) { store.start(entry.id) } } label: {
+                        // Start/pause updates in place: animating the live clock insertion can strand the old label.
+                        Button { store.start(entry.id) } label: {
                             Label(entry.startedAt == nil ? (entry.elapsedSeconds > 0 ? "继续做" : "开始做") : "暂停", systemImage: entry.startedAt == nil ? "play.fill" : "pause")
                                 .font(.caption.weight(.semibold)).padding(.vertical, 4)
                         }.buttonStyle(.bordered).disabled(store.readOnly)

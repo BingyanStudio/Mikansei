@@ -2,6 +2,13 @@
 
 2026-10-13
 
+## 修复：开始做后就地更新、去掉卡顿
+
+- 「开始做 / 暂停」不再用 `withAnimation(.smooth)` 包住状态更新：给 `Text(timerInterval:)` 的插入套大弹簧动画时，卡片会停在旧画面（仍显示「开始做」、计时不动），要暂停一次才刷新。现在点击即时就地更新，计时文字随后每秒走动。
+- 待办分组改成一条带稳定 id 的 `ForEach`（`section-*` / `entry-*`）：卡片在「已超时 / 正在做 / 待完成 / 今日已完成」之间是移动，而不是销毁重建，避免 LazyVStack 残留旧卡片；分组移动动画从 `.smooth` 弹簧改为 0.16s easeOut。
+- 模拟器 UI 测试（Xcode 26.5 / iPhone 17 / iOS 26.5）：新增「开始做后就地更新」用例（点击后不再存在「开始做」卡片、只有一个 focus-clock、计时数字持续变化）通过；`testFocusTimerStartPauseAndResume`、`testRapidCompletionAndReopenDoesNotLoseState`、`testCreateHomeworkAndCompleteItsChecklist` 一并重跑通过。
+- 与本轮无关的既有失败（stash 本轮改动后重跑同样失败，属此前从未在 iOS 上运行的用例自身问题）：`testCalendarAutoImportDeduplicatesAndPreservesCompletion`（选择来源后未出现导入事项）、`testScheduleDurationRoutineDatesAndReminderCanBeEdited`（找不到 `routine-rule`）。
+
 ## 真机安装：main 最新版本已装到 iPhone
 
 - 在 Mac 用 Xcode 26.5 对 `main`（8dfc658）编译并签名 `Mikansei` 与内嵌 `MikanseiWidgets`，`BUILD SUCCEEDED`，`codesign --verify --strict` 通过；沿用原 Team `7JMRL8X34C`、自动签名与 Bundle Identifier `com.personal.mikansei`。

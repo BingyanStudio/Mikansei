@@ -241,6 +241,18 @@ private enum TaskFilter: String, CaseIterable, Identifiable {
     }
 }
 
+/// One flat list with stable identities so a card keeps its view while it moves between groups.
+private enum TaskRow: Identifiable {
+    case section(String, Int, Color)
+    case entry(Entry)
+    var id: String {
+        switch self {
+        case .section(let title, _, _): return "section-\(title)"
+        case .entry(let entry): return "entry-\(entry.id.uuidString)"
+        }
+    }
+}
+
 struct TasksView: View {
     @EnvironmentObject private var store: EntryStore
     @Environment(\.scenePhase) private var scenePhase
@@ -261,6 +273,7 @@ struct TasksView: View {
     }
     var body: some View {
         let visibleEntries = filtered
+        let rows = taskRows(visibleEntries)
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 16) {
                 ChoiceStrip(label: "事项类型", choices: TaskFilter.allCases, selection: $filter, title: { $0.rawValue })
@@ -280,32 +293,36 @@ struct TasksView: View {
                               message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
                               actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
                               action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
-                } else if showCompleted { ForEach(visibleEntries) { entry in EntryCard(entry: entry, edit: { edit(entry) }) } }
-                else {
-                    let overdue = visibleEntries.filter { $0.isOverdue(at: now) }
-                    let doing = visibleEntries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }
-                    let remaining = visibleEntries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }
-                    let finished = visibleEntries.filter(\.isCompleted)
-                    if !overdue.isEmpty { taskGroup("已超时", entries: overdue, color: .red) }
-                    if !doing.isEmpty { taskGroup("正在做", entries: doing, color: Theme.accent) }
-                    if !remaining.isEmpty { taskGroup("待完成", entries: remaining, color: .primary) }
-                    if !finished.isEmpty { taskGroup("今日已完成", entries: finished, color: Theme.accent) }
+                } else {
+                    ForEach(rows) { row in
+                        switch row {
+                        case .section(let title, let count, let color): SectionLabel(title: title, count: count, color: color)
+                        case .entry(let entry): EntryCard(entry: entry, edit: { edit(entry) }, now: now)
+                        }
+                    }
                 }
             }.padding(20).padding(.bottom, 16)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visibleEntries.map(\.id))
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: rows.map(\.id))
         }.background(Theme.background).navigationTitle("待办")
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
             .onAppear { now = Date() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { now = Date() } }
     }
-    private func taskGroup(_ title: String, entries: [Entry], color: Color) -> some View {
-        Group {
-            SectionLabel(title: title, count: entries.count, color: color)
-            ForEach(entries) { entry in
-                EntryCard(entry: entry, edit: { edit(entry) }, now: now)
-            }
+    private func taskRows(_ entries: [Entry]) -> [TaskRow] {
+        guard !showCompleted else { return entries.map(TaskRow.entry) }
+        let groups: [(String, [Entry], Color)] = [
+            ("已超时", entries.filter { $0.isOverdue(at: now) }, .red),
+            ("正在做", entries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }, Theme.accent),
+            ("待完成", entries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }, .primary),
+            ("今日已完成", entries.filter(\.isCompleted), Theme.accent)
+        ]
+        var rows: [TaskRow] = []
+        for (title, group, color) in groups where !group.isEmpty {
+            rows.append(.section(title, group.count, color))
+            rows.append(contentsOf: group.map(TaskRow.entry))
         }
+        return rows
     }
 }
 
