@@ -2,6 +2,22 @@ import XCTest
 
 final class MikanseiUITests: XCTestCase {
     @MainActor
+    func testFolderSyncSettingsAndVersionAreVisible() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        app.buttons["设置"].tap()
+        let folder = app.buttons["选择 iCloud Drive 同步文件夹"]
+        for _ in 0..<5 { if folder.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(folder.isHittable)
+        XCTAssertTrue(app.staticTexts["尚未选择同步文件夹"].exists)
+        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "iPhone跨设备同步设置"; screenshot.lifetime = .keepAlways; add(screenshot)
+        let version = app.descendants(matching: .any).matching(identifier: "app-version").firstMatch
+        for _ in 0..<12 { if version.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(version.exists)
+        XCTAssertEqual(version.value as? String, "0.3.0 (4)")
+    }
+    @MainActor
     func testCalendarMonthNavigationDayTimelineAndViewPreference() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--calendar-view-demo"]

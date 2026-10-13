@@ -4,6 +4,8 @@
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
+当前版本 **0.3.0 (4)**：新增 iCloud Drive 文件夹同步和原生 macOS 版本，两端共享待办、日程、笔记、Checklist、完成状态、计时与课表。沿用免费团队，首次在两端选择同一个 iCloud Drive 文件夹即可，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
+
 ## 已实现
 
 - **待办首页**：“已超时”在最前，其次正在做、待完成；每个栏目内按紧急 → 重要 → 普通，再按截止时间由近到远排序，同优先级无日期事项在后。
@@ -35,6 +37,10 @@
 6. 首次设置提醒时允许通知；在 App 左上角设置中添加课表或导入文件。
 
 这是用于个人试用的开发工程。此前版本通过 Personal Team 签名验证；本轮改动已在 Xcode 编译、签名并安装到 iPhone，界面与真机交互仍需验证。后续分发可在完成真机验证后考虑 TestFlight。
+
+## App 图标
+
+0.2.1 (3) 使用选定的第二版绿色角色图标，保留长发、环状呆毛和简化神态。原稿在 `App/Artwork/AppIconSource.png`；执行 `swift Scripts/make_icon.swift` 可重新导出 Assets 与独立 PNG 的所有尺寸。图标由 iOS 裁切圆角，看板娘立绘仍为候选设计。
 
 ## 课表与 HUSToday
 
@@ -71,7 +77,7 @@
 - 使用本地摘要，不发送任务到服务器，不包含备注、平台、群消息或 Checklist 正文。锁屏只显示前三件，完整列表在 App 内。
 - 苹果限制单次实时活动最长 8 小时；本版没有服务器推送来重启活动或在 App 未运行时刷新任务列表。日期跨天后旧卡片提示更新，回到 App 更新今日内容。系统实时活动权限需开启。
 
-设置页版本从安装包读取；此版为 **0.2.0 (2)**，App 与扩展保持一致。
+设置页版本从安装包读取；此版为 **0.3.0 (4)**，iPhone、Mac 与 iPhone 扩展保持一致。
 
 ## 清单和日历的分工
 
@@ -141,7 +147,7 @@
 
 ## 数据
 
-数据位于 App 沙盒 `Application Support/QingdanJi/entries.json`。不使用账号或云同步。卸载 App 会删除本地数据，请定期在设置中导出备份到“文件”。
+手机数据位于 App 沙盒 `Application Support/QingdanJi/entries.json`，Mac 为 `Application Support/MikanseiMac/entries.json`。先保存本机，用户选择 iCloud Drive 文件夹后跨设备合并；没有自建服务器或额外账户登录。卸载 App 会删除本地数据，请定期在设置中导出备份到“文件”。完整同步范围、离线与冲突规则见 [SYNC.md](SYNC.md)。
 
 小组件只读取任务摘要，通过 App 与扩展的同名 Keychain Access Group 共享；不申请 App Groups，不共享笔记正文、消息原文、提交平台或 Checklist 内容。[Apple 钥匙串共享说明](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps)。本机 Personal Team 现有描述文件允许相应钥匙串组；完整共享读取与小组件显示仍需真机确认。
 
@@ -153,7 +159,7 @@
 
 ## 开发与验证
 
-没有第三方运行依赖。`Sources/MikanseiCore` 是共享的 Foundation 数据与排程逻辑，`App` 使用 SwiftUI 和 UserNotifications，`Widgets` 使用 WidgetKit，`Shared` 提供只读摘要的钥匙串共享存储。
+没有第三方运行依赖。`Sources/MikanseiCore` 是共享的 Foundation 数据、排程和同步合并逻辑，`App` 是 iPhone 界面，`Mac` 是原生桌面界面，`Sync` 提供两端的文件夹授权与同步设置，`Widgets` 使用 WidgetKit，`Shared` 提供 iPhone 只读摘要的钥匙串共享存储。Mac 使用独立 Xcode 工程和本地签名，保留 iPhone 现有 Team。
 
 核心测试：
 
@@ -172,5 +178,7 @@ xcodebuild -project Mikansei.xcodeproj -target Mikansei \
 有 iOS 模拟器运行时后，在 Xcode 选择模拟器并执行 Product → Test 运行 `UITests`。界面测试使用独立测试目录和启动参数，不读取个人数据；本地开发示例不会默认出现在用户清单里。
 
 新增 Swift 或资源文件后，可运行 `python3 Scripts/generate_project.py` 重建项目；会保留现有 target 的签名与编译设置，并让扩展使用与主 App 相同的 Team、版本和摘要共享组。更改主 App Bundle Identifier 后请重建工程，以同步扩展的标识前缀和共享组。
+
+Mac 工程由 `python3 Scripts/generate_macos_project.py` 生成，`python3 Scripts/install_mac.py` 构建并打开通用 Mac App。`python3 Scripts/make_mac_icon.py` 将现有批准图标导出为 macOS ICNS。Mac 界面测试运行 `MikanseiMac.xcodeproj` 的 `MikanseiMac` scheme；合成示例使用 `--ui-testing --demo`，不会读取个人清单或日历。
 
 目前验证结果与环境限制见 `VALIDATION.md`。

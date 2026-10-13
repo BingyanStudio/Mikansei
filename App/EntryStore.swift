@@ -2,7 +2,7 @@ import SwiftUI
 import WidgetKit
 
 @MainActor
-final class EntryStore: ObservableObject {
+final class EntryStore: ObservableObject, SyncWorkspace {
     @Published private(set) var entries: [Entry] = []
     @Published private(set) var courses: [Course] = []
     @Published private(set) var readOnly = false
@@ -11,6 +11,8 @@ final class EntryStore: ObservableObject {
     @Published private(set) var calendarSync = CalendarSyncSettings()
     @Published private(set) var hasUnsavedChanges = false
     @Published private(set) var saveFailed = false
+    @Published private(set) var replica = WorkspaceReplica()
+    var syncReady: Bool { !readOnly && !hasUnsavedChanges }
     private let repository: EntryRepository
     private let writer: EntryArchiveWriter
     private var writeRevision = 0
@@ -32,21 +34,24 @@ final class EntryStore: ObservableObject {
                 ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
                 ProcessInfo.processInfo.arguments.contains("--demo") ? Self.examples() : []
         } else {
-            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync }
+            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync; replica = archive.replica ?? WorkspaceReplica() }
             catch {
                 readOnly = true
                 self.error = "无法读取本地数据，原文件已保留。请勿卸载 App，以免丢失数据。\n\(error.localizedDescription)"
             }
         }
-        if !readOnly { notifications.update(entries: entries, courses: courses); refreshWidgets() }
+        if !readOnly { replica.capture(entries: entries, courses: courses, suppressed: calendarSync.suppressed); notifications.update(entries: entries, courses: courses); refreshWidgets() }
     }
     @discardableResult
-    private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil, calendarSync nextSync: CalendarSyncSettings? = nil) -> Bool {
+    private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil, calendarSync nextSync: CalendarSyncSettings? = nil, mergedReplica: WorkspaceReplica? = nil) -> Bool {
         guard !readOnly else { return false }
-        let archive = EntryArchive(entries: next, courses: nextCourses ?? courses, calendarSync: nextSync ?? calendarSync)
+        var nextReplica = mergedReplica ?? replica
+        nextReplica.capture(entries: next, courses: nextCourses ?? courses, suppressed: (nextSync ?? calendarSync).suppressed)
+        let archive = EntryArchive(entries: next, courses: nextCourses ?? courses, calendarSync: nextSync ?? calendarSync, replica: nextReplica)
         writeRevision += 1
         let revision = writeRevision
         entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync
+        replica = nextReplica
         hasUnsavedChanges = true
         saveFailed = false
         error = nil
@@ -76,6 +81,14 @@ final class EntryStore: ObservableObject {
         return true // Accepted in memory; failures remain visible and can be retried.
     }
     func retrySave() { _ = commit(entries) }
+    func applySync(_ document: WorkspaceSyncDocument) {
+        guard !readOnly else { return }
+        var merged = replica; merged.receive(document)
+        guard merged != replica else { return }
+        var settings = calendarSync
+        for identity in merged.document.deletedCalendarOccurrences ?? [] where !settings.suppressed.contains(where: { $0.matches(identity) }) { settings.suppressed.append(identity) }
+        _ = commit(merged.entries, courses: merged.courses, calendarSync: settings, mergedReplica: merged)
+    }
     @discardableResult
     func save(_ draft: Entry) -> Bool {
         let entry = draft.normalized()

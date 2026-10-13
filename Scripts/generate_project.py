@@ -35,8 +35,9 @@ def ids(names):
 
 core_files = sorted(ROOT.glob("Sources/MikanseiCore/*.swift"))
 shared_files = sorted(ROOT.glob("Shared/*.swift"))
+sync_files = sorted(ROOT.glob("Sync/*.swift"))
 widget_files = sorted(ROOT.glob("Widgets/*.swift")) + core_files + shared_files
-app_files = sorted(ROOT.glob("App/*.swift")) + core_files + shared_files
+app_files = sorted(ROOT.glob("App/*.swift")) + core_files + shared_files + sync_files
 test_files = sorted(ROOT.glob("UITests/*.swift"))
 icon_files = sorted(ROOT.glob("App/Resources/*.png")) + sorted(ROOT.glob("App/Resources/*.wav"))
 for path in sorted(set(app_files + test_files + widget_files)):
@@ -63,8 +64,9 @@ obj("core-group", f"isa = PBXGroup; name = Core; children = {ids(['ref:' + p.rel
 obj("test-group", f"isa = PBXGroup; name = UITests; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in test_files])}; sourceTree = \"<group>\";")
 obj("widgets-group", f"isa = PBXGroup; name = Widgets; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in widget_files if p.parent.name == 'Widgets'] + ['widgets-plist-ref'])}; sourceTree = \"<group>\";")
 obj("shared-group", f"isa = PBXGroup; name = Shared; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in shared_files] + ['entitlements-ref'])}; sourceTree = \"<group>\";")
+obj("sync-group", f"isa = PBXGroup; name = Sync; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in sync_files])}; sourceTree = \"<group>\";")
 obj("products-group", f"isa = PBXGroup; name = Products; children = {ids(['product-app', 'product-widgets', 'product-tests'])}; sourceTree = \"<group>\";")
-obj("main-group", f"isa = PBXGroup; children = {ids(['app-group', 'widgets-group', 'core-group', 'shared-group', 'test-group', 'products-group'])}; sourceTree = \"<group>\";")
+obj("main-group", f"isa = PBXGroup; children = {ids(['app-group', 'widgets-group', 'core-group', 'shared-group', 'sync-group', 'test-group', 'products-group'])}; sourceTree = \"<group>\";")
 for name, files in [("app", app_files), ("tests", test_files), ("widgets", widget_files)]:
     build_prefix = "widget-build:" if name == "widgets" else "build:"
     obj(name + "-sources", f"isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids([build_prefix + p.relative_to(ROOT).as_posix() for p in files])}; runOnlyForDeploymentPostprocessing = 0;")
@@ -94,7 +96,7 @@ app_settings = {
     "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight",
     "TARGETED_DEVICE_FAMILY": "1,2", "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
     "SUPPORTS_MACCATALYST": "NO",
-    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.2.0", "CURRENT_PROJECT_VERSION": "2",
+    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.3.0", "CURRENT_PROJECT_VERSION": "4",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks", "SWIFT_EMIT_LOC_STRINGS": "YES",
 }
 widget_settings = {

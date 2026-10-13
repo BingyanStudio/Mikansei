@@ -15,16 +15,19 @@ public struct EntryArchive: Codable {
     public var entries: [Entry]
     public var courses: [Course]
     public var calendarSync: CalendarSyncSettings
-    public init(entries: [Entry], courses: [Course] = [], calendarSync: CalendarSyncSettings = CalendarSyncSettings()) {
+    public var replica: WorkspaceReplica?
+    public init(entries: [Entry], courses: [Course] = [], calendarSync: CalendarSyncSettings = CalendarSyncSettings(), replica: WorkspaceReplica? = nil) {
         self.version = 1; self.entries = entries; self.courses = courses; self.calendarSync = calendarSync
+        self.replica = replica
     }
-    private enum CodingKeys: String, CodingKey { case version, entries, courses, calendarSync }
+    private enum CodingKeys: String, CodingKey { case version, entries, courses, calendarSync, replica }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decode(Int.self, forKey: .version)
         entries = try c.decode([Entry].self, forKey: .entries)
         courses = try c.decodeIfPresent([Course].self, forKey: .courses) ?? []
         calendarSync = try c.decodeIfPresent(CalendarSyncSettings.self, forKey: .calendarSync) ?? CalendarSyncSettings()
+        replica = try c.decodeIfPresent(WorkspaceReplica.self, forKey: .replica)
     }
     public func encoded() throws -> Data {
         let encoder = JSONEncoder()
@@ -37,6 +40,11 @@ public struct EntryArchive: Codable {
         decoder.dateDecodingStrategy = .iso8601
         let archive = try decoder.decode(Self.self, from: data)
         guard archive.version == 1 else { throw ArchiveError.unsupportedVersion }
+        if let replica = archive.replica {
+            _ = try WorkspaceSyncDocument.decode(replica.document.encoded())
+            let observed = (replica.document.entries.map { $0.revision.counter } + replica.document.courses.map { $0.revision.counter }).max() ?? 0
+            guard replica.counter >= observed && replica.counter < 1_000_000_000_000 else { throw ArchiveError.invalidEntries }
+        }
         guard Set(archive.entries.map(\.id)).count == archive.entries.count,
               Set(archive.courses.map(\.id)).count == archive.courses.count,
               archive.courses.allSatisfy(\.isValid),

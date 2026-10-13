@@ -40,6 +40,7 @@ struct SettingsView: View {
                 NavigationLink { CoursesView() } label: { Label("课表与下课登记提醒", systemImage: "graduationcap") }
                 Text("填写或导入课表，下课时提醒你记录作业、DDL 和提交平台。") .font(.caption).foregroundStyle(.secondary)
             }
+            FolderSyncSettings(workspace: store)
             Section("日历") {
                 NavigationLink { CalendarSyncView() } label: { Label("日历自动导入", systemImage: "calendar.badge.plus") }
                     .accessibilityIdentifier("calendar-sync-settings")
@@ -118,10 +119,13 @@ struct SettingsView: View {
                         .font(.caption).foregroundStyle(.red)
                 }
             } header: { Text("数据与备份") } footer: {
-                Text("数据保存在这台手机，不使用账号或云端同步。卸载 App 会删除本地数据，请定期备份到“文件”。导入采用合并方式，相同编号保留最近修改的版本。")
+                Text("数据先保存在本机；选择 iCloud Drive 文件夹后与其他设备合并。卸载 App 会删除本地数据，请定期备份到“文件”。导入采用合并方式，相同编号保留最近修改的版本。")
             }
             Section {
                 LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"))")
+                    .accessibilityElement(children: .ignore).accessibilityLabel("版本")
+                    .accessibilityValue("\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"))")
+                    .accessibilityIdentifier("app-version")
                 Text("待办、作业、Checklist 和随手笔记。") .font(.subheadline).foregroundStyle(.secondary)
                 if NotificationPlan.pending(entries: store.entries, courses: store.courses, limit: 61).count > 60 {
                     Text("目前只安排最近 60 个提醒。打开 App 时会更新后续安排。")

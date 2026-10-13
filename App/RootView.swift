@@ -19,6 +19,7 @@ struct RootView: View {
     @EnvironmentObject private var notifications: NotificationManager
     @EnvironmentObject private var calendarSync: CalendarSyncManager
     @EnvironmentObject private var deadlineActivity: DeadlineActivityManager
+    @EnvironmentObject private var folderSync: FolderSyncManager
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance") private var appearance = 0
     @State private var editing: EditingSession?
@@ -78,6 +79,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 store.refreshNotifications()
+                if store.syncReady { store.retrySave() }
                 deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
                 if editing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
             }
@@ -85,6 +87,13 @@ struct RootView: View {
         .task {
             if editing == nil { await calendarSync.sync(store: store, requestAccess: true) }
             deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
+            if store.syncReady { store.retrySave() }
+        }
+        .onChange(of: store.hasUnsavedChanges) { _, pending in
+            if !pending { folderSync.request(store) }
+        }
+        .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
+            if scenePhase == .active { folderSync.request(store) }
         }
         .onChange(of: store.entries) { _, entries in
             deadlineActivity.refresh(entries: store.readOnly ? [] : entries)
