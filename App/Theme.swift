@@ -11,18 +11,21 @@ enum Theme {
     static let warm = Color(red: 0.76, green: 0.43, blue: 0.18)
     static func color(for kind: EntryKind) -> Color {
         switch kind {
-        case .task: return accent
+        case .task, .schedule: return accent
         case .homework: return .indigo
         case .note: return warm
         }
     }
-    static func dateLabel(_ date: Date) -> String {
+    private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "zh_CN")
         formatter.doesRelativeDateFormatting = true
         formatter.dateStyle = .short
         formatter.timeStyle = .short
-        return formatter.string(from: date)
+        return formatter
+    }()
+    static func dateLabel(_ date: Date) -> String {
+        dateFormatter.string(from: date)
     }
     static func calendarLabel(_ event: CalendarEventRecord) -> String {
         if event.isAllDay {
@@ -107,7 +110,6 @@ struct SectionLabel: View {
 struct EntryCard: View {
     @EnvironmentObject private var store: EntryStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var completionPending = false
     let entry: Entry
     let edit: () -> Void
     var now: Date = Date()
@@ -115,12 +117,12 @@ struct EntryCard: View {
         HStack(alignment: .top, spacing: 12) {
             if entry.isTask {
                 Button(action: complete) {
-                    Image(systemName: entry.isCompleted || completionPending ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: entry.isCompleted ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 25, weight: .light))
-                        .foregroundStyle(entry.isCompleted || completionPending ? Theme.accent : Color.primary.opacity(0.65))
+                        .foregroundStyle(entry.isCompleted ? Theme.accent : Color.primary.opacity(0.65))
                         .frame(width: 44, height: 44)
                 }
-                .buttonStyle(.plain).disabled(store.readOnly || completionPending)
+                .buttonStyle(.plain).disabled(store.readOnly)
                 .accessibilityLabel(entry.isCompleted ? "重新打开：\(entry.title)" : "完成：\(entry.title)")
             }
             VStack(alignment: .leading, spacing: 10) {
@@ -128,7 +130,7 @@ struct EntryCard: View {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
                             Text(entry.title).font(.body.weight(.semibold)).foregroundStyle(.primary)
-                                .strikethrough(entry.isCompleted || completionPending).multilineTextAlignment(.leading)
+                                .strikethrough(entry.isCompleted).multilineTextAlignment(.leading)
                             if entry.priority != .normal {
                                 Label(entry.priority.title, systemImage: "flag.fill").font(.caption)
                                     .foregroundStyle(entry.priority == .urgent ? .red : Theme.warm)
@@ -156,7 +158,7 @@ struct EntryCard: View {
                             }
                             HStack(spacing: 10) {
                                 if let minutes = entry.estimatedMinutes { Label("约 \(minutes) 分钟", systemImage: "clock").font(.caption).foregroundStyle(.secondary) }
-                                if entry.repeatRule != .never { Label(entry.repeatLabel, systemImage: "repeat").font(.caption).foregroundStyle(Theme.accent) }
+                                if entry.isRoutine { Label("常态 · \(entry.repeatLabel)", systemImage: "repeat").font(.caption).foregroundStyle(Theme.accent) }
                                 if entry.startedAt != nil && !entry.isCompleted { Text("正在做").font(.caption.bold()).foregroundStyle(Theme.accent) }
                             }
                         }
@@ -203,20 +205,8 @@ struct EntryCard: View {
         .contextMenu { Button("编辑", systemImage: "pencil", action: edit) }
     }
     private func complete() {
-        if entry.isCompleted || reduceMotion {
-            withAnimation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.86)) { store.toggleCompletion(entry.id) }
-            return
-        }
-        withAnimation(.easeOut(duration: 0.16)) { completionPending = true }
         UISelectionFeedbackGenerator().selectionChanged()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(180))
-            // A notification or another window may have completed it during the visual feedback.
-            if store.entries.first(where: { $0.id == entry.id })?.isCompleted == false {
-                withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) { store.toggleCompletion(entry.id) }
-            }
-            completionPending = false
-        }
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) { store.toggleCompletion(entry.id) }
     }
     private var metadata: some View { HStack(spacing: 10) { typeLabel; dateLabel } }
     private var typeLabel: some View {

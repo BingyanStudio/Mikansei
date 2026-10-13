@@ -6,7 +6,7 @@ public struct CalendarDisplayItem: Identifiable, Equatable {
     public let kind: Kind
     public let date: Date
     public let end: Date?
-    public var id: String { entry.id.uuidString + (kind == .execution ? ".execution" : ".deadline") }
+    public var id: String { entry.id.uuidString + (kind == .execution ? ".execution" : ".deadline") + ".\(Int(date.timeIntervalSince1970))" }
     public var isAllDay: Bool { kind == .execution && entry.plannedAllDay }
 }
 
@@ -20,13 +20,26 @@ public enum CalendarDisplay {
     public static func items(on date: Date, entries: [Entry], showCompleted: Bool = true, calendar: Calendar = .current) -> [CalendarDisplayItem] {
         guard let day = calendar.dateInterval(of: .day, for: date) else { return [] }
         var items: [CalendarDisplayItem] = []
+        let successors = Entry.successorDates(in: entries)
         for entry in entries where entry.isTask && (showCompleted || !entry.isCompleted) {
-            if let start = entry.plannedStart, let end = entry.plannedEnd,
-               start < day.end && (end > day.start || (start == end && day.contains(start))) {
-                items.append(CalendarDisplayItem(entry: entry, kind: .execution, date: start, end: end))
+            var occurrences = [entry]
+            if entry.isRoutine && !entry.isCompleted {
+                let base = entry.recurrenceReferenceDate ?? day.start
+                let startOffset = entry.plannedStart?.timeIntervalSince(base) ?? 0
+                let endOffset = entry.plannedEnd?.timeIntervalSince(base) ?? 0
+                let from = day.start.addingTimeInterval(-max(0, endOffset))
+                let to = min(day.end.addingTimeInterval(-min(0, startOffset)), successors[entry.id] ?? .distantFuture)
+                let dates = entry.occurrenceDates(in: from..<max(from, to), calendar: calendar)
+                occurrences = dates.map { entry.occurrence(at: $0, calendar: calendar) }
             }
-            if let due = entry.dueDate, due >= day.start, due < day.end {
-                items.append(CalendarDisplayItem(entry: entry, kind: .deadline, date: due, end: nil))
+            for occurrence in occurrences {
+                if let start = occurrence.plannedStart, let end = occurrence.plannedEnd,
+                   start < day.end && (end > day.start || (start == end && day.contains(start))) {
+                    items.append(CalendarDisplayItem(entry: entry, kind: .execution, date: start, end: end))
+                }
+                if let due = occurrence.dueDate, due >= day.start, due < day.end {
+                    items.append(CalendarDisplayItem(entry: entry, kind: .deadline, date: due, end: nil))
+                }
             }
         }
         return items.sorted { $0.date == $1.date ? $0.id < $1.id : $0.date < $1.date }
@@ -43,6 +56,12 @@ public struct CalendarBlock: Identifiable {
 }
 
 public enum CalendarTimelineLayout {
+    /// Position-based creation snaps to 15 minutes and remains in the pressed day, including DST.
+    public static func start(on date: Date, minuteOffset: Double, calendar: Calendar = .current) -> Date? {
+        guard minuteOffset.isFinite, let day = calendar.dateInterval(of: .day, for: date) else { return nil }
+        let minutes = min(max(0, floor(minuteOffset / 15) * 15), day.duration / 60 - 15)
+        return day.start.addingTimeInterval(minutes * 60)
+    }
     /// Lay out execution blocks only. A deadline is a point, not reserved execution time.
     public static func blocks(on date: Date, items: [CalendarDisplayItem], calendar: Calendar = .current) -> [CalendarBlock] {
         guard let day = calendar.dateInterval(of: .day, for: date) else { return [] }

@@ -102,7 +102,10 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         })
         scheduledCount = requests.filter { $0.content.userInfo["snoozed"] as? Bool == true && isActive(ForegroundReminder($0), entries: entries, courses: courses) }.count
         error = nil
-        let plan = NotificationPlan.pending(entries: entries, courses: courses, limit: max(0, 60 - scheduledCount))
+        let capacity = max(0, 60 - scheduledCount)
+        let plan = await Task.detached(priority: .utility) {
+            NotificationPlan.pending(entries: entries, courses: courses, limit: capacity)
+        }.value
         if #available(iOS 26.0, *) {
             let result = await alarms.reconcile(plan.filter { $0.delivery == .alarm }, entries: entries, courses: courses)
             alarmCount = result.0; error = result.1; alarmStatus = alarms.status

@@ -13,6 +13,9 @@ public struct CalendarSelection: Codable, Equatable, Identifiable {
     public init(id: String, title: String, sourceTitle: String) {
         self.id = id; self.title = title; self.sourceTitle = sourceTitle
     }
+    public var isReferenceCalendar: Bool {
+        ["节假日", "节日", "假日", "holiday", "生日", "birthday"].contains { title.localizedCaseInsensitiveContains($0) }
+    }
 }
 
 public struct CalendarEventIdentity: Codable, Equatable, Hashable {
@@ -55,9 +58,11 @@ public struct CalendarEventRecord: Codable, Equatable {
         let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines)
         // Calendar all-day end dates are exclusive. Keep them actionable until the last day's end.
         let due: Date? = timing == .start ? nil : isAllDay ? max(start, end.addingTimeInterval(-1)) : end
-        var entry = Entry(title: cleaned.isEmpty ? "未命名日程" : cleaned, body: notes, category: identity.calendarTitle.trimmingCharacters(in: .whitespacesAndNewlines),
+        var entry = Entry(title: cleaned.isEmpty ? "未命名日程" : cleaned, body: notes, kind: timing == .start ? .schedule : .task, category: identity.calendarTitle.trimmingCharacters(in: .whitespacesAndNewlines),
                           dueDate: due, createdAt: now, updatedAt: now)
         entry.plannedStart = start; entry.plannedEnd = end; entry.plannedAllDay = isAllDay
+        // Importing a whole calendar must not enable hundreds of unsolicited alarms.
+        entry.reminder = nil
         entry.location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.platform = url.trimmingCharacters(in: .whitespacesAndNewlines)
         let minutes = Int(min(1441, max(0, ceil(end.timeIntervalSince(start) / 60))))
@@ -70,8 +75,9 @@ public struct CalendarEventLink: Codable, Equatable {
     public var event: CalendarEventRecord
     public var timing: CalendarImportTiming
     public var missingFromSource: Bool
-    public init(event: CalendarEventRecord, timing: CalendarImportTiming, missingFromSource: Bool = false) {
-        self.event = event; self.timing = timing; self.missingFromSource = missingFromSource
+    public var wasAutomaticallyImported: Bool?
+    public init(event: CalendarEventRecord, timing: CalendarImportTiming, missingFromSource: Bool = false, wasAutomaticallyImported: Bool? = true) {
+        self.event = event; self.timing = timing; self.missingFromSource = missingFromSource; self.wasAutomaticallyImported = wasAutomaticallyImported
     }
 }
 
@@ -79,10 +85,43 @@ public struct CalendarSyncSettings: Codable, Equatable {
     public var enabled = true
     public var timing = CalendarImportTiming.start
     public var selectionInitialized = false
+    public var selectionPolicyVersion = 1
     public var selected: [CalendarSelection] = []
     /// A deleted imported occurrence must not reappear on the next launch.
     public var suppressed: [CalendarEventIdentity] = []
     public init() {}
+    private enum CodingKeys: String, CodingKey { case enabled, timing, selectionInitialized, selectionPolicyVersion, selected, suppressed }
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try c.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        timing = try c.decodeIfPresent(CalendarImportTiming.self, forKey: .timing) ?? .start
+        selectionInitialized = try c.decodeIfPresent(Bool.self, forKey: .selectionInitialized) ?? false
+        selectionPolicyVersion = try c.decodeIfPresent(Int.self, forKey: .selectionPolicyVersion) ?? 0
+        selected = try c.decodeIfPresent([CalendarSelection].self, forKey: .selected) ?? []
+        suppressed = try c.decodeIfPresent([CalendarEventIdentity].self, forKey: .suppressed) ?? []
+    }
+    public func refreshed(available: [CalendarSelection], referenceIDs: Set<String> = []) -> Self {
+        var next = self
+        if !selectionInitialized {
+            // First-time access is opt-in: calendar colors/names are sources, not task tags.
+            next.selected = []
+            next.selectionInitialized = !available.isEmpty
+        } else {
+            next.selected = selected.map { old in
+                if let same = available.first(where: { $0.id == old.id }) { return same }
+                let matches = available.filter { $0.title == old.title && $0.sourceTitle == old.sourceTitle }
+                return matches.count == 1 ? matches[0] : old
+            }
+        }
+        if selectionPolicyVersion == 0 {
+            next.selected.removeAll { $0.isReferenceCalendar || referenceIDs.contains($0.id) }
+        }
+        next.selected = next.selected.reduce(into: []) { result, choice in
+            if !result.contains(where: { $0.id == choice.id }) { result.append(choice) }
+        }
+        next.selectionPolicyVersion = 1
+        return next
+    }
 }
 
 public struct CalendarSyncResult {
@@ -100,6 +139,7 @@ public enum CalendarImport {
         let known = availableCalendarIDs.union(events.map { $0.identity.calendarID })
         var seen: [CalendarEventIdentity] = []
         for event in events where event.isValid {
+            if let queriedCalendarIDs, !queriedCalendarIDs.contains(event.identity.calendarID) { continue }
             guard !seen.contains(where: { $0.matches(event.identity, knownCalendarIDs: known) }) else { continue }
             seen.append(event.identity)
             guard !settings.suppressed.contains(where: { $0.matches(event.identity, knownCalendarIDs: known) }) else { continue }
@@ -116,11 +156,15 @@ public enum CalendarImport {
                 if next.location == previous.location { next.location = incoming.location }
                 if next.platform == previous.platform { next.platform = incoming.platform }
                 if next.dueDate == previous.dueDate { next.dueDate = incoming.dueDate }
+                if original.kind == previous.kind && original.dueDate == previous.dueDate {
+                    next.kind = incoming.kind
+                    if next.reminderAnchor == previous.reminderAnchor { next.reminderAnchor = incoming.reminderAnchor }
+                }
                 if next.plannedStart == previous.plannedStart { next.plannedStart = incoming.plannedStart }
                 if next.plannedEnd == previous.plannedEnd { next.plannedEnd = incoming.plannedEnd }
                 if next.plannedAllDay == previous.plannedAllDay { next.plannedAllDay = incoming.plannedAllDay }
                 if next.estimatedMinutes == previous.estimatedMinutes { next.estimatedMinutes = incoming.estimatedMinutes }
-                next.calendarEvent = CalendarEventLink(event: event, timing: settings.timing)
+                next.calendarEvent = CalendarEventLink(event: event, timing: settings.timing, wasAutomaticallyImported: link.wasAutomaticallyImported)
                 if next != original {
                     next.updatedAt = now
                     result.entries[index] = next
@@ -147,5 +191,19 @@ public enum CalendarImport {
             }
         }
         return result
+    }
+
+    /// Only untouched open imports are eligible for cleanup; local edits/history are retained.
+    public static func canClean(_ entry: Entry, selectedIDs: Set<String>) -> Bool {
+        guard let link = entry.calendarEvent, !selectedIDs.contains(link.event.identity.calendarID),
+              link.wasAutomaticallyImported == true || (link.wasAutomaticallyImported == nil && CalendarSelection(id: link.event.identity.calendarID, title: link.event.identity.calendarTitle, sourceTitle: link.event.identity.sourceTitle).isReferenceCalendar),
+              !entry.isCompleted, !entry.isRoutine, entry.checklist.isEmpty, entry.elapsedSeconds == 0,
+              entry.startedAt == nil, entry.reminder == nil, entry.priority == .normal, entry.source.isEmpty,
+              entry.reminderSound == .system, entry.snoozeMinutes == 5, entry.reminderPattern == .single else { return false }
+        let imported = link.event.draft(timing: link.timing, now: entry.createdAt)
+        return entry.isTask && entry.title == imported.title && entry.body == imported.body &&
+            entry.category == imported.category && entry.platform == imported.platform && entry.location == imported.location &&
+            entry.dueDate == imported.dueDate && entry.plannedStart == imported.plannedStart &&
+            entry.plannedEnd == imported.plannedEnd && entry.plannedAllDay == imported.plannedAllDay && entry.estimatedMinutes == imported.estimatedMinutes
     }
 }

@@ -9,7 +9,14 @@ final class EntryStore: ObservableObject {
     @Published var error: String?
     @Published private(set) var widgetSyncError: String?
     @Published private(set) var calendarSync = CalendarSyncSettings()
+    @Published private(set) var hasUnsavedChanges = false
+    @Published private(set) var saveFailed = false
     private let repository: EntryRepository
+    private let writer: EntryArchiveWriter
+    private var writeRevision = 0
+    private var backgroundWrite: UIBackgroundTaskIdentifier = .invalid
+    private let widgetQueue = DispatchQueue(label: "Mikansei.widget-writer", qos: .utility)
+    private var widgetRefresh: Task<Void, Never>?
     let notifications: NotificationManager
 
     init(notifications: NotificationManager) {
@@ -19,6 +26,7 @@ final class EntryStore: ObservableObject {
         let base = testing ? FileManager.default.temporaryDirectory.appendingPathComponent("Mikansei-UITests") :
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("QingdanJi")
         repository = EntryRepository(fileURL: base.appendingPathComponent("entries.json"))
+        writer = EntryArchiveWriter(repository: repository)
         if testing {
             entries = ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
                 ProcessInfo.processInfo.arguments.contains("--demo") ? Self.examples() : []
@@ -34,22 +42,39 @@ final class EntryStore: ObservableObject {
     @discardableResult
     private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil, calendarSync nextSync: CalendarSyncSettings? = nil) -> Bool {
         guard !readOnly else { return false }
-        do {
-            let coursesToSave = nextCourses ?? courses
-            let syncToSave = nextSync ?? calendarSync
-            try repository.saveArchive(EntryArchive(entries: next, courses: coursesToSave, calendarSync: syncToSave))
-            entries = next
-            courses = coursesToSave
-            calendarSync = syncToSave
-            error = nil
-            notifications.update(entries: next, courses: courses)
-            refreshWidgets()
-            return true
-        } catch {
-            self.error = "保存失败，修改尚未写入手机：\(error.localizedDescription)"
-            return false
+        let archive = EntryArchive(entries: next, courses: nextCourses ?? courses, calendarSync: nextSync ?? calendarSync)
+        writeRevision += 1
+        let revision = writeRevision
+        entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync
+        hasUnsavedChanges = true
+        saveFailed = false
+        error = nil
+        notifications.update(entries: next, courses: courses)
+        if backgroundWrite == .invalid {
+            backgroundWrite = UIApplication.shared.beginBackgroundTask(withName: "保存事项") { [weak self] in
+                Task { @MainActor in
+                    guard let self, self.backgroundWrite != .invalid else { return }
+                    UIApplication.shared.endBackgroundTask(self.backgroundWrite)
+                    self.backgroundWrite = .invalid
+                }
+            }
         }
+        writer.save(archive) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self, revision == self.writeRevision else { return }
+                if self.backgroundWrite != .invalid {
+                    UIApplication.shared.endBackgroundTask(self.backgroundWrite)
+                    self.backgroundWrite = .invalid
+                }
+                switch result {
+                case .success: self.hasUnsavedChanges = false; self.refreshWidgets()
+                case .failure(let error): self.saveFailed = true; self.error = "保存失败，修改暂时只在内存中，请点击重试保存：\(error.localizedDescription)"
+                }
+            }
+        }
+        return true // Accepted in memory; failures remain visible and can be retried.
     }
+    func retrySave() { _ = commit(entries) }
     @discardableResult
     func save(_ draft: Entry) -> Bool {
         let entry = draft.normalized()
@@ -100,16 +125,22 @@ final class EntryStore: ObservableObject {
         entry.location = record.location.trimmingCharacters(in: .whitespacesAndNewlines)
         if !record.url.isEmpty || entry.platform == entry.calendarEvent?.event.url { entry.platform = record.url }
         entry.plannedStart = record.start; entry.plannedEnd = record.end; entry.plannedAllDay = record.isAllDay
-        entry.calendarEvent = CalendarEventLink(event: record, timing: .start)
+        entry.calendarEvent = CalendarEventLink(event: record, timing: .start, wasAutomaticallyImported: false)
         var settings = calendarSync
         settings.suppressed.removeAll { $0.matches(record.identity) }
-        // Explicitly scheduled events must remain selected even when their calendar wasn't selected for import.
-        if !settings.selected.contains(where: { $0.id == record.identity.calendarID }) {
-            settings.selected.append(CalendarSelection(id: record.identity.calendarID, title: record.identity.calendarTitle, sourceTitle: record.identity.sourceTitle))
-        }
         var next = entries
         if let index = next.firstIndex(where: { $0.id == entryID }) { next[index] = entry.normalized() }
         return commit(next, calendarSync: settings)
+    }
+    var cleanableCalendarEntries: [Entry] {
+        let ids = Set(calendarSync.selected.map(\.id))
+        return entries.filter { CalendarImport.canClean($0, selectedIDs: ids) }
+    }
+    @discardableResult
+    func cleanUnselectedCalendarImports() -> Bool {
+        let ids = Set(cleanableCalendarEntries.map(\.id))
+        // Re-selecting a source later may import it again; cleanup doesn't suppress those events.
+        return commit(entries.filter { !ids.contains($0.id) })
     }
     @discardableResult
     func importBackup(_ data: Data) -> Bool {
@@ -132,12 +163,17 @@ final class EntryStore: ObservableObject {
     }
     private func refreshWidgets() {
         guard !ProcessInfo.processInfo.arguments.contains("--ui-testing") else { return }
-        do {
-            try WidgetSnapshotStore.save(WidgetSnapshot(entries: entries))
-            widgetSyncError = nil
-            WidgetCenter.shared.reloadAllTimelines()
-        } catch {
-            widgetSyncError = "小组件清单暂未同步，请重新打开 App 后重试。\n\(error.localizedDescription)"
+        widgetRefresh?.cancel()
+        widgetRefresh = Task { [weak self] in
+            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+            guard let self, !hasUnsavedChanges else { return }
+            let snapshot = WidgetSnapshot(entries: entries)
+            widgetQueue.async { [weak self] in
+                let failure: String?
+                do { try WidgetSnapshotStore.save(snapshot); WidgetCenter.shared.reloadAllTimelines(); failure = nil }
+                catch { failure = "小组件清单暂未同步，请重新打开 App 后重试。\n\(error.localizedDescription)" }
+                DispatchQueue.main.async { self?.widgetSyncError = failure }
+            }
         }
     }
     func start(_ id: UUID) {

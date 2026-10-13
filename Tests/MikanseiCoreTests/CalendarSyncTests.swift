@@ -107,6 +107,8 @@ final class CalendarSyncTests: XCTestCase {
         var settings = CalendarSyncSettings(); settings.timing = .end
         let endMode = CalendarImport.merge(events: [timed], into: original.entries, settings: settings, now: now)
         XCTAssertEqual(endMode.entries[0].dueDate, timed.end)
+        XCTAssertEqual(endMode.entries[0].kind, .task)
+        XCTAssertEqual(endMode.entries[0].reminderAnchor, .deadline)
         var custom = original.entries[0]; custom.dueDate = now.addingTimeInterval(500)
         XCTAssertEqual(CalendarImport.merge(events: [timed], into: [custom], settings: settings, now: now).entries[0].dueDate, custom.dueDate)
     }

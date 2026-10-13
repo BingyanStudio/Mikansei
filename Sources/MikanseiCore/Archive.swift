@@ -44,8 +44,12 @@ public struct EntryArchive: Codable {
               archive.entries.allSatisfy({ entry in
                   !entry.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
                   Set(entry.checklist.map(\.id)).count == entry.checklist.count &&
-                  (entry.repeatRule == .never || (entry.isTask && entry.dueDate != nil)) &&
+                  (entry.repeatRule == .never || (entry.isTask && entry.recurrenceReferenceDate != nil)) &&
                   (1...365).contains(entry.repeatIntervalDays) &&
+                  (1...12).contains(entry.repeatIntervalMonths) &&
+                  entry.repeatWeekdays.allSatisfy { (1...7).contains($0) } &&
+                  (entry.repeatRule != .dates || !entry.repeatDates.isEmpty) &&
+                  (entry.kind != .schedule || (entry.plannedStart != nil && entry.plannedEnd != nil && entry.plannedEnd! >= entry.plannedStart!)) &&
                   (entry.estimatedMinutes == nil || (1...1440).contains(entry.estimatedMinutes!)) &&
                   entry.elapsedSeconds.isFinite && entry.elapsedSeconds >= 0 &&
                   (entry.calendarEvent == nil || entry.calendarEvent!.event.isValid) &&
@@ -97,5 +101,18 @@ public struct EntryRepository {
         #else
         try data.write(to: fileURL, options: .atomic)
         #endif
+    }
+}
+
+/// Serialize atomic archive writes without blocking the UI or allowing older snapshots to win.
+public final class EntryArchiveWriter: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "Mikansei.archive-writer", qos: .userInitiated)
+    private let repository: EntryRepository
+    public init(repository: EntryRepository) { self.repository = repository }
+    public func save(_ archive: EntryArchive, completion: @escaping (Result<Void, Error>) -> Void) {
+        queue.async { [repository] in
+            do { try repository.saveArchive(archive); completion(.success(())) }
+            catch { completion(.failure(error)) }
+        }
     }
 }

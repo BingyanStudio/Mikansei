@@ -1,11 +1,12 @@
 import Foundation
 
 public enum EntryKind: String, CaseIterable, Codable, Identifiable {
-    case task, homework, note
+    case task, schedule, homework, note
     public var id: Self { self }
     public var title: String {
         switch self {
         case .task: return "待办"
+        case .schedule: return "日程"
         case .homework: return "作业"
         case .note: return "笔记"
         }
@@ -13,6 +14,7 @@ public enum EntryKind: String, CaseIterable, Codable, Identifiable {
     public var symbol: String {
         switch self {
         case .task: return "checkmark.circle"
+        case .schedule: return "calendar"
         case .homework: return "book.closed"
         case .note: return "note.text"
         }
@@ -46,13 +48,13 @@ public enum ReminderLead: Int, CaseIterable, Codable, Identifiable {
 }
 
 public enum RepeatRule: String, CaseIterable, Codable, Identifiable {
-    case never, daily, everyThreeDays, weekly, biweekly, custom
+    case never, daily, everyThreeDays, weekly, biweekly, monthly, custom, dates
     public var id: Self { self }
     public var days: Int {
-        switch self { case .never: return 0; case .daily, .custom: return 1; case .everyThreeDays: return 3; case .weekly: return 7; case .biweekly: return 14 }
+        switch self { case .never, .monthly, .dates: return 0; case .daily, .custom: return 1; case .everyThreeDays: return 3; case .weekly: return 7; case .biweekly: return 14 }
     }
     public var title: String {
-        switch self { case .never: return "不重复"; case .daily: return "每天"; case .everyThreeDays: return "每 3 天"; case .weekly: return "每周"; case .biweekly: return "每两周"; case .custom: return "自定义间隔" }
+        switch self { case .never: return "不重复"; case .daily: return "每天"; case .everyThreeDays: return "每 3 天"; case .weekly: return "每周"; case .biweekly: return "每两周"; case .monthly: return "每月"; case .custom: return "自定义间隔"; case .dates: return "日历选日" }
     }
 }
 
@@ -109,6 +111,10 @@ public struct Entry: Identifiable, Codable, Equatable {
     public var source: String = ""
     public var repeatRule: RepeatRule = .never
     public var repeatIntervalDays: Int = 1
+    public var repeatWeekdays: [Int] = [] // ISO weekdays: Monday = 1.
+    public var repeatIntervalMonths: Int = 1
+    public var repeatDates: [Date] = []
+    public var repeatAnchorDate: Date? = nil
     public var reminderPattern: ReminderPattern = .single
     public var previousOccurrenceID: UUID? = nil
     public var startedAt: Date? = nil
@@ -134,11 +140,28 @@ public struct Entry: Identifiable, Codable, Equatable {
         self.completedAt = completedAt
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        if kind == .schedule {
+            plannedStart = dueDate ?? Date(timeIntervalSince1970: (createdAt.addingTimeInterval(3600).timeIntervalSince1970 / 60).rounded(.up) * 60)
+            plannedEnd = plannedStart!.addingTimeInterval(1800)
+            self.dueDate = nil
+            self.reminder = reminder ?? .atTime
+            reminderDelivery = .alarm
+            reminderAnchor = .execution
+        }
     }
 
     public var isTask: Bool { kind != .note }
+    public var isRoutine: Bool { isTask && repeatRule != .never }
     public var repeatDays: Int { repeatRule == .custom ? max(1, repeatIntervalDays) : repeatRule.days }
-    public var repeatLabel: String { repeatRule == .custom ? "每 \(repeatDays) 天" : repeatRule.title }
+    public var repeatLabel: String {
+        if repeatRule == .dates { return "已选 \(Set(repeatDates.map { Calendar.current.startOfDay(for: $0) }).count) 天" }
+        if repeatRule == .monthly { return "每 \(repeatIntervalMonths) 月" }
+        if repeatRule == .weekly && !repeatWeekdays.isEmpty {
+            let names = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+            return repeatWeekdays.sorted().filter { (1...7).contains($0) }.map { names[$0 - 1] }.joined(separator: "、")
+        }
+        return repeatRule == .custom ? "每 \(repeatDays) 天" : repeatRule.title
+    }
     public var completedSteps: Int { checklist.filter(\.isDone).count }
     public var progress: Double {
         checklist.isEmpty ? (isCompleted ? 1 : 0) : Double(completedSteps) / Double(checklist.count)
@@ -158,14 +181,14 @@ public struct Entry: Identifiable, Codable, Equatable {
         startedAt = nil
         updatedAt = now
     }
-    public var attentionDate: Date? { [dueDate, plannedStart].compactMap { $0 }.min() }
-    public var reminderReferenceDate: Date? { reminderAnchor == .execution ? plannedStart ?? dueDate : dueDate ?? plannedStart }
+    public var attentionDate: Date? { kind == .schedule ? plannedStart : [dueDate, plannedStart].compactMap { $0 }.min() }
+    public var reminderReferenceDate: Date? { kind == .schedule || reminderAnchor == .execution ? plannedStart ?? dueDate : dueDate ?? plannedStart }
     public var reminderDate: Date? {
         guard isTask, !isCompleted, let dueDate = reminderReferenceDate, let reminder else { return nil }
         return dueDate.addingTimeInterval(-Double(reminder.rawValue))
     }
     public func isOverdue(at now: Date = Date()) -> Bool {
-        isTask && !isCompleted && dueDate.map { $0 < now } == true
+        isTask && kind != .schedule && !isCompleted && dueDate.map { $0 < now } == true
     }
     public func matches(_ query: String) -> Bool {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -199,6 +222,9 @@ public struct Entry: Identifiable, Codable, Equatable {
         result.platform = platform.trimmingCharacters(in: .whitespacesAndNewlines)
         result.location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         result.repeatIntervalDays = max(1, min(365, repeatIntervalDays))
+        result.repeatIntervalMonths = max(1, min(12, repeatIntervalMonths))
+        result.repeatWeekdays = Array(Set(repeatWeekdays.filter { (1...7).contains($0) })).sorted()
+        result.repeatDates = Array(Set(repeatDates.map { Calendar.current.startOfDay(for: $0) })).sorted()
         result.checklist = checklist.compactMap { step in
             let title = step.title.trimmingCharacters(in: .whitespacesAndNewlines)
             return title.isEmpty ? nil : ChecklistItem(id: step.id, title: title, isDone: step.isDone)
@@ -213,8 +239,13 @@ public struct Entry: Identifiable, Codable, Equatable {
             result.startedAt = nil
             result.elapsedSeconds = 0
         } else {
-            if attentionDate == nil { result.reminder = nil }
-            if dueDate == nil { result.repeatRule = .never }
+            if kind == .schedule {
+                result.dueDate = nil
+                result.reminderAnchor = .execution
+                result.reminderPattern = .single
+            }
+            if result.attentionDate == nil { result.reminder = nil; result.repeatRule = .never }
+            if result.isRoutine && result.repeatAnchorDate == nil { result.repeatAnchorDate = result.recurrenceReferenceDate }
         }
         result.snoozeMinutes = [5, 10, 15].contains(snoozeMinutes) ? snoozeMinutes : 5
         result.updatedAt = now
@@ -222,14 +253,17 @@ public struct Entry: Identifiable, Codable, Equatable {
     }
 
     public func nextOccurrence(after now: Date = Date(), calendar: Calendar = .current) -> Entry? {
-        guard isTask, repeatRule != .never, let dueDate else { return nil }
-        let gap = max(0, calendar.dateComponents([.day], from: dueDate, to: now).day ?? 0)
-        var nextDate = calendar.date(byAdding: .day, value: (gap / repeatDays + 1) * repeatDays, to: dueDate)!
-        if nextDate <= now { nextDate = calendar.date(byAdding: .day, value: repeatDays, to: nextDate)! }
-        var next = self
+        guard isRoutine, let base = recurrenceReferenceDate else { return nil }
+        let upperBound = repeatRule == .dates
+            ? repeatDates.max().flatMap { calendar.date(byAdding: .day, value: 1, to: $0) }
+            : calendar.date(byAdding: .year, value: 5, to: max(now, base))
+        guard let end = upperBound,
+              end > max(now, base).addingTimeInterval(1),
+              let nextDate = occurrenceDates(in: max(now, base).addingTimeInterval(1)..<end, calendar: calendar, limit: 1).first else { return nil }
+        var next = occurrence(at: nextDate, calendar: calendar)
         next.id = UUID()
         next.previousOccurrenceID = id
-        next.dueDate = nextDate
+        next.repeatAnchorDate = repeatAnchorDate ?? base
         next.createdAt = now
         next.updatedAt = now
         next.isCompleted = false
@@ -237,7 +271,6 @@ public struct Entry: Identifiable, Codable, Equatable {
         next.startedAt = nil
         next.elapsedSeconds = 0
         next.calendarEvent = nil
-        next.plannedStart = nil; next.plannedEnd = nil; next.plannedAllDay = false
         next.checklist = checklist.map { ChecklistItem(title: $0.title) }
         return next
     }
@@ -246,7 +279,7 @@ public struct Entry: Identifiable, Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, title, body, kind, category, priority, checklist, dueDate, reminder,
              isCompleted, completedAt, createdAt, updatedAt, platform, location,
-             estimatedMinutes, source, repeatRule, repeatIntervalDays, reminderPattern, previousOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes
+             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -269,6 +302,10 @@ public struct Entry: Identifiable, Codable, Equatable {
         source = try c.decodeIfPresent(String.self, forKey: .source) ?? ""
         repeatRule = try c.decodeIfPresent(RepeatRule.self, forKey: .repeatRule) ?? .never
         repeatIntervalDays = try c.decodeIfPresent(Int.self, forKey: .repeatIntervalDays) ?? 1
+        repeatWeekdays = try c.decodeIfPresent([Int].self, forKey: .repeatWeekdays) ?? []
+        repeatIntervalMonths = try c.decodeIfPresent(Int.self, forKey: .repeatIntervalMonths) ?? 1
+        repeatDates = try c.decodeIfPresent([Date].self, forKey: .repeatDates) ?? []
+        repeatAnchorDate = try c.decodeIfPresent(Date.self, forKey: .repeatAnchorDate)
         reminderPattern = try c.decodeIfPresent(ReminderPattern.self, forKey: .reminderPattern) ?? .single
         previousOccurrenceID = try c.decodeIfPresent(UUID.self, forKey: .previousOccurrenceID)
         startedAt = try c.decodeIfPresent(Date.self, forKey: .startedAt)
@@ -290,16 +327,86 @@ public struct Entry: Identifiable, Codable, Equatable {
     }
 }
 
+public extension Entry {
+    static func successorDates(in entries: [Entry]) -> [UUID: Date] {
+        var result: [UUID: Date] = [:]
+        for entry in entries {
+            if let parent = entry.previousOccurrenceID, let date = entry.recurrenceReferenceDate {
+                result[parent] = min(result[parent] ?? .distantFuture, date)
+            }
+        }
+        return result
+    }
+    /// Routines retain a type (task or schedule); repetition is an independent tag.
+    var recurrenceReferenceDate: Date? { kind == .schedule ? plannedStart : dueDate ?? plannedStart }
+
+    func occurrenceDates(in range: Range<Date>, calendar: Calendar = .current, limit: Int = 1000) -> [Date] {
+        guard isRoutine, let base = recurrenceReferenceDate, range.lowerBound < range.upperBound, limit > 0 else { return [] }
+        let anchor = repeatAnchorDate ?? base
+        let anchorDay = calendar.startOfDay(for: anchor)
+        let anchorMonth = calendar.dateInterval(of: .month, for: anchor)!.start
+        let time = calendar.dateComponents([.hour, .minute, .second], from: base)
+        let chosen = Set(repeatDates.map { calendar.startOfDay(for: $0) })
+        if repeatRule == .dates {
+            return Array(chosen.sorted().compactMap { day in
+                calendar.date(bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: time.second ?? 0, of: day)
+            }.filter { $0 >= base && range.contains($0) }.prefix(limit))
+        }
+        var day = calendar.startOfDay(for: max(base, range.lowerBound))
+        var dates: [Date] = []
+        while day < range.upperBound && dates.count < limit {
+            let gap = calendar.dateComponents([.day], from: anchorDay, to: day).day ?? -1
+            let weekday = (calendar.component(.weekday, from: day) + 5) % 7 + 1
+            var matches = false
+            switch repeatRule {
+            case .never: break
+            case .dates: matches = chosen.contains(day)
+            case .monthly:
+                let month = calendar.dateInterval(of: .month, for: day)!.start
+                let months = calendar.dateComponents([.month], from: anchorMonth, to: month).month ?? -1
+                let lastDay = calendar.range(of: .day, in: .month, for: day)!.count
+                matches = months >= 0 && months % max(1, repeatIntervalMonths) == 0 &&
+                    calendar.component(.day, from: day) == min(calendar.component(.day, from: anchor), lastDay)
+            case .weekly where !repeatWeekdays.isEmpty:
+                matches = gap >= 0 && repeatWeekdays.contains(weekday)
+            default:
+                matches = gap >= 0 && gap % max(1, repeatDays) == 0
+            }
+            if matches, let value = calendar.date(bySettingHour: time.hour ?? 0, minute: time.minute ?? 0,
+                                                  second: time.second ?? 0, of: day),
+               value >= base, range.contains(value) { dates.append(value) }
+            guard let next = calendar.date(byAdding: .day, value: 1, to: day), next > day else { break }
+            day = next
+        }
+        return dates
+    }
+
+    /// Keep wall-clock times across DST; timed schedules preserve their elapsed duration.
+    func occurrence(at date: Date, calendar: Calendar = .current) -> Entry {
+        guard let base = recurrenceReferenceDate else { return self }
+        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: base), to: calendar.startOfDay(for: date)).day ?? 0
+        var next = self
+        next.dueDate = dueDate.flatMap { calendar.date(byAdding: .day, value: days, to: $0) }
+        next.plannedStart = plannedStart.flatMap { calendar.date(byAdding: .day, value: days, to: $0) }
+        if let start = next.plannedStart, let oldStart = plannedStart, let oldEnd = plannedEnd {
+            next.plannedEnd = plannedAllDay ? calendar.date(byAdding: .day, value: days, to: oldEnd) : start.addingTimeInterval(oldEnd.timeIntervalSince(oldStart))
+        }
+        return next
+    }
+}
+
 public struct TaskBoard {
     public let entries: [Entry]
     public let now: Date
     public let calendar: Calendar
+    private let openEntries: [Entry]
     public init(entries: [Entry], now: Date = Date(), calendar: Calendar = .current) {
         self.entries = entries
         self.now = now
         self.calendar = calendar
+        self.openEntries = entries.filter { $0.isTask && !$0.isCompleted }.sorted(by: Self.order)
     }
-    public var open: [Entry] { entries.filter { $0.isTask && !$0.isCompleted }.sorted(by: Self.order) }
+    public var open: [Entry] { openEntries }
     public var overdue: [Entry] { open.filter { $0.isOverdue(at: now) } }
     public var today: [Entry] {
         let day = calendar.startOfDay(for: now)
@@ -328,7 +435,11 @@ public struct TaskBoard {
             }
     }
     public var visible: [Entry] { overdue + open.filter { !$0.isOverdue(at: now) } + finishedToday }
-    public var unplannedOrPast: [Entry] { open.filter { entry in !entry.isOverdue(at: now) && !today.contains(where: { $0.id == entry.id }) && (entry.attentionDate == nil || entry.attentionDate! < calendar.startOfDay(for: now)) } }
+    public var unplannedOrPast: [Entry] {
+        let todayIDs = Set(today.map(\.id))
+        let start = calendar.startOfDay(for: now)
+        return open.filter { entry in !entry.isOverdue(at: now) && !todayIDs.contains(entry.id) && (entry.attentionDate == nil || entry.attentionDate! < start) }
+    }
     public var focus: [Entry] { overdue + today + unplannedOrPast + finishedToday }
     public var completedToday: Int { finishedToday.count }
     public static func order(_ lhs: Entry, _ rhs: Entry) -> Bool {

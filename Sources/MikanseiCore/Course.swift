@@ -75,19 +75,20 @@ public struct PlannedNotification: Identifiable, Equatable, Codable {
 public enum NotificationPlan {
     public static func pending(entries: [Entry], courses: [Course], now: Date = Date(), limit: Int = 60, calendar: Calendar = .current) -> [PlannedNotification] {
         var events: [PlannedNotification] = []
+        let successors = Entry.successorDates(in: entries)
         for entry in entries {
             guard entry.isTask, !entry.isCompleted, entry.reminder != nil, let due = entry.reminderReferenceDate else { continue }
             var dates: [Date]
             if entry.repeatRule != .never {
                 let horizon = calendar.date(byAdding: .day, value: 28, to: now)!
-                var occurrence = due
-                if occurrence <= now { occurrence = entry.nextOccurrence(after: now, calendar: calendar)!.dueDate! }
-                dates = []
-                // Routines keep reminding on their cycle even when a previous cycle is unfinished.
-                while occurrence <= horizon {
-                    dates.append(occurrence.addingTimeInterval(-Double(entry.reminder!.rawValue)))
-                    occurrence = calendar.date(byAdding: .day, value: entry.repeatDays, to: occurrence)!
-                }
+                let lead = Double(entry.reminder!.rawValue)
+                let offset = due.timeIntervalSince(entry.recurrenceReferenceDate ?? due)
+                // Enumerate using the same rules as the calendar, including selected dates and month ends.
+                let start = now.addingTimeInterval(lead - offset)
+                let end = min(horizon.addingTimeInterval(lead - offset + 1), successors[entry.id] ?? .distantFuture)
+                dates = entry.occurrenceDates(in: start..<max(start, end), calendar: calendar)
+                    .compactMap { entry.occurrence(at: $0, calendar: calendar).reminderDate }
+                    .filter { $0 <= horizon }
             } else {
             switch entry.reminderPattern {
             case .single: dates = entry.reminderDate.map { [$0] } ?? []

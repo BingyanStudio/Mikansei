@@ -77,6 +77,16 @@ final class MikanseiUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--calendar-demo"]
         app.launch()
+        XCTAssertFalse(app.staticTexts["日历同步演示"].exists)
+        app.buttons["设置"].tap()
+        app.descendants(matching: .any).matching(identifier: "calendar-sync-settings").firstMatch.tap()
+        let source = app.switches["calendar-source-calendar-demo"]
+        XCTAssertTrue(source.waitForExistence(timeout: 5))
+        XCTAssertEqual(source.value as? String, "0")
+        XCTAssertEqual(app.switches["calendar-source-calendar-demo-holidays"].value as? String, "0")
+        source.tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        app.buttons["完成"].tap()
         XCTAssertTrue(app.staticTexts["日历同步演示"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.staticTexts.matching(identifier: "日历同步演示").count, 1)
         app.buttons["完成：日历同步演示"].tap()
@@ -148,6 +158,84 @@ final class MikanseiUITests: XCTestCase {
         XCTAssertEqual(clock.label, paused)
         start.tap()
         XCTAssertTrue(pause.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testCalendarLongPressOpensScheduleWithDurationAndAlarmDefaults() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--calendar-view-demo"]
+        app.launch()
+        app.tabBars.buttons["日程"].tap()
+        app.buttons["schedule-view-2"].tap()
+        app.buttons["calendar-layout-0"].tap()
+        let today = app.buttons["calendar-date-today"]
+        XCTAssertTrue(today.waitForExistence(timeout: 5))
+        today.press(forDuration: 0.7)
+        XCTAssertTrue(app.navigationBars["新建日程"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["kind-schedule"].isSelected)
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "schedule-start").firstMatch.exists)
+        XCTAssertTrue(app.textFields["schedule-duration"].exists)
+        XCTAssertFalse(app.switches["has-due-date"].exists)
+        app.buttons["取消"].tap()
+        app.buttons["calendar-layout-1"].tap()
+        let hour = app.buttons["calendar-hour-8"]
+        XCTAssertTrue(hour.waitForExistence(timeout: 5))
+        hour.press(forDuration: 0.7)
+        XCTAssertTrue(app.navigationBars["新建日程"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testScheduleDurationRoutineDatesAndReminderCanBeEdited() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing"]
+        app.launch()
+        app.buttons["新建事项"].tap()
+        app.buttons["kind-schedule"].tap()
+        let title = app.textFields["entry-title"]
+        title.tap(); title.typeText("Routine practice")
+        app.buttons["收起键盘"].tap()
+        let duration = app.textFields["schedule-duration"]
+        duration.tap(); duration.typeText(XCUIKeyboardKey.delete.rawValue + XCUIKeyboardKey.delete.rawValue + "45")
+        app.buttons["收起键盘"].tap()
+        let routine = app.switches["routine-enabled"]
+        for _ in 0..<8 { if routine.isHittable { break }; app.swipeUp() }
+        routine.tap()
+        let rule = app.descendants(matching: .any).matching(identifier: "routine-rule").firstMatch
+        rule.tap(); app.buttons["日历选日"].tap()
+        let picker = app.descendants(matching: .any).matching(identifier: "routine-date-picker").firstMatch
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        let dates = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "routine-date-"))
+        let selectedDay = dates.element(boundBy: 41) // Adjacent next month: always a future date.
+        for _ in 0..<4 { if selectedDay.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(selectedDay.isHittable)
+        selectedDay.tap()
+        XCTAssertTrue(selectedDay.isSelected)
+        let delivery = app.descendants(matching: .any).matching(identifier: "reminder-delivery").firstMatch
+        for _ in 0..<8 { if delivery.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(app.staticTexts["闹钟提醒"].exists)
+        app.buttons["save-entry"].tap()
+        XCTAssertTrue(app.staticTexts["Routine practice"].waitForExistence(timeout: 5))
+        app.staticTexts["Routine practice"].tap()
+        XCTAssertTrue(app.textFields["schedule-duration"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.textFields["schedule-duration"].value as? String, "45")
+    }
+
+    @MainActor
+    func testRapidCompletionAndReopenDoesNotLoseState() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--demo"]
+        app.launch()
+        for title in ["完成英语阅读作业", "给自己留半小时运动", "准备明天的学习资料", "买一盏阅读灯"] {
+            let complete = app.buttons["完成：" + title]
+            for _ in 0..<8 { if complete.isHittable { break }; app.swipeUp() }
+            XCTAssertTrue(complete.isHittable)
+            complete.tap()
+        }
+        let reopened = app.buttons["重新打开：买一盏阅读灯"]
+        XCTAssertTrue(reopened.waitForExistence(timeout: 5))
+        reopened.tap()
+        XCTAssertTrue(app.buttons["完成：买一盏阅读灯"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.alerts["操作未完成"].exists)
     }
 
     @MainActor

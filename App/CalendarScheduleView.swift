@@ -51,7 +51,7 @@ struct CalendarScheduleView: View {
             }
         }.environment(\.locale, Locale(identifier: "zh_CN"))
             .alert("日历视图", isPresented: $showInfo) { Button("知道了", role: .cancel) {} } message: {
-                Text("绿色表示实际执行时段，旗标表示 DDL。显示清单中已记录或已导入的事项；无日期事项在待办页。日历自动导入今天起 30 天，可在设置中同步。")
+                Text("绿色表示日程时段，旗标表示 DDL。长按月历日期或日视图空白处添加日程；常态的后续日期也会展示，点选可编辑规则。仅同步设置中勾选的日历来源。")
             }
     }
     private var navigation: some View {
@@ -112,6 +112,13 @@ struct CalendarScheduleView: View {
             .accessibilityLabel("\(day.formatted(.dateTime.year().month().day().weekday()))，\(dayItems.count) 项")
             .accessibilityAddTraits(selected ? .isSelected : [])
             .accessibilityIdentifier(today ? "calendar-date-today" : "calendar-date-\(Int(day.timeIntervalSince1970))")
+            .highPriorityGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                select(day)
+                UISelectionFeedbackGenerator().selectionChanged()
+                add(suggestedStart(on: day), true)
+            })
+            .accessibilityHint("轻点选择日期，长按添加日程")
+            .accessibilityAction(named: "添加日程") { select(day); add(suggestedStart(on: day), true) }
     }
     private var selectedHeading: some View {
         HStack {
@@ -128,16 +135,20 @@ struct CalendarScheduleView: View {
             Spacer()
             Menu {
                 Button("添加当天截止的待办", systemImage: "flag") { add(selectedDate, false) }
-                Button("安排执行时段", systemImage: "calendar.badge.plus") { add(defaultStart, true) }
+                Button("添加日程", systemImage: "calendar.badge.plus") { add(defaultStart, true) }
             } label: { Image(systemName: "plus.circle.fill").font(.title2) }
                 .accessibilityLabel("为所选日期添加事项").accessibilityIdentifier("calendar-add")
         }.padding(.top, 4)
     }
     private var defaultStart: Date {
-        if calendar.isDate(selectedDate, inSameDayAs: now) {
-            return Date(timeIntervalSince1970: (now.addingTimeInterval(300).timeIntervalSince1970 / 900).rounded(.up) * 900)
+        suggestedStart(on: selectedDate)
+    }
+    private func suggestedStart(on date: Date) -> Date {
+        if calendar.isDate(date, inSameDayAs: now), let day = calendar.dateInterval(of: .day, for: date) {
+            let rounded = Date(timeIntervalSince1970: (now.addingTimeInterval(300).timeIntervalSince1970 / 900).rounded(.up) * 900)
+            return min(rounded, day.end.addingTimeInterval(-900))
         }
-        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: selectedDate) ?? selectedDate
+        return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: date) ?? date
     }
     private func select(_ day: Date) { selectedDate = day; visibleMonth = day }
     private func move(_ direction: Int) {
@@ -203,14 +214,28 @@ private struct CalendarDayTimeline: View {
     }
     private func canvas(width: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
-            VStack(spacing: 0) { ForEach(0...Int(day.duration / 3600), id: \.self) { hour in
+            VStack(spacing: 0) { ForEach(0..<Int(day.duration / 3600), id: \.self) { hour in
                 HStack(alignment: .top, spacing: 8) {
                     Text(hourLabel(hour))
                         .font(.caption2).monospacedDigit().foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8).frame(width: 48, alignment: .trailing)
                     Button { add(day.start.addingTimeInterval(Double(hour * 3600))) } label: {
                         VStack(spacing: 0) { Rectangle().fill(Color(uiColor: .separator)).frame(height: 0.5); Color.clear }
                             .frame(width: width - 64, height: hourHeight).contentShape(Rectangle())
-                    }.buttonStyle(.plain).accessibilityLabel("安排 \(hour) 点的事项")
+                    }.buttonStyle(.plain).accessibilityLabel("添加 \(hourLabel(hour)) 的日程")
+                        .accessibilityIdentifier("calendar-hour-\(hour)")
+                        .highPriorityGesture(LongPressGesture(minimumDuration: 0.5)
+                            .sequenced(before: DragGesture(minimumDistance: 0))
+                            .onEnded { value in
+                                if case .second(true, let drag) = value {
+                                    let fraction = Double((drag?.location.y ?? 0) / hourHeight)
+                                    if let start = CalendarTimelineLayout.start(on: date, minuteOffset: Double(hour * 60) + fraction * 60, calendar: calendar) {
+                                        UISelectionFeedbackGenerator().selectionChanged()
+                                        add(start)
+                                    }
+                                }
+                            })
+                        .accessibilityHint("长按空白处，按所在位置添加日程")
+                        .accessibilityAction(named: "添加日程") { add(day.start.addingTimeInterval(Double(hour * 3600))) }
                 }.frame(height: hourHeight, alignment: .top).id(hour)
             } }.padding(.top, 12)
             ForEach(blocks) { block in

@@ -42,7 +42,7 @@ struct SettingsView: View {
             Section("日历") {
                 NavigationLink { CalendarSyncView() } label: { Label("日历自动导入", systemImage: "calendar.badge.plus") }
                     .accessibilityIdentifier("calendar-sync-settings")
-                Text("日历负责时段，清单负责完成。打开时导入日历；事项内可安排或编辑日历日程。只有 DDL 或无日期的待办不自动写入日历。")
+                Text("选择要自动同步的日历标签 / 来源，仅勾选的来源会导入。日程按开始时间和持续时间安排；常态支持重复规律或日历选日。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section {

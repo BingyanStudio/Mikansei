@@ -45,6 +45,12 @@ struct RootView: View {
             if store.readOnly {
                 Text("本地数据读取失败，已暂停修改以保护原文件。")
                     .font(.caption).frame(maxWidth: .infinity).padding(10).background(.orange.opacity(0.18))
+            } else if store.saveFailed {
+                HStack {
+                    Text("更改尚未写入手机")
+                    Spacer()
+                    Button("重试保存") { store.retrySave() }
+                }.font(.caption).padding(10).background(.orange.opacity(0.18))
             } else if notifications.authorization == .denied && (store.entries.contains(where: { $0.reminder != nil && !$0.isCompleted && $0.reminderDelivery == .popup }) || store.courses.contains(where: { $0.reminderEnabled && $0.reminderDelivery == .popup })) {
                 HStack {
                     Label("提醒未开启", systemImage: "bell.slash")
@@ -98,7 +104,7 @@ struct RootView: View {
             Button("从消息添加", systemImage: "text.badge.plus") { messageImport = true }.disabled(store.readOnly)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button { add(.task) } label: {
+            Button { add(tab == .today ? .schedule : .task) } label: {
                 Image(systemName: "plus").font(.title3.weight(.medium)).frame(width: 36, height: 36)
             }.accessibilityLabel("新建事项").disabled(store.readOnly)
         }
@@ -106,7 +112,7 @@ struct RootView: View {
     private func edit(_ entry: Entry) { editing = EditingSession(entry: entry, isNew: false) }
     private func add(_ kind: EntryKind) { editing = EditingSession(entry: Entry(kind: kind), isNew: true) }
     private func addOnDate(_ date: Date, execution: Bool) {
-        var entry = Entry()
+        var entry = Entry(kind: execution ? .schedule : .task)
         if execution {
             entry.plannedStart = date
             entry.plannedEnd = date.addingTimeInterval(1800)
@@ -148,7 +154,6 @@ struct TodayView: View {
     let add: (EntryKind) -> Void
     let addOnDate: (Date, Bool) -> Void
     @Binding var page: Int
-    @Namespace private var cards
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
@@ -168,11 +173,11 @@ struct TodayView: View {
                     CalendarScheduleView(entries: store.entries, now: context.date, edit: edit, add: addOnDate)
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
+                        LazyVStack(alignment: .leading, spacing: 16) {
                             if page == 0 { focus(board, now: context.date) }
                             else { agenda(board, now: context.date) }
                         }.padding(.horizontal, 20).padding(.bottom, 16)
-                            .animation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.86), value: board.focus)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: board.focus.map(\.id))
                     }
                 }
             }.background(Theme.background).navigationTitle("日程")
@@ -189,11 +194,10 @@ struct TodayView: View {
         if !board.finishedToday.isEmpty { group("今日已完成", entries: board.finishedToday, color: Theme.accent, now: now) }
     }
     private func group(_ title: String, entries: [Entry], color: Color = .secondary, now: Date) -> some View {
-        VStack(spacing: 10) {
+        Group {
             SectionLabel(title: title, count: entries.count, color: color)
             ForEach(entries) { entry in
                 EntryCard(entry: entry, edit: { edit(entry) }, now: now)
-                    .matchedGeometryEffect(id: entry.id, in: cards)
             }
         }
     }
@@ -206,7 +210,7 @@ struct TodayView: View {
         }
         let groups = Dictionary(grouping: dated) { Calendar.current.startOfDay(for: $0.date) }
         if groups.isEmpty {
-            EmptyCard(symbol: "calendar", title: "日程还是空白的", message: "已安排的时段和截止日期显示在这里；无日期事项始终留在待办清单。", actionTitle: "安排一件事") { add(.task) }
+            EmptyCard(symbol: "calendar", title: "日程还是空白的", message: "已安排的时段和截止日期显示在这里；无日期事项始终留在待办清单。", actionTitle: "添加日程") { add(.schedule) }
         } else {
             ForEach(groups.keys.sorted(), id: \.self) { day in
                 VStack(spacing: 10) {
@@ -230,10 +234,10 @@ struct TodayView: View {
 }
 
 private enum TaskFilter: String, CaseIterable, Identifiable {
-    case all = "全部", tasks = "待办", homework = "作业"
+    case all = "全部", tasks = "待办", schedules = "日程", homework = "作业", routine = "常态"
     var id: Self { self }
     func includes(_ entry: Entry) -> Bool {
-        entry.isTask && (self == .all || (self == .tasks && entry.kind == .task) || (self == .homework && entry.kind == .homework))
+        entry.isTask && (self == .all || (self == .tasks && entry.kind == .task) || (self == .homework && entry.kind == .homework) || (self == .schedules && entry.kind == .schedule) || (self == .routine && entry.isRoutine))
     }
 }
 
@@ -241,7 +245,6 @@ struct TasksView: View {
     @EnvironmentObject private var store: EntryStore
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Namespace private var cards
     let edit: (Entry) -> Void
     let add: (EntryKind) -> Void
     @State private var query = ""
@@ -257,8 +260,9 @@ struct TasksView: View {
         }
     }
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        let visibleEntries = filtered
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 ChoiceStrip(label: "事项类型", choices: TaskFilter.allCases, selection: $filter, title: { $0.rawValue })
                 HStack {
                     Picker("状态", selection: $showCompleted) { Text("当前清单").tag(false); Text("历史记录").tag(true) }
@@ -270,25 +274,25 @@ struct TasksView: View {
                         ForEach(categories, id: \.self) { value in Button(value) { category = value } }
                     } label: { Label(category.isEmpty ? "分类" : category, systemImage: "line.3.horizontal.decrease").foregroundStyle(.primary) }
                 }.font(.subheadline)
-                SectionLabel(title: showCompleted ? "历史记录" : "我的清单", count: showCompleted ? filtered.count : filtered.filter { !$0.isCompleted }.count, color: Theme.accent)
-                if filtered.isEmpty {
+                SectionLabel(title: showCompleted ? "历史记录" : "我的清单", count: showCompleted ? visibleEntries.count : visibleEntries.filter { !$0.isCompleted }.count, color: Theme.accent)
+                if visibleEntries.isEmpty {
                     EmptyCard(symbol: showCompleted ? "checkmark.seal" : "checklist", title: query.isEmpty ? "清单里还没有事项" : "没有找到相关事项",
                               message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
-                              actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : "待办")",
-                              action: { add(filter == .homework ? .homework : .task) })
-                } else if showCompleted { ForEach(filtered) { entry in EntryCard(entry: entry, edit: { edit(entry) }) } }
+                              actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
+                              action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
+                } else if showCompleted { ForEach(visibleEntries) { entry in EntryCard(entry: entry, edit: { edit(entry) }) } }
                 else {
-                    let overdue = filtered.filter { $0.isOverdue(at: now) }
-                    let doing = filtered.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }
-                    let remaining = filtered.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }
-                    let finished = filtered.filter(\.isCompleted)
+                    let overdue = visibleEntries.filter { $0.isOverdue(at: now) }
+                    let doing = visibleEntries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }
+                    let remaining = visibleEntries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }
+                    let finished = visibleEntries.filter(\.isCompleted)
                     if !overdue.isEmpty { taskGroup("已超时", entries: overdue, color: .red) }
                     if !doing.isEmpty { taskGroup("正在做", entries: doing, color: Theme.accent) }
                     if !remaining.isEmpty { taskGroup("待完成", entries: remaining, color: .primary) }
                     if !finished.isEmpty { taskGroup("今日已完成", entries: finished, color: Theme.accent) }
                 }
             }.padding(20).padding(.bottom, 16)
-                .animation(reduceMotion ? nil : .spring(response: 0.48, dampingFraction: 0.86), value: filtered)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visibleEntries.map(\.id))
         }.background(Theme.background).navigationTitle("待办")
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
@@ -296,11 +300,10 @@ struct TasksView: View {
             .onChange(of: scenePhase) { _, phase in if phase == .active { now = Date() } }
     }
     private func taskGroup(_ title: String, entries: [Entry], color: Color) -> some View {
-        VStack(spacing: 10) {
+        Group {
             SectionLabel(title: title, count: entries.count, color: color)
             ForEach(entries) { entry in
                 EntryCard(entry: entry, edit: { edit(entry) }, now: now)
-                    .matchedGeometryEffect(id: entry.id, in: cards)
             }
         }
     }

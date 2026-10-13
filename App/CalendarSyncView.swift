@@ -4,6 +4,7 @@ import SwiftUI
 struct CalendarSyncView: View {
     @EnvironmentObject private var store: EntryStore
     @EnvironmentObject private var sync: CalendarSyncManager
+    @State private var confirmCleanup = false
     var body: some View {
         Form {
             Section {
@@ -29,11 +30,13 @@ struct CalendarSyncView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             if sync.authorization == .fullAccess {
-                Section("选择日历") {
+                Section {
                     if sync.calendars.isEmpty { Text("系统日历中暂无可读取的日历。") }
                     ForEach(sync.calendars) { calendar in
                         Toggle(isOn: Binding(get: { store.calendarSync.selected.contains(where: { $0.id == calendar.id }) }, set: { selected in
                             var settings = store.calendarSync
+                            settings.selectionInitialized = true
+                            settings.selectionPolicyVersion = 1
                             settings.selected.removeAll { $0.id == calendar.id }
                             if selected { settings.selected.append(calendar.selection) }
                             if store.saveCalendarSyncSettings(settings) { Task { await sync.sync(store: store) } }
@@ -45,7 +48,7 @@ struct CalendarSyncView: View {
                                     Text(calendar.selection.sourceTitle).font(.caption).foregroundStyle(.secondary)
                                 }
                             }
-                        }
+                        }.accessibilityIdentifier("calendar-source-\(calendar.id)")
                     }
                     let unavailable = store.calendarSync.selected.filter { selected in !sync.calendars.contains(where: { $0.id == selected.id }) }
                     ForEach(unavailable) { calendar in
@@ -55,6 +58,14 @@ struct CalendarSyncView: View {
                             Button("取消选择") { var settings = store.calendarSync; settings.selected.removeAll { $0.id == calendar.id }; _ = store.saveCalendarSyncSettings(settings) }
                         }
                     }
+                } header: { Text("自动同步的日历标签 / 来源") } footer: {
+                    Text("按苹果日历中的名称和颜色选择来源，仅勾选的日历会自动同步。首次使用默认不选；旧版默认导入的节假日、生日来源会取消选择，你仍可手动开启。取消选择不删除已有事项。")
+                }
+                if !store.cleanableCalendarEntries.isEmpty {
+                    Section {
+                        Button("清理未选日历的导入事项（\(store.cleanableCalendarEntries.count) 件）", role: .destructive) { confirmCleanup = true }
+                            .accessibilityIdentifier("calendar-cleanup")
+                    } footer: { Text("只清理未经修改、尚未完成的导入事项；保留已完成、Checklist、计时和个人修改。不会删除苹果日历事件。") }
                 }
             }
             Section {
@@ -71,5 +82,8 @@ struct CalendarSyncView: View {
         .navigationTitle("日历自动导入").navigationBarTitleDisplayMode(.inline)
         .disabled(store.readOnly)
         .task { sync.refreshChoices(store: store); await sync.sync(store: store) }
+        .confirmationDialog("清理未选来源的导入事项？", isPresented: $confirmCleanup, titleVisibility: .visible) {
+            Button("清理导入事项", role: .destructive) { _ = store.cleanUnselectedCalendarImports() }
+        } message: { Text("只删除 Mikansei 中未经修改且未完成的导入事项。重新勾选来源后可以再次同步。") }
     }
 }

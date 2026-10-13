@@ -64,7 +64,7 @@ final class CalendarSyncManager: ObservableObject {
             let selection = calendars[0].selection
             guard initializeSelection(store: store) else { return }
             queried = Set(store.calendarSync.selected.map(\.id))
-            events = queried.isEmpty ? [] : [CalendarEventRecord(
+            events = !queried.contains(selection.id) ? [] : [CalendarEventRecord(
                 identity: CalendarEventIdentity(calendarID: selection.id, calendarTitle: selection.title,
                                                 sourceTitle: selection.sourceTitle, eventID: "demo-event"),
                 title: "日历同步演示", start: demoStart, end: demoStart.addingTimeInterval(3600),
@@ -126,6 +126,9 @@ final class CalendarSyncManager: ObservableObject {
             target.isAllDay = entry.plannedAllDay
             target.alarms = [] // Mikansei controls reminders; avoid duplicate Calendar alerts.
         }
+        if entry.kind == .schedule, let start = entry.plannedStart, let end = entry.plannedEnd {
+            target.startDate = start; target.endDate = end; target.isAllDay = entry.plannedAllDay
+        }
         target.title = entry.title; target.notes = entry.body; target.location = entry.location
         if let url = URL(string: entry.platform), ["https", "http"].contains(url.scheme?.lowercased() ?? "") { target.url = url }
         return CalendarPlanSession(entryID: entry.id, event: target, eventStore: eventStore)
@@ -136,7 +139,9 @@ final class CalendarSyncManager: ObservableObject {
         guard !testing || demo, authorization == .fullAccess else { calendars = []; return [] }
         if demo {
             let selection = CalendarSelection(id: "calendar-demo", title: "学习", sourceTitle: "演示日历")
-            calendars = [CalendarOption(selection: selection, color: .indigo, isBirthday: false)]
+            let holidays = CalendarSelection(id: "calendar-demo-holidays", title: "中国大陆节假日", sourceTitle: "演示订阅")
+            calendars = [CalendarOption(selection: selection, color: .indigo, isBirthday: false), CalendarOption(selection: holidays, color: .red, isBirthday: false)]
+            _ = initializeSelection(store: store)
             return []
         }
         eventStore.reset()
@@ -145,25 +150,11 @@ final class CalendarSyncManager: ObservableObject {
             CalendarOption(selection: CalendarSelection(id: $0.calendarIdentifier, title: $0.title, sourceTitle: $0.source.title),
                            color: Color(cgColor: $0.cgColor), isBirthday: $0.type == .birthday)
         }.sorted { ($0.selection.sourceTitle, $0.selection.title) < ($1.selection.sourceTitle, $1.selection.title) }
+        _ = initializeSelection(store: store)
         return available
     }
     private func initializeSelection(store: EntryStore) -> Bool {
-        var settings = store.calendarSync
-        if !settings.selectionInitialized {
-            guard !calendars.isEmpty else { return true }
-            settings.selected = calendars.filter { !$0.isBirthday }.map(\.selection)
-            settings.selectionInitialized = true
-        } else {
-            // EventKit calendar IDs can change after an account resync. Rebind only an unambiguous match.
-            settings.selected = settings.selected.map { old in
-                if let same = calendars.first(where: { $0.id == old.id }) { return same.selection }
-                let matches = calendars.filter { $0.selection.title == old.title && $0.selection.sourceTitle == old.sourceTitle }
-                return matches.count == 1 ? matches[0].selection : old
-            }
-            settings.selected = settings.selected.reduce(into: []) { result, choice in
-                if !result.contains(where: { $0.id == choice.id }) { result.append(choice) }
-            }
-        }
+        let settings = store.calendarSync.refreshed(available: calendars.map(\.selection), referenceIDs: Set(calendars.filter(\.isBirthday).map(\.id)))
         return store.saveCalendarSyncSettings(settings)
     }
     static func record(_ event: EKEvent) -> CalendarEventRecord? {
