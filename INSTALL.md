@@ -55,7 +55,7 @@ python3 Scripts/install_iphone.py --check
 
 后续可走 **TestFlight**：完成开发者会员、App Store Connect 上传与测试配置后，手机安装 TestFlight，打开邀请并点击安装。开发构建通过 Xcode 安装需开发者模式，TestFlight 安装不需要。[TestFlight 说明](https://developer.apple.com/testflight/)、[开发者模式适用范围](https://developer.apple.com/documentation/xcode/enabling-developer-mode-on-a-device/)。
 
-Mikansei 目前没有上传到 TestFlight，没有可用邀请链接。App 与小组件已通过本机 Personal Team 签名编译验证；安装助手的 CLI 参数已检查，完整自动安装、启动以及小组件读取仍需真机验证。
+Mikansei 目前没有上传到 TestFlight，没有可用邀请链接。App 与小组件已通过本机 Personal Team 签名编译验证；完整自动安装与启动已在 iPhone 17 上跑通，小组件的真实读取与布局仍需在手机上确认。
 
 ## 本次更新的使用方式
 
@@ -73,4 +73,4 @@ Mikansei 目前没有上传到 TestFlight，没有可用邀请链接。App 与�
 - **事项详情 → 标签 → 常态（Routine）**：待办和日程都可以开启；支持每天、每周多选星期、每月与自定义间隔，或在“日历选日”中跨月点选不规则日期。
 - 勾选立即更新界面，保存与小组件刷新在后台执行。若出现“更改尚未写入手机”，点击“重试保存”，成功前保留 App 并导出备份。
 
-本轮在 Linux 验证核心逻辑与 Swift 语法；尚未运行 iOS 签名构建或界面测试。安装前请在 Mac 用 Xcode 构建，按 VALIDATION.md 的检查项验证长按、重复规则、闹钟与连续勾选。
+核心逻辑与 Swift 语法已在 Linux 验证；iOS 签名构建与真机安装已在 Mac + iPhone 17 跑通。界面测试与真机交互（长按、重复规则、闹钟与连续勾选）仍按 VALIDATION.md 的检查项在手机上确认。
