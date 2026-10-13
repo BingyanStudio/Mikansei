@@ -94,7 +94,7 @@ app_settings = {
     "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight",
     "TARGETED_DEVICE_FAMILY": "1,2", "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
     "SUPPORTS_MACCATALYST": "NO",
-    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.1.0", "CURRENT_PROJECT_VERSION": "1",
+    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.2.0", "CURRENT_PROJECT_VERSION": "2",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks", "SWIFT_EMIT_LOC_STRINGS": "YES",
 }
 widget_settings = {

@@ -18,6 +18,7 @@ struct RootView: View {
     @EnvironmentObject private var store: EntryStore
     @EnvironmentObject private var notifications: NotificationManager
     @EnvironmentObject private var calendarSync: CalendarSyncManager
+    @EnvironmentObject private var deadlineActivity: DeadlineActivityManager
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance") private var appearance = 0
     @State private var editing: EditingSession?
@@ -77,10 +78,20 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 store.refreshNotifications()
+                deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
                 if editing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
             }
         }
-        .task { if editing == nil { await calendarSync.sync(store: store, requestAccess: true) } }
+        .task {
+            if editing == nil { await calendarSync.sync(store: store, requestAccess: true) }
+            deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
+        }
+        .onChange(of: store.entries) { _, entries in
+            deadlineActivity.refresh(entries: store.readOnly ? [] : entries)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
+        }
         .onReceive(notifications.$openedEntryID) { id in
             if let id, let entry = store.entries.first(where: { $0.id == id }) {
                 if editing != nil || settings || messageImport { pendingRoute = .entry(id) } else { edit(entry) }

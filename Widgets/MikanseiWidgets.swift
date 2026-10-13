@@ -301,6 +301,7 @@ struct MikanseiWidgets: WidgetBundle {
         QuickAddWidget()
         TodayProgressWidget()
         FocusTimerWidget()
+        DeadlineLiveActivity()
         if #available(iOS 26.0, *) { ReminderAlarmActivity() }
     }
 }

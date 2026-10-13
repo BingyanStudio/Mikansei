@@ -15,6 +15,7 @@ struct BackupDocument: FileDocument {
 struct SettingsView: View {
     @EnvironmentObject private var store: EntryStore
     @EnvironmentObject private var notifications: NotificationManager
+    @EnvironmentObject private var deadlineActivity: DeadlineActivityManager
     @AppStorage("appearance") private var appearance = 0
     @State private var backup = BackupDocument()
     @State private var exporting = false
@@ -83,6 +84,27 @@ struct SettingsView: View {
                 }
             }
             Section {
+                Toggle("自动显示今日 DDL", isOn: Binding(get: { deadlineActivity.enabled }, set: {
+                    deadlineActivity.setEnabled($0, entries: store.entries)
+                })).accessibilityIdentifier("deadline-live-activity-enabled")
+                Text(deadlineActivity.status).font(.subheadline)
+                    .accessibilityElement(children: .ignore).accessibilityLabel(deadlineActivity.status)
+                    .accessibilityIdentifier("deadline-live-activity-status")
+                if deadlineActivity.enabled {
+                    Button("重新显示 / 更新", systemImage: "arrow.clockwise") {
+                        deadlineActivity.setEnabled(true, entries: store.entries)
+                    }.accessibilityIdentifier("deadline-live-activity-refresh")
+                }
+                if let error = deadlineActivity.error {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                    Button("打开系统设置", systemImage: "gear") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+                    }
+                }
+            } header: { Text("锁屏与灵动岛 · 实时活动") } footer: {
+                Text("显示已超时、今日与无日期的未完成事项；按重要级和 DDL 排序。最重要的事项显示倒计时，日程显示距开始的时间，无日期则显示无时限。完成或改期时更新，今日清单为空时结束。倒计时归零后停在零；再次打开时刷新逾期状态。系统最多持续 8 小时，回到 App 可恢复。")
+            }
+            Section {
                 Button("导出 JSON 备份", systemImage: "square.and.arrow.up") {
                     do { backup = BackupDocument(data: try EntryArchive(entries: store.entries, courses: store.courses, calendarSync: store.calendarSync).encoded()); exporting = true }
                     catch { message = "导出失败：\(error.localizedDescription)" }
@@ -99,7 +121,7 @@ struct SettingsView: View {
                 Text("数据保存在这台手机，不使用账号或云端同步。卸载 App 会删除本地数据，请定期备份到“文件”。导入采用合并方式，相同编号保留最近修改的版本。")
             }
             Section {
-                LabeledContent("版本", value: "0.1.0")
+                LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"))")
                 Text("待办、作业、Checklist 和随手笔记。") .font(.subheadline).foregroundStyle(.secondary)
                 if NotificationPlan.pending(entries: store.entries, courses: store.courses, limit: 61).count > 60 {
                     Text("目前只安排最近 60 个提醒。打开 App 时会更新后续安排。")

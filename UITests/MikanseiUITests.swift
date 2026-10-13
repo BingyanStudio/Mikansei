@@ -261,6 +261,55 @@ final class MikanseiUITests: XCTestCase {
     }
 
     @MainActor
+    func testDeadlineLiveActivityStartsUpdatesAndStops() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--deadline-activity-demo"]
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["完成：紧急作业"].waitForExistence(timeout: 10), "需先确认合成事项已加载")
+        app.buttons["设置"].tap()
+        let toggle = app.switches["deadline-live-activity-enabled"]
+        for _ in 0..<7 { if toggle.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(toggle.isHittable)
+        let status = app.descendants(matching: .any).matching(identifier: "deadline-live-activity-status").firstMatch
+        for _ in 0..<7 { if status.exists && status.isHittable { break }; app.swipeUp() }
+        XCTAssertTrue(status.exists)
+        let refresh = app.buttons["deadline-live-activity-refresh"]
+        for _ in 0..<3 { if refresh.isHittable { break }; app.swipeUp() }
+        refresh.tap()
+        let starts = NSPredicate(format: "label == %@", "正在显示 · 4 件未完成")
+        expectation(for: starts, evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        XCUIDevice.shared.press(.home)
+        let island = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        island.name = "DDL实时活动-灵动岛"; island.lifetime = .keepAlways; add(island)
+        app.activate()
+        app.buttons["完成"].tap()
+        app.tabBars.buttons["待办"].tap()
+        let first = app.buttons["完成：紧急作业"]
+        for _ in 0..<4 { if first.exists && first.isHittable { break }; app.swipeUp() }
+        first.tap()
+        app.buttons["设置"].tap()
+        for _ in 0..<7 { if status.exists && status.isHittable { break }; app.swipeUp() }
+        expectation(for: NSPredicate(format: "label == %@", "正在显示 · 3 件未完成"), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        let settings = XCTAttachment(screenshot: app.screenshot())
+        settings.name = "DDL实时活动-完成后更新"; settings.lifetime = .keepAlways; add(settings)
+        for _ in 0..<4 { if toggle.isHittable { break }; app.swipeDown() }
+        XCTAssertTrue(toggle.isHittable)
+        XCTAssertEqual(toggle.value as? String, "1")
+        // SwiftUI exposes the whole labeled row as Switch; tap the visible trailing control.
+        toggle.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        XCTAssertEqual(toggle.value as? String, "0")
+        expectation(for: NSPredicate(format: "label == %@", "未开启"), evaluatedWith: status)
+        waitForExpectations(timeout: 10)
+        XCUIDevice.shared.press(.home)
+        let ended = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        ended.name = "DDL实时活动-关闭后"; ended.lifetime = .keepAlways; add(ended)
+    }
+
+    @MainActor
     func testDemoScreenshots() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--demo"]

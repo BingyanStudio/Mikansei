@@ -5,6 +5,7 @@ struct MikanseiApp: App {
     @StateObject private var notifications: NotificationManager
     @StateObject private var store: EntryStore
     @StateObject private var calendarSync = CalendarSyncManager()
+    @StateObject private var deadlineActivity = DeadlineActivityManager()
 
     init() {
         let notifications = NotificationManager()
@@ -17,6 +18,7 @@ struct MikanseiApp: App {
                 .environmentObject(store)
                 .environmentObject(notifications)
                 .environmentObject(calendarSync)
+                .environmentObject(deadlineActivity)
                 .tint(Theme.accent)
         }
     }

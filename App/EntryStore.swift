@@ -28,7 +28,8 @@ final class EntryStore: ObservableObject {
         repository = EntryRepository(fileURL: base.appendingPathComponent("entries.json"))
         writer = EntryArchiveWriter(repository: repository)
         if testing {
-            entries = ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
+            entries = ProcessInfo.processInfo.arguments.contains("--deadline-activity-demo") ? Self.deadlineActivityExamples() :
+                ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
                 ProcessInfo.processInfo.arguments.contains("--demo") ? Self.examples() : []
         } else {
             do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync }
@@ -215,6 +216,13 @@ final class EntryStore: ObservableObject {
         allDay.plannedStart = day; allDay.plannedEnd = calendar.date(byAdding: .day, value: 1, to: day); allDay.plannedAllDay = true
         return [timed("图书馆自习", start: 9, end: 11), timed("社团讨论", start: 10, end: 11), allDay,
                 Entry(title: "报告 DDL", dueDate: calendar.date(bySettingHour: 22, minute: 0, second: 0, of: day)), Entry(title: "买一盏阅读灯")]
+    }
+
+    private static func deadlineActivityExamples(now: Date = Date()) -> [Entry] {
+        let dayEnd = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))!
+        return [Entry(title: "紧急作业", kind: .homework, priority: .urgent, dueDate: min(now.addingTimeInterval(600), dayEnd.addingTimeInterval(-1))),
+                Entry(title: "提交社团材料", priority: .important, dueDate: min(now.addingTimeInterval(1800), dayEnd.addingTimeInterval(-1))),
+                Entry(title: "给家里打电话"), Entry(title: "洗衣服")]
     }
 
     static func examples(now: Date = Date()) -> [Entry] {
