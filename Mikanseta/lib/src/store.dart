@@ -38,7 +38,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.1.0 (1)';
+  String displayVersion = '0.1.1 (2)';
   String? error;
   int _revision = 0;
   Future<void> _writes = Future.value();

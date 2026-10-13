@@ -26,9 +26,26 @@ void main() {
         find.byKey(const ValueKey('entry-title')),
         '验证测试版作业',
       );
+      await tester.tap(find.text('备注、Checklist 与更多信息'));
+      await tester.pumpAndSettle();
+      final checklist = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Checklist',
+      );
+      await tester.ensureVisible(checklist);
+      await tester.enterText(checklist, '完成练习\n上传作业');
       await tester.tap(find.byKey(const ValueKey('save-entry')));
       await tester.pumpAndSettle();
       final id = store.entries.single.id;
+      await tester.tap(find.text('完成练习'));
+      await tester.pumpAndSettle();
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.text('1/2 项'), findsOneWidget);
+      await store.settled;
+      final progress = EntryStore(storage);
+      await progress.load();
+      expect(progress.find(id)!.steps.map((step) => step.done), [true, false]);
+      expect(progress.find(id)!.completed, false);
       await tester.tap(find.byTooltip('开始计时'));
       await tester.pumpAndSettle();
       expect(store.running?.id, id);

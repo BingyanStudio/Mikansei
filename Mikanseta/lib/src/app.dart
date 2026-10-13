@@ -9,7 +9,7 @@ import 'store.dart';
 import 'theme.dart';
 import 'editor.dart';
 
-const appVersion = '0.1.0 (1)';
+const appVersion = '0.1.1 (2)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({super.key, required this.store});
@@ -857,8 +857,6 @@ class EntryTile extends StatelessWidget {
       if (entry.category.isNotEmpty) entry.category,
       if (entry.platform.isNotEmpty) entry.platform,
       if (entry.location.isNotEmpty) entry.location,
-      if (entry.steps.isNotEmpty)
-        '${entry.steps.where((s) => s.done).length}/${entry.steps.length}',
       if (entry.repeatRule != 'never') repeatLabels[entry.repeatRule]!,
     ];
     return Card(
@@ -868,6 +866,7 @@ class EntryTile extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (entry.isTask)
                 IconButton(
@@ -919,6 +918,14 @@ class EntryTile extends StatelessWidget {
                             : scheme.onSurfaceVariant,
                       ),
                     ),
+                    if (entry.steps.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _InlineChecklist(
+                        entry: entry,
+                        store: store,
+                        onDetails: onDetails,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -941,6 +948,74 @@ class EntryTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _InlineChecklist extends StatelessWidget {
+  const _InlineChecklist({
+    required this.entry,
+    required this.store,
+    required this.onDetails,
+  });
+  final Entry entry;
+  final EntryStore store;
+  final VoidCallback onDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = entry.steps;
+    final done = steps.where((step) => step.done).length;
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 80,
+              child: LinearProgressIndicator(
+                value: done / steps.length,
+                semanticsLabel: '${entry.title}的子事项进度，已完成 $done 项，共 ${steps.length} 项',
+              ),
+            ),
+            Text(
+              '$done/${steps.length} 项',
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        ...steps
+            .take(3)
+            .map(
+              (step) => CheckboxListTile(
+                key: ValueKey('inline-step-${entry.id}-${step.id}'),
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                value: step.done,
+                title: Text(
+                  step.title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    decoration: step.done ? TextDecoration.lineThrough : null,
+                    color: step.done
+                        ? scheme.onSurfaceVariant
+                        : scheme.onSurface,
+                  ),
+                ),
+                onChanged: store.readOnly
+                    ? null
+                    : (_) => store.toggleStep(entry.id, step.id),
+              ),
+            ),
+        if (steps.length > 3)
+          TextButton(
+            onPressed: onDetails,
+            child: Text('查看全部 ${steps.length} 个步骤'),
+          ),
+      ],
     );
   }
 }
