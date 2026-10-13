@@ -14,7 +14,7 @@
 | Mac 本地包签名完整性 | `codesign --verify --deep --strict` 通过；本机打开成功 |
 | iOS 模拟器普通启动构建 | 通过 |
 | iPhone Release 不带签名构建 | 通过，约 17.9 MB |
-| iPhone 自动签名 / 真机安装 | 后续通过：Mikanseta Release 0.1.0 (1) 已安装到 XYLiPhone / iOS 26.7.1；手机应用列表验证原版 Mikansei 0.3.0 (4) 同时保留。自动启动被手机锁定拒绝，尚未验证真机运行 |
+| iPhone 自动签名 / 真机安装 | 后续通过：Mikanseta Release 0.1.0 (1) 已安装到 XYLiPhone / iOS 26.7.1；手机应用列表验证原版 Mikansei 0.3.0 (4) 同时保留。解锁后启动成功，设备进程列表确认 Mikanseta 正在运行；真机界面操作尚未逐项实测 |
 | Android 构建 / 真机 | 未验证：本机没有 Android SDK。已加入工程和文件桥接源码，不将其报告为已运行 |
 | 安装脚本 | Python 语法与 shell 语法检查通过；iPhone `--check` 准确返回需要连接解锁设备 |
 | 图标与配色 | 1024×1024 源图无透明通道；平台尺寸由同一源图导出。模拟器实际检查浅色 / 深色、事项列表、计时和文字对比度 |
@@ -45,6 +45,6 @@
 
 Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta，安装脚本同时更新。源码目录保留 `ios/Runner/`，供 Flutter 自动生成插件注册文件；开发命令通过 `--flavor Mikanseta` 选择新方案，继续使用已有 Debug / Profile / Release 配置。Team `7JMRL8X34C` 和 App 安装标识 `com.personal.mikanseta` 保留。此次只调整工程名称与安装流程，App 版本保持 0.1.0 (1)。
 
-工程列表与构建设置验证通过；模拟器普通启动包、真机 Release 不签名包与自动签名构建均通过。已签名发布包通过 `codesign --verify --deep --strict`，安装脚本成功安装，设备应用列表确认真实版本。手机锁定导致系统返回 Locked，未将安装成功报告为运行验证通过。
+工程列表与构建设置验证通过；模拟器普通启动包、真机 Release 不签名包与自动签名构建均通过。已签名发布包通过 `codesign --verify --deep --strict`，安装脚本成功安装，设备应用列表确认真实版本。初次自动启动因手机锁定返回 Locked；用户解锁后再次启动成功，随后设备进程列表确认 Mikanseta 仍在运行。这里只验证真机启动与进程存活，不将其报告为真机界面逐项验证通过。
 
 改名后的 iPhone 17 / iOS 26.5 模拟器集成测试再次通过：启动、原生读写、快速添加、计时、完成保留、重新读取和设置页。测试后恢复测试版原文件。工程 XML / plist 及 Python 安装脚本语法检查通过。
