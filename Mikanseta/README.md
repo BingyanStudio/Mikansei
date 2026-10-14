@@ -28,7 +28,7 @@
 | 循环规则、完成后产生下一次事项 | 已迁移；月历尚未预展开未来循环实例 |
 | 专注计时、本机保存、JSON 备份 | 已迁移 |
 | iOS、macOS 原生文件桥接 | 本机读写与版本接口通过集成测试；系统文档窗口已实现，未自动化操作 |
-| Android 工程和原生文件桥接 | 已加入源码；本机缺少 Android SDK，尚未构建或真机验证 |
+| Android 工程和原生文件桥接 | 已生成发布签名通用 APK；Android 16 / x86_64 模拟器核心操作测试通过，尚未安卓真机验证 |
 | 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 后续接入；本版 DDL 暂不触发系统提醒 |
 | 课表编辑、ICS / CSV、课后作业登记 | 后续接入；备份中的课表记录会保留 |
 | Apple 日历来源选择、自动导入和反向录入 | 后续接入；备份中的日历设置与事件关联会保留 |
@@ -43,6 +43,12 @@
 当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到工作区的 `Mikanseta-macOS.app` 并打开。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
 
 第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
+
+## 安装到安卓手机
+
+已生成 **0.1.1 (2)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+
+双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；安卓真机仍待验证。
 
 ## 安装到 iPhone
 
@@ -84,8 +90,8 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 ./Scripts/flutter.sh test integration_test/app_test.dart -d <模拟器编号> --flavor Mikanseta
 ./Scripts/flutter.sh build macos --release
 ./Scripts/flutter.sh build ios --simulator --flavor Mikanseta
-# 安装并配置 Android SDK 后：
-./Scripts/flutter.sh build apk --debug
+# 配置 Android SDK 和发布签名后：
+./Scripts/build-android.sh
 ```
 
 新机器可按 [Flutter 安装文档](https://docs.flutter.dev/install/manual) 安装本项目固定版本，再设置 `FLUTTER_SDK`。iPhone 测试需 iOS 15 或更新，Mac 构建目标为 macOS 12 或更新。Mac 发布包同时包含 x86_64 和 arm64，本轮运行验证使用 Intel Mac；Apple Silicon 运行尚未实测。

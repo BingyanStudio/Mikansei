@@ -59,3 +59,16 @@ Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta
 - Android 本轮仍未构建或真机验证。
 - iPhone Release 构建、自动签名和安装通过：设备应用列表确认为 Mikanseta 0.1.1 (2)，原版 Mikansei 0.3.0 (4) 同时保留。启动命令成功，随后设备进程列表确认 Mikanseta 正在运行；没有将模拟器交互测试报告为真机逐项操作验证。
 - macOS Release 构建通过；安装脚本重封装并校验包签名，工作区 Mac App 已更新到 0.1.1 (2)。再次打开后确认应用进程运行，安装包签名复核通过。Mac 本轮未重复运行原生界面集成测试，卡片交互由共享界面测试及 iOS 原生集成测试覆盖。
+
+## 安卓首个 APK（2026-10-14）
+
+- Mikanseta 0.1.1 (2) Release 通用 APK 构建通过，包名 `com.personal.mikanseta`。54.0 MB，包含 `armeabi-v7a`、`arm64-v8a`、`x86_64`；最低 API 24，目标 API 36。
+- 发布签名使用独立 RSA 3072 密钥，`apksigner verify --verbose --print-certs` 通过（APK v2）。私钥及 `android/key.properties` 保存在本地，不提交 Git；提供不含凭据的配置样例。
+- Gradle 9.3.1 使用官方 bin 下载源并固定 SHA-256；Java 21 与 Android 命令行工具下载校验和通过。SDK、NDK、模拟器和缓存位于工作区 `.toolchains`，未修改全局 Java / Flutter 配置。当前网络下 Maven Central 对 Gradle 请求返回 403，工作区专用 Gradle 缓存中设置了 Google 托管 Central 镜像与阿里云插件镜像；工程仍保留默认仓库设置。
+- Android 16 / API 36、x86_64 独立模拟器集成测试通过：原生读写、快速添加、卡片内子事项勾选及重新读取、计时、完成保留与设置页。测试使用调试包和 `--no-enable-impeller`；Flutter 工具仅在此空白 QA 模拟器切换测试签名，测试后清理调试包。
+- 初始 SwiftShader 模拟器图形后端出现启动画面与截图挂起，改用 host 图形后端并关闭模拟器 Vulkan 后，核心集成测试通过。这个结果不代替安卓真机 GPU、ARM 架构或系统文件选择器验证。
+- 一键脚本输出按版本命名的 APK 与便携 SHA-256 文件到工作区 `Deliveries/Mikanseta/`；二者不提交 Git 历史。
+
+交付 APK SHA-256：`54a64378c427230983ad503c60fdea3822d40fc290584177e5dcbf7893009514`。安卓真机尚未验证。
+
+正式交付 APK 再次安装和默认启动通过：`am start -W` 返回 Status: ok / COLD，约 1.3 秒完成，随后确认应用进程运行并截图检查首屏；未向正式 APK 传入关闭 Impeller 的启动参数。
