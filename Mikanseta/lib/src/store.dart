@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -38,7 +39,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.1.1 (2)';
+  String displayVersion = '0.1.2 (3)';
   String? error;
   int _revision = 0;
   Future<void> _writes = Future.value();
@@ -47,6 +48,127 @@ class EntryStore extends ChangeNotifier {
   Entry? find(String id) => entries.where((e) => e.id == id).firstOrNull;
   Entry? get running =>
       entries.where((e) => !e.completed && e.startedAt != null).firstOrNull;
+  Map<String, dynamic> get androidCalendarSettings => Map<String, dynamic>.from(
+    _archive.metadata['androidCalendarSync'] as Map? ?? {},
+  );
+  void setAndroidCalendarSettings(Map<String, dynamic> settings) {
+    _commit(
+      Archive(
+        entries: entries,
+        metadata: {..._archive.metadata, 'androidCalendarSync': settings},
+      ),
+    );
+  }
+
+  int importAndroidEvents(List<Map<String, dynamic>> events, String deviceID) {
+    if (readOnly) return 0;
+    final settings = androidCalendarSettings;
+    final suppressed = settings['deviceID'] == deviceID
+        ? Set<String>.from(settings['suppressed'] as List? ?? [])
+        : <String>{};
+    final next = entries.toList();
+    var changed = 0;
+    for (final event in events) {
+      final key = event['key'] as String;
+      if (suppressed.contains(key)) continue;
+      var index = next.indexWhere((entry) {
+        final link = entry.data['androidCalendarLink'] as Map?;
+        return link?['deviceID'] == deviceID && link?['key'] == key;
+      });
+      final rawBody = event['body'] as String;
+      final markerMatch = RegExp(
+        r'mikanseta://entry/([0-9a-fA-F-]{36})\?token=([0-9a-fA-F-]{36})',
+      ).firstMatch(rawBody);
+      final marker = markerMatch?.group(1);
+      if (index < 0 && marker != null) {
+        index = next.indexWhere(
+          (e) =>
+              e.id.toLowerCase() == marker.toLowerCase() &&
+              e.data['androidCalendarLink'] == null &&
+              e.data['androidCalendarExportToken'] == markerMatch?.group(2),
+        );
+      }
+      DateTime date(String field) {
+        final utc = DateTime.fromMillisecondsSinceEpoch(
+          event[field] as int,
+          isUtc: true,
+        );
+        return event['allDay'] == true
+            ? DateTime(utc.year, utc.month, utc.day)
+            : utc.toLocal();
+      }
+
+      final start = date('start');
+      var end = date('end');
+      if (!end.isAfter(start)) {
+        end = event['allDay'] == true
+            ? DateTime(start.year, start.month, start.day + 1)
+            : start.add(const Duration(minutes: 30));
+      }
+      final snapshot = <String, dynamic>{
+        'title': (event['title'] as String).trim().isEmpty
+            ? '未命名日程'
+            : event['title'],
+        'body': rawBody
+            .replaceAll(
+              RegExp(
+                r'\n?mikanseta://entry/[0-9a-fA-F-]{36}\?token=[0-9a-fA-F-]{36}',
+              ),
+              '',
+            )
+            .trim(),
+        'location': event['location'],
+        'plannedStart': isoDate(start),
+        'plannedEnd': isoDate(end),
+        'plannedAllDay': event['allDay'],
+      };
+      final old = index >= 0
+          ? next[index]
+          : Entry.create(
+              title: snapshot['title'] as String,
+              kind: EntryKind.schedule,
+              now: clock(),
+            );
+      final previous =
+          (old.data['androidCalendarLink'] as Map?)?['snapshot'] as Map?;
+      final fields = <String, dynamic>{};
+      for (final field in snapshot.keys) {
+        if (index < 0 ||
+            previous != null && old.data[field] == previous[field] ||
+            previous == null &&
+                (field == 'plannedStart' ||
+                    field == 'plannedEnd' ||
+                    field == 'plannedAllDay')) {
+          fields[field] = snapshot[field];
+        }
+      }
+      if (index < 0) fields['category'] = event['calendarTitle'];
+      fields['androidCalendarLink'] = {
+        'deviceID': deviceID,
+        'key': key,
+        'eventID': event['eventID'],
+        'calendarID': event['calendarID'],
+        'snapshot': snapshot,
+      };
+      if (index < 0) fields['source'] = '系统日历 · ${event['calendarTitle']}';
+      // Comparing the normalized data avoids a save on every app resume.
+      if (fields.entries.every(
+        (f) => jsonEncode(old.data[f.key]) == jsonEncode(f.value),
+      )) {
+        continue;
+      }
+      final updated = old.change(fields, now: clock());
+      validateEntry(updated);
+      if (index < 0) {
+        next.add(updated);
+      } else {
+        next[index] = updated;
+      }
+      changed++;
+    }
+    if (changed > 0) _commit(_archive.withEntries(next));
+    return changed;
+  }
 
   Future<void> load() async {
     if (storage case final NativeStorage native) {
@@ -125,8 +247,27 @@ class EntryStore extends ChangeNotifier {
     if (entry != null) save(entry.toggleStep(step, clock()));
   }
 
-  void delete(String id) =>
-      _commit(_archive.withEntries(entries.where((e) => e.id != id).toList()));
+  void delete(String id) {
+    final link = find(id)?.data['androidCalendarLink'] as Map?;
+    final settings = androidCalendarSettings;
+    final metadata = {..._archive.metadata};
+    if (link != null && settings['deviceID'] == link['deviceID']) {
+      metadata['androidCalendarSync'] = {
+        ...settings,
+        'suppressed': {
+          ...List<String>.from(settings['suppressed'] as List? ?? []),
+          link['key'] as String,
+        }.toList(),
+      };
+    }
+    _commit(
+      Archive(
+        entries: entries.where((e) => e.id != id).toList(),
+        metadata: metadata,
+      ),
+    );
+  }
+
   void focus(String id) {
     if (readOnly) return;
     final target = find(id);

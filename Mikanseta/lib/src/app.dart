@@ -8,8 +8,9 @@ import 'domain.dart';
 import 'store.dart';
 import 'theme.dart';
 import 'editor.dart';
+import 'android_system.dart';
 
-const appVersion = '0.1.1 (2)';
+const appVersion = '0.1.2 (3)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({super.key, required this.store});
@@ -43,11 +44,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Timer? _refresh;
   final searchFocus = FocusNode();
   final searchController = TextEditingController();
+  bool calendarSyncing = false;
+  bool editing = false;
+  bool initialCalendarSync = false;
+  String? calendarSyncError;
   EntryStore get store => widget.store;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    store.addListener(onStoreReady);
+    WidgetsBinding.instance.addPostFrameCallback((_) => onStoreReady());
     _refresh = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
     });
@@ -55,6 +62,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    store.removeListener(onStoreReady);
     _refresh?.cancel();
     searchFocus.dispose();
     searchController.dispose();
@@ -64,16 +72,53 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) setState(() {});
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+      syncCalendar();
+    }
+  }
+
+  void onStoreReady() {
+    if (!store.loading && !initialCalendarSync) {
+      initialCalendarSync = true;
+      syncCalendar();
+    }
+  }
+
+  Future<void> syncCalendar() async {
+    if (!AndroidSystem.supported ||
+        calendarSyncing ||
+        store.loading ||
+        store.readOnly ||
+        editing) {
+      return;
+    }
+    calendarSyncing = true;
+    try {
+      await AndroidSystem.sync(store, canImport: () => mounted && !editing);
+      calendarSyncError = null;
+    } catch (error) {
+      final text = AndroidSystem.error(error);
+      if (mounted && calendarSyncError != text) message('日历导入未完成：$text');
+      calendarSyncError = text;
+    } finally {
+      calendarSyncing = false;
+    }
   }
 
   Future<void> edit({Entry? entry, EntryKind? kind, DateTime? start}) async {
-    if (store.readOnly) return;
-    await showDialog<void>(
-      context: context,
-      builder: (context) =>
-          EntryEditor(store: store, entry: entry, kind: kind, start: start),
-    );
+    if (store.readOnly || editing) return;
+    editing = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (context) =>
+            EntryEditor(store: store, entry: entry, kind: kind, start: start),
+      );
+    } finally {
+      editing = false;
+      if (mounted) syncCalendar();
+    }
   }
 
   void details(Entry entry) => showDialog<void>(
@@ -628,6 +673,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       const SizedBox(height: 20),
+      if (AndroidSystem.supported) ...[
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.calendar_month),
+                title: const Text('系统日历来源'),
+                subtitle: const Text('选择来源、导入日程与设置自动更新'),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => AndroidCalendarPage(store: store),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.alarm),
+                title: const Text('打开系统时钟'),
+                subtitle: const Text('可在事项详情创建闹钟或系统倒计时'),
+                onTap: () async {
+                  try {
+                    await AndroidSystem.call<bool>('showClock');
+                  } catch (error) {
+                    if (mounted) message(AndroidSystem.error(error));
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text('安卓日历导入与系统时钟联动已接入。系统闹钟由时钟 App 管理，不会自动跟随 DDL 改期或完成状态。'),
+        ),
+      ],
       Text('数据', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
       Card(
@@ -681,7 +762,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               SizedBox(height: 18),
               Text('后续接入', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
-              Text('系统弹窗与闹钟提醒、课后登记、Apple 日历双向同步、小组件与实时活动、iCloud Drive 同步。'),
+              Text('系统自动提醒、课后登记、日历自动回写、Apple 日历同步、小组件与实时活动、iCloud Drive 同步。'),
               SizedBox(height: 12),
               Text('本版的 DDL 是清单记录，暂不会发出系统提醒。以上原生能力仍可在 Mikansei 中使用。'),
             ],
@@ -978,7 +1059,8 @@ class _InlineChecklist extends StatelessWidget {
               width: 80,
               child: LinearProgressIndicator(
                 value: done / steps.length,
-                semanticsLabel: '${entry.title}的子事项进度，已完成 $done 项，共 ${steps.length} 项',
+                semanticsLabel:
+                    '${entry.title}的子事项进度，已完成 $done 项，共 ${steps.length} 项',
               ),
             ),
             Text(
@@ -1122,6 +1204,8 @@ class EntryDetails extends StatelessWidget {
                         '累计专注',
                         durationLabel(entry.focusSeconds(store.clock())),
                       ),
+                    if (AndroidSystem.supported && entry.isTask)
+                      AndroidEntryActions(entry: entry, store: store),
                     const SizedBox(height: 20),
                     Wrap(
                       spacing: 8,

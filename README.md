@@ -6,7 +6,7 @@
 
 当前版本 **0.3.0 (4)**：新增 iCloud Drive 文件夹同步和原生 macOS 版本，两端共享待办、日程、笔记、Checklist、完成状态、计时与课表。沿用免费团队，首次在两端选择同一个 iCloud Drive 文件夹即可，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
-另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前为 0.1.1 (2)，使用牛皮浅棕主题。已移植清单、Checklist、日程、循环、计时和备份，事项卡片支持直接勾选子事项；原生系统提醒、日历同步、小组件、实时活动与 iCloud 同步仍在迁移中。两个 App 可并存，本机数据分别保存。Mikanseta 已提供安卓发布签名 APK，见 [安卓安装与打包](Mikanseta/INSTALL_ANDROID.md)；安卓模拟器核心操作验证通过，真机待测。
+另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前为 0.1.2 (3)，使用牛皮浅棕主题。已移植清单、Checklist、日程、循环、计时和备份，事项卡片支持直接勾选子事项；安卓新增系统日历来源选择、自动导入、手动安排到日历及系统闹钟 / 倒计时联动。自动 DDL 提醒、Apple 日历、小组件、实时活动与 iCloud 同步仍在迁移中。两个 App 可并存，本机数据分别保存。Mikanseta 已提供安卓发布签名 APK，见 [安卓安装与打包](Mikanseta/INSTALL_ANDROID.md)；安卓模拟器核心操作验证通过，真机待测。
 
 ## 已实现
 

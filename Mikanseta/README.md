@@ -1,6 +1,6 @@
 # Mikanseta · Flutter 测试版
 
-**0.1.1 (2)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。
+**0.1.2 (3)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。
 
 本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
 
@@ -18,6 +18,8 @@
 - Mikansei v1 JSON 备份合并导入和导出。保持事项编号，保留较新的记录和尚未迁移的原生字段，包括提醒设置、日历关联、日历选择与课表。
 - 电脑快捷键：⌘ / Ctrl + N 添加；⌘ / Ctrl + F 搜索。原生文件选择与保存窗口用于备份。
 - 设置里的版本号直接读取安装包，包含构建编号。
+- 安卓系统日历：勾选来源，导入今天起 30 天的日程；可在打开或返回 App 时自动更新，首次不勾选节假日等任何来源。
+- 安卓事项详情可查看系统事件、预填系统日历新增页，以及创建系统闹钟和倒计时；铃声、重复和振动由系统时钟设置。
 
 ## 迁移进度
 
@@ -29,6 +31,7 @@
 | 专注计时、本机保存、JSON 备份 | 已迁移 |
 | iOS、macOS 原生文件桥接 | 本机读写与版本接口通过集成测试；系统文档窗口已实现，未自动化操作 |
 | Android 工程和原生文件桥接 | 已生成发布签名通用 APK；Android 16 / x86_64 模拟器核心操作测试通过，尚未安卓真机验证 |
+| Android 日历与时钟 | 按来源导入、返回时更新、手动安排日历、系统闹钟 / 倒计时已接入；自动 DDL 闹钟与自动回写待接入 |
 | 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 后续接入；本版 DDL 暂不触发系统提醒 |
 | 课表编辑、ICS / CSV、课后作业登记 | 后续接入；备份中的课表记录会保留 |
 | Apple 日历来源选择、自动导入和反向录入 | 后续接入；备份中的日历设置与事件关联会保留 |
@@ -46,9 +49,11 @@
 
 ## 安装到安卓手机
 
-已生成 **0.1.1 (2)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+已生成 **0.1.2 (3)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
 
 双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；安卓真机仍待验证。
+
+Android 联动的权限、入口与边界见 [安卓使用说明](INSTALL_ANDROID.md)。
 
 ## 安装到 iPhone
 
@@ -70,7 +75,7 @@ Xcode 工程、运行方案和 App 目标均名为 `Mikanseta`。源码目录 `i
 | macOS | `com.personal.mikanseta.macOS` | App 沙盒应用支持目录的 `Mikanseta/entries.json` |
 | Android | `com.personal.mikanseta` | App 私有目录的 `Mikanseta/entries.json` |
 
-备份导入会复制并合并数据，两端的后续编辑不会自动共享。课表与日历配置在备份中保留，但不会在本轮触发原生服务。原设备的 `replica` 同步副本不会随备份复制或回传；原版导入时由原版重建本机同步记录，避免复用另一个设备的同步身份。本版不写入原版 iCloud 同步文件夹。
+备份导入会复制并合并数据，两端的后续编辑不会自动共享。原版课表与 Apple 日历配置在备份中保留，不触发原版服务。Android 日历来源与关联按本机安装身份隔离，换手机或重装后需重新选择来源；安装身份不随 Android 系统备份恢复，以免复用另一部手机的日历编号。原设备的 `replica` 同步副本不会随备份复制或回传；原版导入时由原版重建本机同步记录，避免复用另一个设备的同步身份。本版不写入原版 iCloud 同步文件夹。
 
 原版日期使用 UTC ISO 8601 整秒字符串，测试版导出保持这一格式；连续编辑保证更新时间递增，避免备份合并时丢失同一秒内的改动。导出已与原版 `EntryArchive.decode` 实际往返验证，详见 [验证记录](VALIDATION.md)。
 
@@ -102,7 +107,8 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 - `lib/src/store.dart`：操作状态、串行保存、失败重试；通过可替换存储接口调用平台能力。
 - `lib/src/app.dart` / `editor.dart` / `theme.dart`：自适应界面、录入表单和牛皮浅棕主题。
 - `native/Apple/NativeArchiveBridge.swift`：iOS 和 Mac 共用文件桥接；耗时读写在后台队列，iPhone 写入受后台任务保护。
-- `android/.../MainActivity.kt`：私有原子文件、系统文档选择与版本信息。
+- `lib/src/android_system.dart`：Android 来源选择、导入协调与系统应用入口。
+- `android/.../MainActivity.kt`：私有原子文件、系统文档选择、版本信息、Calendar Provider 和系统日历 / 时钟 Intent。
 - `test/`、`integration_test/`：数据规则、手机 / 电脑界面和真实原生存储测试。
 - `Scripts/verify-backup.sh`：使用原版 Swift 核心生成备份，经 Dart 编辑，再交回原版解码器验证。
 

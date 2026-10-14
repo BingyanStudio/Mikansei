@@ -72,3 +72,17 @@ Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta
 交付 APK SHA-256：`54a64378c427230983ad503c60fdea3822d40fc290584177e5dcbf7893009514`。安卓真机尚未验证。
 
 正式交付 APK 再次安装和默认启动通过：`am start -W` 返回 Status: ok / COLD，约 1.3 秒完成，随后确认应用进程运行并截图检查首屏；未向正式 APK 传入关闭 Impeller 的启动参数。
+
+## 0.1.2 (3)：Android 日历与时钟联动（2026-10-14）
+
+- 静态检查无问题；完整数据 / 界面测试 34 项通过，日历专项 8 项在 `TZ=America/Los_Angeles` 再次通过。覆盖幂等导入、改期不重复、重复实例独立、全天日期及读取范围边界、保留完成 / Checklist / 计时与手动修改、删除排除、导出令牌关联、跨安装来源隔离、编辑期间暂缓导入，以及来源默认不选、倒计时范围、外部处理应用缺失提示、日历确认 / 取消与 DDL 分离。
+- Release 通用 APK 构建及发布签名校验通过，版本 0.1.2 (3)；原发布证书、包名、最低 API 24、目标 API 36 保持。设置页读取实际包版本；所有本地版本回退值同步更新。
+- 专用 Android 16 / x86_64 QA 模拟器中创建两个虚构日历来源（课程、节假日）。在发布包实际界面勾选课程、保留节假日未选，保存后只导入 1 个日程。修改源事件后返回 App，原事项标题、备注和地点更新，未新增副本；打开 / 返回自动导入开关可保存。
+- 实际系统时钟界面确认创建含事项标题的闹钟，重复、铃声和振动可见；系统 25 分钟倒计时启动并显示事项名称与递减时间。QA 时钟提示通知被阻止，故本轮不声称已验证锁屏响铃或后台可靠性。
+- 系统日历新增 / 查看 Intent 的参数、确认、取消与本地数据保留已验证；完整外部编辑保存流程未通过。该 AOSP 镜像的 Calendar 新增组件在清单中声明但安装包缺少 `com.android.calendar.event.EditEventActivity`，启动时报 `ClassNotFoundException`。详情组件另有 String 强转 Long 与空值崩溃；仅对该 AOSP 组件使用其支持的 EventTime 路由绕开前一个错误，外部应用单独启动避免带走 Mikanseta 的任务栈，后续空值错误仍属外部日历限制。其他日历应用沿用标准 Android URI。依据为实际系统日志及 [AOSP EventInfoActivity 源码](https://android.googlesource.com/platform/packages/apps/Calendar/+/refs/heads/main/src/com/android/calendar/EventInfoActivity.kt)。
+- 日历仅读取所选本机来源。安装身份放在 Android `noBackupFilesDir`，不会随系统备份恢复到另一部手机，避免错误复用 Calendar Provider 编号。没有读写个人日历；临时测试仅发生在专用模拟器。
+- 本轮没有安装到 iPhone 或 Mac；它们的现有安装版本未改变。安卓品牌真机、ARM 架构运行、系统日历完整编辑保存及真实账号下载仍待验证。
+
+Android 系统时钟采用 [官方通用 Intent](https://developer.android.com/guide/components/intents-common)，只设置时、分或倒计时时长。没有实现自动 DDL 调度、自动取消闹钟、后台持续同步或日历自动回写。
+
+0.1.2 (3) 最终 APK SHA-256：`4fee5861fbce436bab62be63bedf0168dbbcdb0382f28f32f4279b5bf30b2ae3`。
