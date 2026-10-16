@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -9,22 +11,33 @@ import 'store.dart';
 import 'theme.dart';
 import 'editor.dart';
 import 'android_system.dart';
+import 'calendar_view.dart';
+import 'student_tools.dart';
+import 'system_services.dart';
 
-const appVersion = '0.1.2 (3)';
+const appVersion = '0.2.0 (4)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({super.key, required this.store});
   final EntryStore store;
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    title: 'Mikanseta',
-    debugShowCheckedModeBanner: false,
-    theme: KraftTheme.build(Brightness.light),
-    darkTheme: KraftTheme.build(Brightness.dark),
-    locale: const Locale('zh', 'CN'),
-    supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    home: HomePage(store: store),
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: store,
+    builder: (context, _) => MaterialApp(
+      title: 'Mikanseta',
+      debugShowCheckedModeBanner: false,
+      theme: KraftTheme.build(Brightness.light),
+      darkTheme: KraftTheme.build(Brightness.dark),
+      locale: const Locale('zh', 'CN'),
+      supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      themeMode: switch (store.preferences["appearance"]) {
+        "light" => ThemeMode.light,
+        "dark" => ThemeMode.dark,
+        _ => ThemeMode.system,
+      },
+      home: HomePage(store: store),
+    ),
   );
 }
 
@@ -39,13 +52,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int page = 0;
   String query = '';
   String filter = '全部';
-  DateTime selectedDate = dayOf(DateTime.now());
-  DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
   Timer? _refresh;
   final searchFocus = FocusNode();
   final searchController = TextEditingController();
   bool calendarSyncing = false;
   bool editing = false;
+  bool readingRoutes = false;
+  bool popupVisible = false;
+  final pendingPopups = <Map<String, dynamic>>[];
+  final handledPopups = <String>{};
   bool initialCalendarSync = false;
   String? calendarSyncError;
   EntryStore get store => widget.store;
@@ -54,6 +69,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     store.addListener(onStoreReady);
+    NativeStorage.channel.setMethodCallHandler((call) async {
+      if (call.method == "routesAvailable") {
+        readRoutes();
+      }
+      if (call.method == 'foregroundReminder') {
+        showForeground(Map<String, dynamic>.from(call.arguments as Map));
+      }
+      if (call.method == "serviceError" && mounted) {
+        message("${call.arguments}");
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => onStoreReady());
     _refresh = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() {});
@@ -63,6 +89,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     store.removeListener(onStoreReady);
+    NativeStorage.channel.setMethodCallHandler(null);
     _refresh?.cancel();
     searchFocus.dispose();
     searchController.dispose();
@@ -75,6 +102,115 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       setState(() {});
       syncCalendar();
+      store.refreshServices();
+      readRoutes();
+    }
+  }
+
+  Future<void> showForeground(Map<String, dynamic> item) async {
+    final id = item['id'] as String;
+    if (handledPopups.contains(id) || pendingPopups.any((p) => p['id'] == id)) {
+      return;
+    }
+    pendingPopups.add(item);
+    if (popupVisible || !mounted) return;
+    popupVisible = true;
+    try {
+      while (pendingPopups.isNotEmpty && mounted) {
+        if (!mounted) break;
+        final next = pendingPopups.removeAt(0);
+        handledPopups.add(next['id'] as String);
+        final action = await showDialog<String>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(next['title'] as String),
+            content: Text(next['body'] as String),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'dismiss'),
+                child: const Text('知道了'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'snooze'),
+                child: const Text('稍后提醒'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, 'open'),
+                child: const Text('打开'),
+              ),
+              if (next['canComplete'] != false)
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, 'complete'),
+                  child: const Text('完成'),
+                ),
+            ],
+          ),
+        );
+        await NativeStorage.channel.invokeMethod('foregroundAction', {
+          'id': next['id'],
+          'action': action ?? 'dismiss',
+        });
+      }
+    } finally {
+      popupVisible = false;
+    }
+  }
+
+  Future<void> readRoutes() async {
+    if (store.loading || readingRoutes || !mounted) return;
+    readingRoutes = true;
+    try {
+      final routes =
+          await NativeStorage.channel.invokeListMethod<dynamic>("takeRoutes") ??
+          [];
+      for (final raw in routes) {
+        if (!mounted) break;
+        final route = Map<String, dynamic>.from(raw as Map);
+        final url = Uri.tryParse(route["url"] as String? ?? "");
+        final id =
+            route["entryID"] as String? ??
+            (url?.host == "entry" || url?.host == "focus"
+                ? url?.pathSegments.lastOrNull
+                : null);
+        if (route["courseID"] != null) {
+          final c = store.courses
+              .where((c) => c.id == route["courseID"])
+              .firstOrNull;
+          if (c != null) {
+            await showDialog<void>(
+              context: context,
+              builder: (_) =>
+                  EntryEditor(store: store, entry: c.homework(), isNew: true),
+            );
+          }
+        } else if (id != null) {
+          final e = store.find(id);
+          if (e != null) {
+            if (route["action"] == "complete") {
+              if (!e.completed) store.toggle(id);
+            } else if (url?.host == "focus") {
+              final start = url?.queryParameters["action"] == "start";
+              if ((e.startedAt == null) == start) store.focus(id);
+            } else {
+              details(e);
+            }
+          }
+        } else if (url?.host == "new") {
+          await edit(
+            kind:
+                EntryKind.values
+                    .where((k) => k.name == url?.queryParameters["kind"])
+                    .firstOrNull ??
+                EntryKind.task,
+          );
+        } else if (url?.host == "today" || url?.host == "tasks") {
+          setState(() => page = url?.host == "tasks" ? 1 : 0);
+        }
+      }
+    } catch (_) {
+      /* A platform without routes keeps the shared UI usable. */
+    } finally {
+      readingRoutes = false;
     }
   }
 
@@ -82,6 +218,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     if (!store.loading && !initialCalendarSync) {
       initialCalendarSync = true;
       syncCalendar();
+      WidgetsBinding.instance.addPostFrameCallback((_) => readRoutes());
     }
   }
 
@@ -106,14 +243,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> edit({Entry? entry, EntryKind? kind, DateTime? start}) async {
-    if (store.readOnly || editing) return;
+  Future<void> edit({
+    Entry? entry,
+    EntryKind? kind,
+    DateTime? start,
+    DateTime? end,
+  }) async {
+    if (store.readOnly || store.loading || editing) return;
     editing = true;
     try {
       await showDialog<void>(
         context: context,
-        builder: (context) =>
-            EntryEditor(store: store, entry: entry, kind: kind, start: start),
+        builder: (context) => EntryEditor(
+          store: store,
+          entry: entry,
+          kind: kind,
+          start: start,
+          end: end,
+        ),
       );
     } finally {
       editing = false;
@@ -311,6 +458,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       entries = switch (filter) {
         '已超时' => board.overdue,
         '紧急' => board.visible.where((e) => e.priority == 2).toList(),
+        '常态' => board.visible.where((e) => e.repeatRule != 'never').toList(),
+        '作业' =>
+          board.visible.where((e) => e.kind == EntryKind.homework).toList(),
         '历史' => board.history,
         _ => board.visible,
       };
@@ -397,7 +547,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: ['全部', '已超时', '紧急', '历史']
+            children: ['全部', '已超时', '紧急', '作业', '常态', '历史']
                 .map(
                   (label) => ChoiceChip(
                     label: Text(
@@ -453,194 +603,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       ),
     ),
   );
-  Widget calendar(bool desktop) {
-    final lastDay = DateTime(month.year, month.month + 1, 0).day;
-    final offset = month.weekday - 1;
-    final items =
-        store.entries.where((e) => e.isTask && e.onDay(selectedDate)).toList()
-          ..sort(entryOrder);
-    final monthView = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            IconButton(
-              tooltip: '上个月',
-              icon: const Icon(Icons.chevron_left),
-              onPressed: () =>
-                  setState(() => month = DateTime(month.year, month.month - 1)),
-            ),
-            Expanded(
-              child: Center(
-                child: Text(
-                  '${month.year} 年 ${month.month} 月',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: '下个月',
-              icon: const Icon(Icons.chevron_right),
-              onPressed: () =>
-                  setState(() => month = DateTime(month.year, month.month + 1)),
-            ),
-            TextButton(
-              onPressed: () => setState(() {
-                selectedDate = dayOf(DateTime.now());
-                month = DateTime(selectedDate.year, selectedDate.month);
-              }),
-              child: const Text('今天'),
-            ),
-          ],
-        ),
-        Row(
-          children: ['一', '二', '三', '四', '五', '六', '日']
-              .map(
-                (d) => Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      child: Text(d),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 7,
-            mainAxisExtent: 54,
-          ),
-          itemCount: ((lastDay + offset + 6) ~/ 7) * 7,
-          itemBuilder: (context, index) {
-            final day = index - offset + 1;
-            if (day < 1 || day > lastDay) return const SizedBox.shrink();
-            final date = DateTime(month.year, month.month, day);
-            final selected = sameDay(date, selectedDate);
-            final hasEntries = store.entries.any(
-              (e) => e.isTask && !e.completed && e.onDay(date),
-            );
-            final scheme = Theme.of(context).colorScheme;
-            return Semantics(
-              label: '${date.month} 月 $day 日${hasEntries ? '，有未完成事项' : ''}',
-              button: true,
-              selected: selected,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => setState(() => selectedDate = date),
-                onLongPress: store.readOnly
-                    ? null
-                    : () => edit(
-                        kind: EntryKind.schedule,
-                        start: DateTime(date.year, date.month, date.day, 9),
-                      ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  margin: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: selected ? scheme.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(14),
-                    border: sameDay(date, DateTime.now())
-                        ? Border.all(color: scheme.primary)
-                        : null,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '$day',
-                        style: TextStyle(
-                          color: selected ? scheme.onPrimary : scheme.onSurface,
-                          fontWeight: selected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: hasEntries
-                              ? selected
-                                    ? scheme.onPrimary
-                                    : scheme.primary
-                              : Colors.transparent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        Text('长按日期，快速添加日程', style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-    final agenda = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${dateLabel(selectedDate, time: false)} 的安排',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            IconButton(
-              tooltip: '添加当天日程',
-              onPressed: store.readOnly
-                  ? null
-                  : () => edit(
-                      kind: EntryKind.schedule,
-                      start: DateTime(
-                        selectedDate.year,
-                        selectedDate.month,
-                        selectedDate.day,
-                        9,
-                      ),
-                    ),
-              icon: const Icon(Icons.add),
-            ),
-          ],
-        ),
-        if (items.isEmpty)
-          const EmptyState(
-            icon: Icons.event_available_outlined,
-            title: '这一天没有安排',
-            message: '长按日期，或者点 + 记下一段时间。',
-          )
-        else
-          AnimatedEntryList(
-            entries: items,
-            now: store.clock(),
-            store: store,
-            onDetails: details,
-            showGroups: false,
-          ),
-      ],
-    );
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      child: desktop
-          ? Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(child: monthView),
-                const SizedBox(width: 32),
-                Expanded(child: agenda),
-              ],
-            )
-          : Column(children: [monthView, const SizedBox(height: 24), agenda]),
-    );
-  }
+  Widget calendar(bool desktop) => ScheduleCalendar(
+    store: store,
+    onOpen: details,
+    onCreate: (start, end) =>
+        edit(kind: EntryKind.schedule, start: start, end: end),
+  );
 
   Widget settings() => ListView(
     padding: const EdgeInsets.fromLTRB(20, 12, 20, 50),
@@ -673,6 +641,45 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       const SizedBox(height: 20),
+      ListTile(
+        leading: const Icon(Icons.notifications_active),
+        title: const Text('提醒、小组件与实时活动'),
+        subtitle: Text(store.serviceError ?? '系统权限、提醒状态、今日 DDL'),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => ServicesSettings(store: store),
+          ),
+        ),
+      ),
+      DropdownButtonFormField<String>(
+        initialValue: store.preferences['appearance'] as String? ?? 'system',
+        decoration: const InputDecoration(labelText: '外观'),
+        items: const [
+          DropdownMenuItem(value: 'system', child: Text('跟随系统')),
+          DropdownMenuItem(value: 'light', child: Text('浅色')),
+          DropdownMenuItem(value: 'dark', child: Text('深色')),
+        ],
+        onChanged: (v) => store.setPreferences({'appearance': v}),
+      ),
+      ListTile(
+        leading: const Icon(Icons.school),
+        title: const Text('课表与下课登记提醒'),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(builder: (_) => CoursesPage(store: store)),
+        ),
+      ),
+      ListTile(
+        leading: const Icon(Icons.message_outlined),
+        title: const Text('从群消息添加'),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => MessageImportPage(store: store),
+          ),
+        ),
+      ),
       if (AndroidSystem.supported) ...[
         Card(
           child: Column(
@@ -689,24 +696,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 ),
               ),
               const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.alarm),
-                title: const Text('打开系统时钟'),
-                subtitle: const Text('可在事项详情创建闹钟或系统倒计时'),
-                onTap: () async {
-                  try {
-                    await AndroidSystem.call<bool>('showClock');
-                  } catch (error) {
-                    if (mounted) message(AndroidSystem.error(error));
-                  }
-                },
-              ),
+              if (defaultTargetPlatform == TargetPlatform.android)
+                ListTile(
+                  leading: const Icon(Icons.alarm),
+                  title: const Text('打开系统时钟'),
+                  subtitle: const Text('可在事项详情创建闹钟或系统倒计时'),
+                  onTap: () async {
+                    try {
+                      await AndroidSystem.call<bool>('showClock');
+                    } catch (error) {
+                      if (mounted) message(AndroidSystem.error(error));
+                    }
+                  },
+                ),
             ],
           ),
         ),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text('安卓日历导入与系统时钟联动已接入。系统闹钟由时钟 App 管理，不会自动跟随 DDL 改期或完成状态。'),
+          child: Text('仅导入你勾选的来源。由 Mikanseta 管理的提醒随事项更新；手动创建到系统时钟的记录独立保留。'),
         ),
       ],
       Text('数据', style: Theme.of(context).textTheme.titleMedium),
@@ -758,13 +766,17 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             children: [
               Text('已可使用', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
-              Text('清单、作业、笔记、Checklist、DDL 排序、当天完成记录、日程起止时间、循环事项、专注计时、备份导入导出。'),
+              Text(
+                '清单与 Checklist、月 / 日 / 周日历、拖动选时段、循环与计时、课表及课后登记、消息解析、系统日历与提醒、小组件和今日 DDL 展示、备份。',
+              ),
               SizedBox(height: 18),
-              Text('后续接入', style: TextStyle(fontWeight: FontWeight.w700)),
+              Text('同步', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
-              Text('系统自动提醒、课后登记、日历自动回写、Apple 日历同步、小组件与实时活动、iCloud Drive 同步。'),
+              Text('本轮不包含账户和跨设备云同步。'),
               SizedBox(height: 12),
-              Text('本版的 DDL 是清单记录，暂不会发出系统提醒。以上原生能力仍可在 Mikansei 中使用。'),
+              Text(
+                '系统功能需要对应权限。iPhone 实时活动需要 iOS 17、原生闹钟需要 iOS 26；Mac 使用系统通知，安卓的锁屏展示为常驻通知。',
+              ),
             ],
           ),
         ),
@@ -1154,6 +1166,28 @@ class EntryDetails extends StatelessWidget {
                     ),
                     if (entry.due != null)
                       detail('截止时间', dateLabel(entry.due!)),
+                    if ([
+                      'https',
+                      'http',
+                    ].contains(Uri.tryParse(entry.platform)?.scheme))
+                      TextButton.icon(
+                        onPressed: () async {
+                          try {
+                            await NativeStorage.channel.invokeMethod(
+                              'openExternalURL',
+                              entry.platform,
+                            );
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('无法打开链接：$e')),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text('打开提交平台'),
+                      ),
                     if (entry.start != null)
                       detail(
                         '开始时间',

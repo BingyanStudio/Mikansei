@@ -1,10 +1,10 @@
 # Mikanseta · Flutter 测试版
 
-**0.1.2 (3)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。
+**0.2.0 (4)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。
 
 本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
 
-## 首轮可用功能
+## 已可用功能
 
 - 一句话快速添加，待办 / 作业 / 日程 / 笔记四种类型，详细字段按需展开。
 - 「已超时」优先显示；同栏目内按紧急 → 重要 → 普通，再按 DDL / 日程开始时间排序。无日期事项仍在清单里。
@@ -23,21 +23,25 @@
 
 ## 迁移进度
 
-| 能力 | 本轮状态 |
+本轮迁移源码已通过 Dart 静态检查与 44 项 Flutter 测试、Android Release 构建和 iOS 模拟器构建；APK 签名与版本元数据也已校验。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
+
+| 能力 | 当前状态 |
 | --- | --- |
-| 清单、Checklist、完成 / 历史、排序、快速添加 | 已迁移 |
-| 日程起止时间、全天、月历、长按添加 | 已迁移基础操作；尚未接入 Apple 日历 |
-| 循环规则、完成后产生下一次事项 | 已迁移；月历尚未预展开未来循环实例 |
-| 专注计时、本机保存、JSON 备份 | 已迁移 |
+| 清单、Checklist、完成 / 历史、排序、快速添加 | 已迁移并验证 |
+| 日程起止时间、全天、月历、长按添加 | 已迁移基础操作并验证 |
+| 日 / 周日历与拖动选时段 | 静态检查与 Widget 测试通过，含只读模式不创建日程的回归 |
+| 循环规则、完成后产生下一次事项 | 已迁移并验证；月历尚未预展开未来循环实例 |
+| 专注计时、本机保存、JSON 备份 | 已迁移并验证 |
 | iOS、macOS 原生文件桥接 | 本机读写与版本接口通过集成测试；系统文档窗口已实现，未自动化操作 |
-| Android 工程和原生文件桥接 | 已生成发布签名通用 APK；Android 16 / x86_64 模拟器核心操作测试通过，尚未安卓真机验证 |
-| Android 日历与时钟 | 按来源导入、返回时更新、手动安排日历、系统闹钟 / 倒计时已接入；自动 DDL 闹钟与自动回写待接入 |
-| 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 后续接入；本版 DDL 暂不触发系统提醒 |
-| 课表编辑、ICS / CSV、课后作业登记 | 后续接入；备份中的课表记录会保留 |
-| Apple 日历来源选择、自动导入和反向录入 | 后续接入；备份中的日历设置与事件关联会保留 |
-| 主屏幕 / 锁屏小组件、正在做与 DDL 实时活动 | 后续保留原生扩展并接入 Flutter 数据 |
-| iCloud Drive 同一 Apple ID 自动同步 | 后续接入原有同步协议；本版使用独立本机数据与手动备份 |
-| QQ 消息自动获取或辅助解析 | 本轮未迁移 |
+| Apple 日历来源选择、自动导入和反向录入 | 源码已接入，未验证 |
+| 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 源码已接入，未验证 |
+| 主屏幕 / 锁屏小组件、正在做与 DDL 实时活动 | 源码已接入，未验证 |
+| 课表编辑、CSV / ICS、课后作业登记 | 源码已接入；CSV / ICS 解析有单元测试通过，界面与原生未验证 |
+| 粘贴消息解析 | 源码已接入；单元测试通过 |
+| Android 工程、原生文件桥接、系统日历与时钟 | 已生成发布签名通用 APK；Android 16 / x86_64 模拟器核心操作测试通过，尚未安卓真机验证 |
+| Android 系统服务：本地提醒、小组件、前台响铃 | Release 编译通过；设备行为未验证 |
+| Android 系统日历编辑结果即时回流 | 尚未实现；需后续完成原生异步结果与事项匹配 |
+| iCloud Drive 同一 Apple ID 自动同步 | 未迁移；本版使用独立本机数据与手动备份 |
 
 这些原生功能仍可在原版 Mikansei 中使用。测试版尚未代替原版作为唯一提醒工具。
 
@@ -45,13 +49,17 @@
 
 当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到工作区的 `Mikanseta-macOS.app` 并打开。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
 
+本轮 macOS Release 构建通过，生成的 App 尚未安装或启动；Mac 原生界面仍未验证，见 [验证记录](VALIDATION.md)。
+
 第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
 
 ## 安装到安卓手机
 
-已生成 **0.1.2 (3)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+已生成 **0.2.0 (4)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
 
-双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；安卓真机仍待验证。
+本轮已重新构建并导出 **0.2.0 (4)** Release APK，55.9 MB。SHA-256 与签名验证结果见 [验证记录](VALIDATION.md)。
+
+双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。此前 Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；本轮 Android 设备未连接，新加入的提醒和小组件仍待设备验证。
 
 Android 联动的权限、入口与边界见 [安卓使用说明](INSTALL_ANDROID.md)。
 
@@ -61,7 +69,9 @@ Android 联动的权限、入口与边界见 [安卓使用说明](INSTALL_ANDROI
 2. 连接并解锁手机，确认信任这台 Mac。
 3. 双击 **`安装到iPhone.command`**。脚本只安装 Mikanseta，保留原版 Mikansei。
 
-本轮沿用已有 Team；新 App 的签名需要 Xcode 账号与对应描述文件。2026-10-13 已完成 Release 自动签名并安装到 XYLiPhone，手机上的版本已更新为 0.1.1 (2)，原版 Mikansei 0.3.0 (4) 同时保留。解锁后系统启动成功，并确认 Mikanseta 真机进程持续运行；手机界面操作尚未逐项实测。iPhone 模拟器已经构建并验证。
+沿用已有 Team；新 App 的签名需要 Xcode 账号与对应描述文件。2026-10-13 已完成 Release 自动签名并安装到 XYLiPhone，当时手机上的版本为 0.1.1 (2)，原版 Mikansei 0.3.0 (4) 同时保留。解锁后系统启动成功，并确认 Mikanseta 真机进程持续运行；手机界面操作尚未逐项实测。iPhone 模拟器已经构建并验证。
+
+0.2.0 (4) 没有安装到 iPhone：当前工作区的 iOS 侧改动只是源码接入，尚未编译，也没有在设备上运行；Dart 侧静态检查与测试通过只覆盖 Dart 与 Widget 层。iPhone 上的实际版本以设备显示为准，见 [验证记录](VALIDATION.md)。
 
 免费签名的有效期与可安装数量由 Apple 管理；安装失败时脚本显示实际原因，不会卸载其他 App。
 
@@ -82,6 +92,8 @@ Xcode 工程、运行方案和 App 目标均名为 `Mikanseta`。源码目录 `i
 ## 开发与验证
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
+
+本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 44 项全部通过。只读模式下拖动选择时段的回归测试一度失败，已在 `lib/src/calendar_view.dart` 修复后通过。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
 
 `Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或工作区 `.toolchains/flutter`，否则查找已安装的 Flutter。缓存存放于工作区 `.toolchains/pub-cache`。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 
@@ -106,10 +118,17 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 - `lib/src/domain.dart`：事项、排序、循环、计时计算、备份验证和合并；纯 Dart，可单独验证。
 - `lib/src/store.dart`：操作状态、串行保存、失败重试；通过可替换存储接口调用平台能力。
 - `lib/src/app.dart` / `editor.dart` / `theme.dart`：自适应界面、录入表单和牛皮浅棕主题。
+- `lib/src/calendar_view.dart`：月历、周视图与日视图，长按拖动选时段。
+- `lib/src/student_tools.dart`：课程模型、CSV / ICS 解析与粘贴消息解析。
+- `lib/src/system_services.dart`：把提醒计划交给原生服务的桥接层。
 - `native/Apple/NativeArchiveBridge.swift`：iOS 和 Mac 共用文件桥接；耗时读写在后台队列，iPhone 写入受后台任务保护。
+- `native/Apple/AppleSystemServices.swift`、`native/Apple/Ported/`：Apple 日历、通知 / 闹钟调度、小组件摘要与实时活动数据。
 - `lib/src/android_system.dart`：Android 来源选择、导入协调与系统应用入口。
+- `android/.../LocalServices.kt`：Android 本地提醒、前台响铃、小组件与系统日历写入。
+- `ios/Widgets/`：Mikanseta Widgets 扩展，含主屏幕 / 锁屏小组件与实时活动。
 - `android/.../MainActivity.kt`：私有原子文件、系统文档选择、版本信息、Calendar Provider 和系统日历 / 时钟 Intent。
 - `test/`、`integration_test/`：数据规则、手机 / 电脑界面和真实原生存储测试。
 - `Scripts/verify-backup.sh`：使用原版 Swift 核心生成备份，经 Dart 编辑，再交回原版解码器验证。
+- `Scripts/configure-native-services.py`：把共享原生核心与独立命名的 Widget 扩展挂进 Xcode 工程，保留现有签名设置。
 
 后续平台能力从桥接层接入；清单与交互代码继续共享。提醒、日历、WidgetKit / ActivityKit 扩展和同步协议将分别迁移，不把系统服务混入界面代码。

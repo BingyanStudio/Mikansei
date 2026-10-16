@@ -10,9 +10,11 @@ import AppKit
 
 /// The Flutter domain owns merging. This adapter provides atomic local storage
 /// and user-selected documents, without iCloud entitlements.
+@MainActor
 final class NativeArchiveBridge: NSObject {
     private let queue = DispatchQueue(label: "Mikanseta.archive", qos: .userInitiated)
     private let channel: FlutterMethodChannel
+    private lazy var services = AppleSystemServices(channel:channel)
     private var pickerResult: FlutterResult?
     private let archiveURL: URL
     init(messenger: FlutterBinaryMessenger) {
@@ -20,14 +22,19 @@ final class NativeArchiveBridge: NSObject {
         archiveURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Mikanseta", isDirectory: true).appendingPathComponent("entries.json")
         super.init()
+        _ = services
         channel.setMethodCallHandler { [weak self] call, result in self?.handle(call, result: result) }
     }
+    func acceptURL(_ url:URL) { services.acceptURL(url) }
     private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if services.handle(call,result:result) { return }
         switch call.method {
         case "readArchive":
             perform(result) { [archiveURL] in
                 guard FileManager.default.fileExists(atPath: archiveURL.path) else { return nil }
-                return try String(contentsOf: archiveURL, encoding: .utf8)
+                let text = try String(contentsOf: archiveURL, encoding: .utf8)
+                DispatchQueue.main.async { self.services.update(text) }
+                return text
             }
         case "writeArchive":
             guard let text = call.arguments as? String else { result(FlutterError(code: "arguments", message: "缺少备份内容", details: nil)); return }
@@ -38,9 +45,10 @@ final class NativeArchiveBridge: NSObject {
                 #else
                 try Data(text.utf8).write(to: archiveURL, options: .atomic)
                 #endif
+                DispatchQueue.main.async { self.services.update(text) }
                 return nil
             }
-        case "importArchive": openDocument(result)
+        case "importArchive", "importText": openDocument(result)
         case "exportArchive":
             guard let text = call.arguments as? String else { result(FlutterError(code: "arguments", message: "缺少备份内容", details: nil)); return }
             exportDocument(text, result: result)
@@ -88,7 +96,7 @@ final class NativeArchiveBridge: NSObject {
     private func openDocument(_ result: @escaping FlutterResult) {
         guard pickerResult == nil, let presenter else { result(FlutterError(code: "busy", message: "请稍后再导入", details: nil)); return }
         pickerResult = result
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json], asCopy: false)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json,.plainText,.commaSeparatedText,UTType(filenameExtension:"ics") ?? .data], asCopy: false)
         picker.delegate = self; picker.allowsMultipleSelection = false
         presenter.present(picker, animated: true)
     }
@@ -112,7 +120,7 @@ final class NativeArchiveBridge: NSObject {
     }
     #else
     private func openDocument(_ result: @escaping FlutterResult) {
-        let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]
+        let panel = NSOpenPanel(); panel.allowedContentTypes = [.json,.plainText,.commaSeparatedText,UTType(filenameExtension:"ics") ?? .data]
         panel.allowsMultipleSelection = false; panel.canChooseDirectories = false
         guard panel.runModal() == .OK, let url = panel.url else { result(nil); return }
         perform(result) { try self.readSelected(url) }

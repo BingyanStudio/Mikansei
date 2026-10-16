@@ -22,9 +22,32 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.personal.mikanseta</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mikanseta</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>MikansetaSharedKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)$(MIKANSETA_SHARED_KEYCHAIN_SUFFIX)</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>按事项截止时间、日程或下课时间设置闹钟提醒。</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>读取所选日历，并在你确认后安排或编辑日历事件。</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>读取你选择的日历，将日程与待办放在同一张清单中。</string>
+	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>

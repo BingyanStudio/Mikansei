@@ -207,6 +207,7 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(NativeStorage.channel, (call) async {
           if (call.method == 'calendarDeviceID') return 'phone';
+          if (call.method == 'takeCalendarEdits') return [];
           if (call.method == 'addCalendarEvent') {
             requests.add(Map<String, dynamic>.from(call.arguments as Map));
           }

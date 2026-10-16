@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="14dp" android:background="#F5EDDE">
+ <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+  <TextView android:id="@+id/widget_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:textColor="#805734" android:textStyle="bold" android:textSize="16sp"/>
+  <TextView android:id="@+id/widget_add" android:layout_width="44dp" android:layout_height="44dp" android:gravity="center" android:text="+" android:textColor="#805734" android:textSize="24sp" android:contentDescription="添加事项"/>
+ </LinearLayout>
+ <TextView android:id="@+id/widget_body" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:textColor="#38291E" android:textSize="14sp" android:maxLines="6" android:ellipsize="end"/>
+ <Chronometer android:id="@+id/widget_timer" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="24sp" android:textColor="#805734" android:visibility="gone"/>
+ <TextView android:id="@+id/widget_focus_action" android:layout_width="match_parent" android:layout_height="44dp" android:gravity="center" android:textColor="#805734" android:visibility="gone"/>
+ <LinearLayout android:id="@+id/widget_quick" android:layout_width="match_parent" android:layout_height="44dp" android:orientation="horizontal" android:visibility="gone">
+  <TextView android:id="@+id/widget_task" android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:gravity="center" android:text="待办" android:textColor="#805734"/>
+  <TextView android:id="@+id/widget_homework" android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:gravity="center" android:text="作业" android:textColor="#805734"/>
+  <TextView android:id="@+id/widget_note" android:layout_width="0dp" android:layout_weight="1" android:layout_height="44dp" android:gravity="center" android:text="笔记" android:textColor="#805734"/>
+ </LinearLayout>
+</LinearLayout>

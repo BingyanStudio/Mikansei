@@ -4,7 +4,9 @@
 
 将 APK 文件发送到安卓手机，在浏览器或文件管理器中打开。如系统提示，允许该下载来源安装应用，再确认安装。
 
-此版包含清单、卡片内子事项勾选、日程、循环、计时、本地保存与 JSON 备份。新增系统日历按来源导入及系统时钟联动。自动 DDL 提醒、小组件及跨设备云同步尚未接入。
+此版包含清单、卡片内子事项勾选、日程、循环、计时、本地保存与 JSON 备份，以及系统日历按来源导入和系统时钟联动。
+
+0.2.0 (4) 新增日 / 周日历与拖动选时段、课表 / 消息解析，以及 Android 本地提醒、主屏幕小组件和前台响铃。Dart 静态检查、44 项 Flutter 测试、Release 编译和 APK 签名验证通过；本轮没有连接 Android 设备，提醒、小组件和响铃服务仍待实机验证。系统日历编辑结果即时回流尚未实现。跨设备云同步仍未迁移。
 
 ## 日历和时钟联动
 
@@ -18,13 +20,17 @@
 
 取消勾选来源不会清除已经导入的事项；源事件删除后也保留待办供自行核对。在 Mikanseta 删除某次导入事项后，该次事件不会自动加回。重复事件按每次发生分别进入清单，全天事件保留原日历日期。
 
-只申请 `READ_CALENDAR` 读取日历，以及调用系统时钟的普通 `SET_ALARM` 权限；新增事件经系统日历编辑页确认，不申请写日历或精确闹钟调度权限。本轮只接入 Android；iOS / macOS 测试版的日历与系统闹钟仍待迁移。
+0.2.0 (4) 还声明 `POST_NOTIFICATIONS`、`SCHEDULE_EXACT_ALARM`、`USE_FULL_SCREEN_INTENT`、`RECEIVE_BOOT_COMPLETED` 和媒体播放前台服务权限，用于提醒、锁屏响铃及重启后恢复。系统可能要求用户单独允许通知、精确闹钟或全屏提醒；相关设备行为尚未实测。日历读取使用 `READ_CALENDAR`，新增 / 编辑仍通过系统日历界面由用户确认。
+
+系统日历编辑页结束后，App 当前不能即时读取其结果；需要所选来源在后续打开或返回时同步。尤其在未选择日历来源时，不会即时建立或更新本地关联。
 
 测试限制：导入和系统时钟已在安卓模拟器操作验证；该测试镜像自带 Calendar 缺少新增页组件且详情页有内部崩溃，完整系统日历编辑保存仍需真机验证。详见 [验证记录](VALIDATION.md)。
 
 ## 安装包信息
 
-当前版本为 **0.1.2 (3)**，包名 `com.personal.mikanseta`，最低 Android 7.0（API 24），目标 API 36。通用 APK 包含 ARM64、32 位 ARM 和 x86_64；使用专用发布证书签名。实际运行验证范围见 [VALIDATION.md](VALIDATION.md)。
+当前版本为 **0.2.0 (4)**，包名 `com.personal.mikanseta`，最低 Android 7.0（API 24），目标 API 36。通用 APK 包含 ARM64、32 位 ARM 和 x86_64；使用专用发布证书签名。实际运行验证范围见 [VALIDATION.md](VALIDATION.md)。
+
+本轮于 **2026-10-16 11:10 +0800** 重新构建并导出 APK，大小 55.9 MB。SHA-256 为 `b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`；签名验证通过 APK Signature Scheme v2。完整验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 ## 重新构建
 
@@ -43,3 +49,5 @@
 本工作区首次创建的密钥与密码单独保存在 `../../.toolchains/mikanseta-signing/`，请另行备份；它们不进入 Git 仓库，也不应随 APK 分发。
 
 签名验证可使用 Android SDK 的 `apksigner verify --verbose`。实际构建和运行结果记录在 [VALIDATION.md](VALIDATION.md)。
+
+校验时需要把 `JAVA_HOME` 指向工作区 JDK：`JAVA_HOME=../../.toolchains/jdk21/Contents/Home`。设置后 `apksigner verify` 退出码为 0，本轮 APK 已通过 APK Signature Scheme v2 校验。日志见 [VALIDATION.md](VALIDATION.md)。

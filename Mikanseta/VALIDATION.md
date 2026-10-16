@@ -1,6 +1,8 @@
-# Mikanseta 0.1.0 (1) 验证记录
+# Mikanseta 验证记录
 
-日期：2026-10-13。测试宿主：Intel Mac，Xcode 26.5；Flutter 3.47.7、Dart 3.13.5。源工程包含 iOS、Android、macOS；原版 Mikansei 源码与安装标识未改动。
+本文件按时间记录各版本的验证范围，从 0.1.0 (1) 到当前 0.2.0 (4)。
+
+首轮记录日期：2026-10-13。测试宿主：Intel Mac，Xcode 26.5；Flutter 3.47.7、Dart 3.13.5。源工程包含 iOS、Android、macOS；原版 Mikansei 源码与安装标识未改动。
 
 | 验证 | 实际结果 |
 | --- | --- |
@@ -39,7 +41,9 @@
 
 ## 尚未迁移
 
-本轮不包含系统通知、AlarmKit 闹钟、课后提醒、Apple 日历双向同步、小组件、实时活动和 iCloud Drive 自动同步。这些能力在测试版设置页明确标为后续接入；原版仍可使用。Mac 包包含双架构，但 Apple Silicon 运行尚未实测。
+截至 0.1.2 (3)，测试版不包含系统通知、AlarmKit 闹钟、课后提醒、Apple 日历双向同步、小组件、实时活动和 iCloud Drive 自动同步。这些能力在当时的设置页明确标为后续接入；原版仍可使用。Mac 包包含双架构，但 Apple Silicon 运行尚未实测。
+
+当前工作区的未提交源码已接入其中的大部分能力，但尚未验证，见文末 0.2.0 (4) 一节。iCloud Drive 自动同步仍未迁移。
 
 ## iOS 工程改名与真机安装（2026-10-13）
 
@@ -86,3 +90,38 @@ Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta
 Android 系统时钟采用 [官方通用 Intent](https://developer.android.com/guide/components/intents-common)，只设置时、分或倒计时时长。没有实现自动 DDL 调度、自动取消闹钟、后台持续同步或日历自动回写。
 
 0.1.2 (3) 最终 APK SHA-256：`4fee5861fbce436bab62be63bedf0168dbbcdb0382f28f32f4279b5bf30b2ae3`。
+
+## 0.2.0 (4)：未提交迁移源码（2026-10-16）
+
+`pubspec.yaml` 已更新为 **0.2.0+4**，界面与设置页的版本回退值同步为 `0.2.0 (4)`；Android 与 Xcode 工程的构建配置都从 `pubspec.yaml` 读取版本。以下源码位于当前工作区，**尚未提交**：
+
+- 日 / 周日历与拖动选时段：`lib/src/calendar_view.dart`。新增周视图；日视图空白处长按后拖动选择时段，15 分钟对齐。
+- 课表与消息解析：`lib/src/student_tools.dart`。课程模型、CSV / ICS 解析，以及粘贴文本的日期、平台和耗时建议。
+- 原生提醒、小组件与实时活动：`lib/src/system_services.dart`、`android/app/src/main/kotlin/com/personal/mikanseta/LocalServices.kt`、`ios/Widgets/`、`native/Apple/Ported/`。
+- Apple 日历与 Android 系统服务迁移：`native/Apple/AppleSystemServices.swift`、`lib/src/android_system.dart`，以及把共享原生核心与独立命名的 Widget 扩展挂进 Xcode 工程并保留签名的 `Scripts/configure-native-services.py`。
+
+这批改动**只完成源码接入**：Dart 侧静态检查与 Flutter 测试已经通过，原生提醒、小组件、实时活动、Apple 日历和 Android 系统服务仍未在真实设备上验证。iCloud Drive 云同步继续未迁移。
+
+### 本轮验证结果（2026-10-16）
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查 | `./Scripts/flutter.sh analyze` 通过，`No issues found!`。 |
+| 数据与界面测试 | `./Scripts/flutter.sh test` 通过：`+44: All tests passed!`。共 44 项，分布为 `domain_test.dart` 19、`widget_test.dart` 7、`android_system_test.dart` 8、`migration_test.dart` 10。新增的 `migration_test.dart` 覆盖时间轴、跨午夜与夏令时、循环展开、拖动选时段、月历 / 周历切换、CSV / ICS 解析、消息解析、提醒计划与日历清理。 |
+| 只读回归修复 | `read-only timeline cannot create schedules and day/week choices persist` 曾失败一次：只读模式下拖动选择时段触发 null check 异常，报在 `test/migration_test.dart:157`。该回归已在工作区 `lib/src/calendar_view.dart` 修复，单独重跑该项通过；随后完整套件 44 项全部通过。修复前的那次失败不计入通过。 |
+| Android 原生编译 | `:app:compileReleaseKotlin --offline` 通过；包含前台提醒降级和外部路由白名单修复。 |
+| Android Release 构建 | `./Scripts/build-android.sh` 通过，导出 **0.2.0 (4)** 通用 APK，55.9 MB，最低 API 24、目标 API 36。 |
+| Android APK 签名与元数据 | 设置工作区 JDK 后，`apksigner verify --verbose` 通过 APK Signature Scheme v2；`aapt` 确认包名 `com.personal.mikanseta`、版本码 4。APK 声明通知、精确闹钟、全屏 Intent、开机接收和媒体播放前台服务权限。SHA-256：`b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`。 |
+| iOS 模拟器构建 | `./Scripts/flutter.sh build ios --simulator --flavor Mikanseta` 通过，产物包含 `MikansetaWidgets.appex`，版本元数据为 0.2.0 (4)。Flutter 提示缺少 `Debug-Mikanseta` 配置并回退到 `Debug`；此项不是 Release 或真机签名验证。 |
+| Android 真机 / 模拟器 | 未运行。本机 `adb devices -l` 未列出设备；无法据此确认通知授权、精确闹钟、全屏提醒、重启恢复或小组件的运行效果。 |
+| Android 系统日历结果回流 | 尚未实现即时回流：`takeCalendarEdits` 仍返回空列表。通过系统日历编辑后，事项的本地关联可能要等所选来源的后续同步更新；从未选择来源时不会立即回写。 |
+| macOS Release 构建 | `./Scripts/flutter.sh build macos --release` 通过，生成 50.4 MB `Mikanseta.app`。本轮未启动或安装该包。 |
+| 原生与系统服务 | iOS Widget 扩展随模拟器构建编译；Android 原生已 Release 编译；macOS Release 编译通过。系统提醒、小组件、实时活动、Apple 日历及 Android 系统服务均未在真实设备完成行为验证。 |
+
+Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`（宿主 Intel Mac，macos_x64）；在获准的主机环境下运行正常，分析和测试结果如上。Android `apksigner` 也需把 `JAVA_HOME` 指向工作区 JDK。
+
+### 本轮 APK 与源码
+
+交付文件 `Deliveries/Mikanseta/Mikanseta-0.2.0+4-android.apk` 于 **2026-10-16 11:10 +0800** 由本轮 Release 构建生成，SHA-256 为 `b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`；相应 `.sha256` 文件已生成。旧的 2026-10-15 构建已由本轮构建替换。
+
+此 APK 包含日 / 周视图、提醒、小组件与路由修复等当前构建源码；系统日历编辑结果即时回流仍未实现，设备行为也尚未实测。APK 构建成功不等于所有迁移功能均已验收。

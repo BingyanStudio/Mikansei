@@ -320,6 +320,8 @@ class Entry {
           'createdAt': isoDate(now),
           'updatedAt': isoDate(now),
           'calendarEvent': null,
+          'androidCalendarLink': null,
+          'androidCalendarExportToken': null,
           'checklist': steps
               .map((s) => StepItem(title: s.title).toJson())
               .toList(),

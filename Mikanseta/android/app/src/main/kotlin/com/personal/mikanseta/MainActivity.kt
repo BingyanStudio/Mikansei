@@ -6,6 +6,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.content.ContentUris
 import android.os.Build
+import android.os.Bundle
+import android.net.Uri
+import android.provider.Settings
 import android.provider.CalendarContract
 import android.provider.AlarmClock
 import android.util.AtomicFile
@@ -20,6 +23,9 @@ class MainActivity : FlutterActivity() {
     private val io = Executors.newSingleThreadExecutor()
     private var pending: MethodChannel.Result? = null
     private var exportContent: String? = null
+    private var notificationPermission: MethodChannel.Result? = null
+    private var notificationDelivery = "popup"
+    private var nativeChannel: MethodChannel? = null
     private var calendarPermission: MethodChannel.Result? = null
     private val calendarDeviceID by lazy {
         // Calendar provider IDs belong to this installation. Android backup must
@@ -30,10 +36,42 @@ class MainActivity : FlutterActivity() {
     }
     private val archive by lazy { AtomicFile(File(filesDir, "Mikanseta/entries.json")) }
 
+    override fun onCreate(state: Bundle?) { super.onCreate(state); acceptRoute(intent) }
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptRoute(intent) }
+    private fun acceptRoute(intent: Intent?) {
+        // This activity is exported, so the payload is untrusted input: it must match the route
+        // schema this app produces before it is stored for Dart. Malformed input is dropped.
+        val route = LocalServices.validRoute(intent?.getStringExtra("route")) ?: LocalServices.routeFromData(intent?.data)
+        if (route != null) { LocalServices.queueRoute(this,route); nativeChannel?.invokeMethod("routesAvailable",null); intent?.removeExtra("route"); intent?.data=null }
+    }
+    private fun finishReminderPermission(result: MethodChannel.Result, delivery: String) {
+        if (!LocalServices.allowed(this)) { result.success(false); return }
+        if (delivery == "alarm" && !LocalServices.exact(this) && Build.VERSION.SDK_INT >= 31) {
+            startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:$packageName")))
+            result.success(false)
+        } else result.success(true)
+    }
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mikanseta/native").setMethodCallHandler { call, result ->
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "mikanseta/native")
+        nativeChannel=channel
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
+                "reconcileServices" -> background(result) { LocalServices.reconcile(this,call.arguments as Map<*,*>) }
+                "takeCalendarEdits" -> result.success(emptyList<Any>())
+                "openExternalURL" -> { try {val url=Uri.parse(call.arguments as String);require(url.scheme=="https"||url.scheme=="http");startActivity(Intent(Intent.ACTION_VIEW,url));result.success(true)} catch(e:Exception){result.error("url","无法打开链接",null)} }
+                "openSystemSettings" -> { val full=call.argument<String>("target")=="fullscreen";val intent=if(full&&Build.VERSION.SDK_INT>=34) Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")) else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName);try{startActivity(intent);result.success(true)}catch(e:Exception){result.error("settings",e.localizedMessage,null)} }
+                "systemStatus" -> result.success(LocalServices.status(this))
+                "takeRoutes" -> result.success(LocalServices.takeRoutes(this))
+                "setLiveEnabled" -> { LocalServices.prefs(this).edit().putBoolean("live",call.argument<Boolean>("enabled") == true).apply();LocalServices.live(this);result.success(true) }
+                "requestReminderAccess" -> {
+                    val delivery=call.argument<String>("delivery") ?: "popup"
+                    if(Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+                        if(notificationPermission!=null)result.error("busy","正在等待通知授权",null)
+                        else { notificationPermission=result; notificationDelivery=delivery;requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS),302) }
+                    } else finishReminderPermission(result,delivery)
+                }
+
                 "calendarDeviceID" -> result.success(calendarDeviceID)
                 "calendarAccess" -> result.success(checkSelfPermission(Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED)
                 "requestCalendarAccess" -> {
@@ -49,13 +87,17 @@ class MainActivity : FlutterActivity() {
                     val args = call.arguments as Map<*, *>
                     calendarEvents(args)
                 }
-                "openCalendarEvent", "addCalendarEvent", "createClockAlarm", "createClockTimer", "showClock" -> {
+                "openCalendarEvent", "addCalendarEvent", "editCalendarEvent", "createClockAlarm", "createClockTimer", "showClock" -> {
                     try {
                         val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                         val intent = when (call.method) {
                             "openCalendarEvent" -> Intent(Intent.ACTION_VIEW, ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, (args["eventID"] as String).toLong())).apply {
                                 putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, (args["start"] as Number).toLong())
                                 putExtra(CalendarContract.EXTRA_EVENT_END_TIME, (args["end"] as Number).toLong())
+                            }
+                            "editCalendarEvent" -> Intent(Intent.ACTION_EDIT,ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI,(args["eventID"] as String).toLong())).apply {
+                                putExtra(CalendarContract.Events.TITLE,args["title"] as String);putExtra(CalendarContract.Events.DESCRIPTION,args["body"] as String);putExtra(CalendarContract.Events.EVENT_LOCATION,args["location"] as String)
+                                putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME,(args["start"] as Number).toLong());putExtra(CalendarContract.EXTRA_EVENT_END_TIME,(args["end"] as Number).toLong());putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY,args["allDay"] as Boolean)
                             }
                             "addCalendarEvent" -> Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI).apply {
                                 val begin = (args["start"] as Number).toLong()
@@ -121,13 +163,13 @@ class MainActivity : FlutterActivity() {
                     val build = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
                     result.success("${info.versionName} ($build)")
                 }
-                "importArchive", "exportArchive" -> {
+                "importArchive", "exportArchive", "importText" -> {
                     if (pending != null) { result.error("busy", "请稍后重试", null); return@setMethodCallHandler }
                     val exporting = call.method == "exportArchive"
                     pending = result
                     exportContent = if (exporting) call.arguments as? String else null
                     val intent = Intent(if (exporting) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
-                        .addCategory(Intent.CATEGORY_OPENABLE).setType("application/json")
+                        .addCategory(Intent.CATEGORY_OPENABLE).setType(if(call.method == "importText") "*/*" else "application/json")
                     if (exporting) intent.putExtra(Intent.EXTRA_TITLE, "Mikanseta-backup.json")
                     try { startActivityForResult(intent, if (exporting) 202 else 201) }
                     catch (exception: Exception) { pending = null; exportContent = null; result.error("document", exception.localizedMessage, null) }
@@ -138,6 +180,7 @@ class MainActivity : FlutterActivity() {
     }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 302) { notificationPermission?.let { finishReminderPermission(it,notificationDelivery) };notificationPermission=null }
         if (requestCode == 301) {
             calendarPermission?.success(grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             calendarPermission = null

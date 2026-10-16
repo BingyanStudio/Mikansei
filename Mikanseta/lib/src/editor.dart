@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 
 import 'domain.dart';
 import 'store.dart';
+import 'student_tools.dart' show ReminderControls;
+import 'system_services.dart' show requestReminderAccess;
+import 'android_system.dart' show addToSystemCalendar;
 
 class EntryEditor extends StatefulWidget {
   const EntryEditor({
@@ -11,11 +14,15 @@ class EntryEditor extends StatefulWidget {
     this.entry,
     this.kind,
     this.start,
+    this.end,
+    this.isNew = false,
   });
+  final bool isNew;
   final EntryStore store;
   final Entry? entry;
   final EntryKind? kind;
   final DateTime? start;
+  final DateTime? end;
   @override
   State<EntryEditor> createState() => _EntryEditorState();
 }
@@ -42,6 +49,8 @@ class _EntryEditorState extends State<EntryEditor> {
   List<int> weekdays = [];
   List<DateTime> repeatDates = [];
   String? error;
+  bool saving = false;
+  late final Map<String, dynamic> reminder;
   @override
   void initState() {
     super.initState();
@@ -51,6 +60,10 @@ class _EntryEditorState extends State<EntryEditor> {
           kind: widget.kind ?? EntryKind.task,
           now: widget.store.clock(),
         );
+    reminder = {...draft.data};
+    if (widget.entry == null && draft.kind == EntryKind.schedule) {
+      reminder["reminder"] = 0;
+    }
     kind = draft.kind;
     priority = draft.priority;
     due = draft.due;
@@ -65,9 +78,11 @@ class _EntryEditorState extends State<EntryEditor> {
       start.hour,
       start.minute,
     );
-    end = widget.start == null
-        ? draft.end ?? start.add(const Duration(minutes: 30))
-        : start.add(const Duration(minutes: 30));
+    end =
+        widget.end ??
+        (widget.start == null
+            ? draft.end ?? start.add(const Duration(minutes: 30))
+            : start.add(const Duration(minutes: 30)));
     allDay = draft.allDay;
     repeat = draft.repeatRule;
     intervalDays = draft.data['repeatIntervalDays'] as int? ?? 1;
@@ -129,7 +144,8 @@ class _EntryEditorState extends State<EntryEditor> {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
-  void save() {
+  Future<void> save() async {
+    if (saving || widget.store.readOnly) return;
     final cleanTitle = title.text.trim();
     final minutes = estimate.text.trim().isEmpty
         ? null
@@ -173,6 +189,17 @@ class _EntryEditorState extends State<EntryEditor> {
     }).toList();
     final changedKind = kind != draft.kind;
     var next = draft.change({
+      ...{
+        for (final key in [
+          'reminder',
+          'reminderDelivery',
+          'reminderSound',
+          'snoozeMinutes',
+          'reminderPattern',
+          'reminderAnchor',
+        ])
+          key: reminder[key],
+      },
       'title': cleanTitle,
       'body': body.text.trim(),
       'kind': kind.name,
@@ -227,10 +254,45 @@ class _EntryEditorState extends State<EntryEditor> {
       next = next.change({'repeatAnchorDate': isoDate(next.recurrenceDate!)});
     }
     try {
+      setState(() => saving = true);
       widget.store.save(next);
+      await widget.store.settled;
+      if (widget.store.saveFailed) throw StateError('事项暂未写入磁盘，请重试保存。');
+      bool allowed = true;
+      if (next.data['reminder'] != null &&
+          widget.store.storage is NativeStorage) {
+        allowed = await requestReminderAccess(
+          next.data['reminderDelivery'] as String? ?? 'popup',
+        );
+        await widget.store.refreshServices();
+      }
+      if (!mounted) return;
+      if ((widget.entry == null || widget.isNew) &&
+          next.kind == EntryKind.schedule &&
+          widget.store.preferences['offerCalendar'] == true) {
+        try {
+          await addToSystemCalendar(context, widget.store, next);
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text('事项已保存，日历尚未安排：$e')));
+          }
+        }
+      }
+      if (!mounted) return;
+      if (!allowed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('事项已保存，提醒权限尚未开启。请在设置中开启。')),
+        );
+      }
       Navigator.pop(context);
     } catch (exception) {
-      setState(() => error = '无法保存：$exception');
+      if (mounted) {
+        setState(() {
+          saving = false;
+          error = '无法保存：$exception';
+        });
+      }
     }
   }
 
@@ -254,13 +316,13 @@ class _EntryEditorState extends State<EntryEditor> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.entry == null ? '记下一件事' : '编辑事项',
+                    widget.entry == null || widget.isNew ? '记下一件事' : '编辑事项',
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
                 IconButton(
                   tooltip: '关闭',
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: saving ? null : () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
                 ),
               ],
@@ -275,7 +337,7 @@ class _EntryEditorState extends State<EntryEditor> {
                   TextField(
                     key: const ValueKey('entry-title'),
                     controller: title,
-                    autofocus: widget.entry == null,
+                    autofocus: widget.entry == null || widget.isNew,
                     minLines: 1,
                     maxLines: 3,
                     textInputAction: TextInputAction.done,
@@ -314,6 +376,28 @@ class _EntryEditorState extends State<EntryEditor> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    if (kind != EntryKind.schedule)
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          for (final d in [(0, '今天'), (1, '明天')])
+                            ActionChip(
+                              label: Text('${d.$2}截止'),
+                              onPressed: () {
+                                final now = widget.store.clock();
+                                setState(
+                                  () => due = DateTime(
+                                    now.year,
+                                    now.month,
+                                    now.day + d.$1,
+                                    23,
+                                    59,
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
                     if (kind == EntryKind.schedule) ...[
                       timeButton('开始', start, () async {
                         final date = await pick(start, includeTime: !allDay);
@@ -330,6 +414,32 @@ class _EntryEditorState extends State<EntryEditor> {
                         final date = await pick(end, includeTime: !allDay);
                         if (date != null) setState(() => end = date);
                       }),
+                      TextFormField(
+                        key: ValueKey('duration-$allDay'),
+                        initialValue: allDay
+                            ? '${DateTime.utc(end.year, end.month, end.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays > 0 ? DateTime.utc(end.year, end.month, end.day).difference(DateTime.utc(start.year, start.month, start.day)).inDays : 1}'
+                            : '${end.difference(start).inMinutes}',
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: allDay ? '持续天数' : '持续分钟',
+                        ),
+                        onChanged: (text) {
+                          final value = int.tryParse(text);
+                          if (value != null &&
+                              value > 0 &&
+                              value <= (allDay ? 365 : 1440)) {
+                            setState(
+                              () => end = allDay
+                                  ? DateTime(
+                                      start.year,
+                                      start.month,
+                                      start.day + value,
+                                    )
+                                  : start.add(Duration(minutes: value)),
+                            );
+                          }
+                        },
+                      ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('全天'),
@@ -434,6 +544,10 @@ class _EntryEditorState extends State<EntryEditor> {
                       decoration: const InputDecoration(labelText: '预计用时（分钟）'),
                     ),
                     if (kind != EntryKind.note) ...[
+                      ReminderControls(
+                        data: reminder,
+                        onChanged: () => setState(() {}),
+                      ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<String>(
                         initialValue: repeat,
@@ -572,7 +686,7 @@ class _EntryEditorState extends State<EntryEditor> {
                 Expanded(
                   child: FilledButton.icon(
                     key: const ValueKey('save-entry'),
-                    onPressed: widget.store.readOnly ? null : save,
+                    onPressed: widget.store.readOnly || saving ? null : save,
                     icon: const Icon(Icons.check),
                     label: const Text('保存'),
                   ),

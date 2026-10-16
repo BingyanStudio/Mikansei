@@ -7,7 +7,12 @@ import 'store.dart';
 
 class AndroidSystem {
   static bool get supported =>
-      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+      !kIsWeb &&
+      [
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+      ].contains(defaultTargetPlatform);
   static Future<T?> call<T>(String method, [Object? args]) =>
       NativeStorage.channel.invokeMethod<T>(method, args);
   static Future<int> sync(
@@ -86,6 +91,7 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
   Set<String> selected = {};
   String? deviceID;
   bool enabled = false;
+  String timing = 'start';
   bool busy = false;
   String status = '选择要导入的日历；首次不默认勾选任何来源。';
   Future<void> load() async {
@@ -109,6 +115,7 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
             ? Set<String>.from(config['selected'] as List? ?? [])
             : {};
         enabled = config['deviceID'] == id && config['enabled'] == true;
+        timing = config['timing'] as String? ?? 'start';
         status = sources.isEmpty
             ? '系统中没有可读取的日历，请先在系统日历添加日历来源。'
             : '只导入勾选的来源，包含今天起 30 天的日程。';
@@ -128,6 +135,7 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
         'deviceID': deviceID,
         'selected': selected.toList(),
         'enabled': enabled,
+        'timing': timing,
         'suppressed': old['deviceID'] == deviceID
             ? old['suppressed'] ?? []
             : [],
@@ -164,6 +172,13 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
             contentPadding: EdgeInsets.zero,
             title: Text(source['title'] as String? ?? '日历'),
             subtitle: Text(source['account'] as String? ?? ''),
+            secondary: Icon(
+              Icons.circle,
+              size: 14,
+              color: source['color'] is int
+                  ? Color((source['color'] as int) | 0xff000000)
+                  : Theme.of(context).colorScheme.primary,
+            ),
             value: selected.contains(source['id']),
             onChanged: busy || widget.store.readOnly
                 ? null
@@ -175,6 +190,29 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
                     }
                   }),
           ),
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('新增日程保存后安排到系统日历'),
+          subtitle: const Text('先保存本地事项，再打开系统编辑页，由你确认日历与时段。'),
+          value: widget.store.preferences['offerCalendar'] == true,
+          onChanged: busy || widget.store.readOnly
+              ? null
+              : (v) {
+                  widget.store.setPreferences({'offerCalendar': v});
+                  setState(() {});
+                },
+        ),
+        DropdownButtonFormField<String>(
+          initialValue: timing,
+          decoration: const InputDecoration(labelText: '导入时间安排'),
+          items: const [
+            DropdownMenuItem(value: 'start', child: Text('保留日程起止时间')),
+            DropdownMenuItem(value: 'end', child: Text('按结束时间附加 DDL')),
+          ],
+          onChanged: busy || widget.store.readOnly
+              ? null
+              : (v) => setState(() => timing = v!),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
@@ -194,6 +232,41 @@ class _AndroidCalendarPageState extends State<AndroidCalendarPage> {
               : save,
           child: const Text('保存来源并导入'),
         ),
+        if (widget.store.cleanableCalendarEntries.isNotEmpty)
+          TextButton(
+            onPressed: busy
+                ? null
+                : () async {
+                    final ok = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('清理未选来源的导入事项？'),
+                        content: const Text(
+                          '只清理未修改、未完成、没有 Checklist 或计时的导入事项。不会删除系统日历事件。',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('取消'),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('清理'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (ok == true) {
+                      final count = widget.store
+                          .cleanUnselectedCalendarEntries();
+                      await widget.store.settled;
+                      if (mounted) setState(() => status = '已清理 $count 件导入事项。');
+                    }
+                  },
+            child: Text(
+              '清理未选来源的导入事项（${widget.store.cleanableCalendarEntries.length} 件）',
+            ),
+          ),
         if (busy)
           const Padding(
             padding: EdgeInsets.all(16),
@@ -232,75 +305,43 @@ class _AndroidEntryActionsState extends State<AndroidEntryActions> {
     }
   }
 
-  Future<void> calendar() async {
-    final entry = widget.entry;
-    final link = entry.data['androidCalendarLink'] as Map?;
-    if (link != null &&
-        link['deviceID'] ==
-            await AndroidSystem.call<String>('calendarDeviceID')) {
-      final snapshot = link['snapshot'] as Map;
-      final start = DateTime.parse(snapshot['plannedStart'] as String);
-      final end = DateTime.parse(snapshot['plannedEnd'] as String);
-      await AndroidSystem.call<bool>('openCalendarEvent', {
-        'eventID': link['eventID'],
-        'start': start.millisecondsSinceEpoch,
-        'end': end.millisecondsSinceEpoch,
-      });
-      return;
+  Future<void> calendar() =>
+      addToSystemCalendar(context, widget.store, widget.entry);
+
+  Future<void> editCalendar() async {
+    final entry = widget.entry,
+        link = widget.entry.data['androidCalendarLink'] as Map?;
+    if (link == null || widget.store.readOnly) return;
+    if (link['deviceID'] !=
+        await AndroidSystem.call<String>('calendarDeviceID')) {
+      throw StateError('请在此设备重新关联日历。');
     }
-    if (widget.store.readOnly) {
-      throw StateError('当前数据只读，请先恢复可写的数据后再添加到系统日历。');
-    }
-    if (!mounted) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('添加到系统日历'),
-        content: Text(
-          entry.start == null
-              ? '请在系统日历确认执行时段。事项的 DDL 保持原样，不会被当作开始时间。'
-              : '将预填日程时间、标题和地点，请在系统日历确认保存。',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('打开系统日历'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    final start = entry.start ?? DateTime.now().add(const Duration(hours: 1));
-    final end = entry.end ?? start.add(Duration(minutes: entry.estimate ?? 30));
-    int epoch(DateTime date) => entry.allDay
-        ? DateTime.utc(date.year, date.month, date.day).millisecondsSinceEpoch
-        : date.millisecondsSinceEpoch;
-    final token =
-        entry.data['androidCalendarExportToken'] as String? ?? newId();
-    final current = widget.store.find(entry.id);
-    if (current == null) throw StateError('事项已删除。');
-    widget.store.save(current.change({'androidCalendarExportToken': token}));
-    await widget.store.settled;
-    if (widget.store.saveFailed) throw StateError('关联信息尚未保存，请先重试保存。');
-    await AndroidSystem.call<bool>('addCalendarEvent', {
+    final start =
+        entry.start ??
+        DateTime.parse((link['snapshot'] as Map)['plannedStart'] as String);
+    final end = entry.end ?? start.add(const Duration(minutes: 30));
+    final saved = await AndroidSystem.call<bool>('editCalendarEvent', {
+      'eventID': link['eventID'],
       'title': entry.title,
-      'body': [
-        entry.body,
-        if (entry.platform.isNotEmpty) '处理平台：${entry.platform}',
-        if (entry.due != null) 'DDL：${dateLabel(entry.due!)}',
-        'mikanseta://entry/${entry.id}?token=$token',
-      ].where((s) => s.isNotEmpty).join('\n'),
+      'body': entry.body,
       'location': entry.location,
-      'start': epoch(start),
-      'end': epoch(
-        end.isAfter(start) ? end : start.add(const Duration(minutes: 30)),
-      ),
+      'start': start.millisecondsSinceEpoch,
+      'end': end.millisecondsSinceEpoch,
       'allDay': entry.allDay,
     });
+    if (saved == true) {
+      final rows =
+          await AndroidSystem.call<List<dynamic>>('takeCalendarEdits') ?? [];
+      if (rows.isNotEmpty) {
+        widget.store.importAndroidEvents(
+          rows.map((r) => Map<String, dynamic>.from(r as Map)).toList(),
+          link['deviceID'] as String,
+          confirmedEdit: true,
+        );
+      } else {
+        await AndroidSystem.sync(widget.store, manual: true);
+      }
+    }
   }
 
   Future<void> alarm() async {
@@ -372,16 +413,26 @@ class _AndroidEntryActionsState extends State<AndroidEntryActions> {
                   : '查看系统日历',
             ),
           ),
-          OutlinedButton.icon(
-            onPressed: busy ? null : () => perform(alarm),
-            icon: const Icon(Icons.alarm),
-            label: const Text('创建系统闹钟'),
-          ),
-          OutlinedButton.icon(
-            onPressed: busy ? null : () => perform(timer),
-            icon: const Icon(Icons.timer_outlined),
-            label: const Text('系统倒计时'),
-          ),
+          if (widget.entry.data['androidCalendarLink'] != null)
+            OutlinedButton.icon(
+              onPressed: busy || widget.store.readOnly
+                  ? null
+                  : () => perform(editCalendar),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text('编辑并保存到系统日历'),
+            ),
+          if (defaultTargetPlatform == TargetPlatform.android)
+            OutlinedButton.icon(
+              onPressed: busy ? null : () => perform(alarm),
+              icon: const Icon(Icons.alarm),
+              label: const Text('创建系统闹钟'),
+            ),
+          if (defaultTargetPlatform == TargetPlatform.android)
+            OutlinedButton.icon(
+              onPressed: busy ? null : () => perform(timer),
+              icon: const Icon(Icons.timer_outlined),
+              label: const Text('系统倒计时'),
+            ),
         ],
       ),
       const Text('系统日历和时钟中的记录独立保留；修改、完成或删除事项不会自动取消闹钟或删除日历事件。'),
@@ -430,5 +481,93 @@ class _TimerDialogState extends State<_TimerDialog> {
         ),
       ],
     );
+  }
+}
+
+Future<void> addToSystemCalendar(
+  BuildContext context,
+  EntryStore store,
+  Entry entry,
+) async {
+  final link = entry.data['androidCalendarLink'] as Map?;
+  if (link != null &&
+      link['deviceID'] ==
+          await AndroidSystem.call<String>('calendarDeviceID')) {
+    final snapshot = link['snapshot'] as Map;
+    final start = DateTime.parse(snapshot['plannedStart'] as String);
+    final end = DateTime.parse(snapshot['plannedEnd'] as String);
+    await AndroidSystem.call<bool>('openCalendarEvent', {
+      'eventID': link['eventID'],
+      'start': start.millisecondsSinceEpoch,
+      'end': end.millisecondsSinceEpoch,
+    });
+    return;
+  }
+  if (store.readOnly) {
+    throw StateError('当前数据只读，请先恢复可写的数据后再添加到系统日历。');
+  }
+  if (!context.mounted) return;
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('添加到系统日历'),
+      content: Text(
+        entry.start == null
+            ? '请在系统日历确认执行时段。事项的 DDL 保持原样，不会被当作开始时间。'
+            : '将预填日程时间、标题和地点，请在系统日历确认保存。',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('打开系统日历'),
+        ),
+      ],
+    ),
+  );
+  if (confirmed != true) return;
+  final start = entry.start ?? DateTime.now().add(const Duration(hours: 1));
+  final end = entry.end ?? start.add(Duration(minutes: entry.estimate ?? 30));
+  int epoch(DateTime date) => entry.allDay
+      ? DateTime.utc(date.year, date.month, date.day).millisecondsSinceEpoch
+      : date.millisecondsSinceEpoch;
+  final token = entry.data['androidCalendarExportToken'] as String? ?? newId();
+  final current = store.find(entry.id);
+  if (current == null) throw StateError('事项已删除。');
+  store.save(current.change({'androidCalendarExportToken': token}));
+  await store.settled;
+  if (store.saveFailed) throw StateError('关联信息尚未保存，请先重试保存。');
+  final saved = await AndroidSystem.call<bool>('addCalendarEvent', {
+    'title': entry.title,
+    'body': [
+      entry.body,
+      if (entry.platform.isNotEmpty) '处理平台：${entry.platform}',
+      if (entry.due != null) 'DDL：${dateLabel(entry.due!)}',
+      'mikanseta://entry/${entry.id}?token=$token',
+    ].where((s) => s.isNotEmpty).join('\n'),
+    'location': entry.location,
+    'start': epoch(start),
+    'end': epoch(
+      end.isAfter(start) ? end : start.add(const Duration(minutes: 30)),
+    ),
+    'allDay': entry.allDay,
+  });
+  if (saved == true) {
+    final rows =
+        await AndroidSystem.call<List<dynamic>>('takeCalendarEdits') ?? [];
+    if (rows.isNotEmpty) {
+      final id = await AndroidSystem.call<String>('calendarDeviceID');
+      if (id != null) {
+        store.importAndroidEvents(
+          rows.map((r) => Map<String, dynamic>.from(r as Map)).toList(),
+          id,
+          confirmedEdit: true,
+        );
+        await store.settled;
+      }
+    }
   }
 }
