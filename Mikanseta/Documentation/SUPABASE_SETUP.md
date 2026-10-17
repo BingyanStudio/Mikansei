@@ -20,10 +20,20 @@ Mikanseta 0.3.0 (5) 起支持登录 Supabase 账号，同一账号的 iPhone、�
 
 登录方式是邮箱验证码（OTP），没有密码。Supabase 默认的 Email provider 已开启，无需改动；Authentication → Providers 里不要关闭它。
 
-**首次用某个邮箱登录分两步**（Supabase 要求先确认邮箱）：
+### 让验证码出现在邮件里（必做一次）
 
-1. 第一次点"发送验证码"收到的是标题 **Confirm your email address** 的邮件，里面只有链接没有数字码。点邮件里的确认链接即可——浏览器随后跳到 `localhost` 显示"拒绝连接"是正常现象（App 项目没有网站），点击本身已在服务器完成邮箱确认。
-2. 回到 App 再点一次"发送验证码"，这次收到的标题是 **Your sign-in code**，正文里的 6 位数字就是验证码。之后该邮箱在所有设备登录都只需这一步。
+Supabase 默认的邮件模板只有链接、没有数字码，而 App 登录需要 6 位数字码。请在控制台 **Authentication → Emails**（旧界面为 Authentication → Email Templates）里，把 **Confirm signup** 和 **Magic Link** 两个模板的正文都替换为：
+
+```html
+<h2>Mikanseta 登录验证码</h2>
+<p>在 App 的“账户同步”里填入下面的 6 位验证码：</p>
+<p style="font-size:32px;font-weight:700;letter-spacing:10px;margin:16px 0">{{ .Token }}</p>
+<p>验证码 1 小时内有效。也可以直接点击链接：<br /><a href="{{ .ConfirmationURL }}">登录</a></p>
+```
+
+保存即可。邮件里的链接仍会跳到 Site URL（新项目默认 `http://localhost:3000`，显示“拒绝连接”是正常现象），忽略链接、只用数字码。
+
+**首次用某个邮箱登录分两步**（未改模板时的旧流程）：第一次收到的是标题 **Confirm your email address** 的邮件，只有链接；点一次确认邮箱后再回 App 重新发送验证码。改好模板后首封邮件也带数字码，可直接登录；该邮箱在之后所有设备上都只需输入验证码。
 
 ## 二、同步行为
 
@@ -54,7 +64,7 @@ Mikanseta 0.3.0 (5) 起支持登录 Supabase 账号，同一账号的 iPhone、�
 ## 五、常见问题
 
 - **收不到验证码**：内置发件人 `noreply@mail.app.supabase.co` 常进垃圾箱；一小时内超过 2 封会被限流，稍后再试。
-- **邮件里没有验证码，只有链接**：那是首次登录的邮箱确认邮件（见上文"首次用某个邮箱登录分两步"），点一次链接后再回 App 重新发送验证码。
+- **邮件里没有验证码，只有链接**：邮件模板还没改。按上文"让验证码出现在邮件里（必做一次）"把 `{{ .Token }}` 加进 Confirm signup 与 Magic Link 模板；在此之前首次登录只能靠邮件里的确认链接。
 - **设置里显示"未配置"**：构建时没读到 `LocalInstall/supabase.env`。确认文件存在且两行都以 `SUPABASE_URL=` / `SUPABASE_ANON_KEY=` 开头，再重新构建。
 - **同步提示错误**：本机数据始终保留，回到前台或点"立即同步"重试；若持续失败，检查设备联网与项目是否被暂停（控制台恢复）。
 - **换了 Supabase 项目**：把新值写进 env 重新构建即可；旧项目数据不会自动迁移，可先在一台设备导出 JSON 备份再导入。
