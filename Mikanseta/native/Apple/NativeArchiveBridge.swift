@@ -117,6 +117,9 @@ final class NativeArchiveBridge: NSObject {
         panel.prompt = "选择同步文件夹"
         guard panel.runModal() == .OK, let url = panel.url else { result(nil); return }
         do {
+            // The picked URL is security-scoped; bookmark creation needs access.
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
             let bookmark = try url.bookmarkData(options: [.withSecurityScope], includingResourceValuesForKeys: nil, relativeTo: nil)
             UserDefaults.standard.set(bookmark, forKey: Self.localSyncBookmarkKey)
             result(["name": url.lastPathComponent, "path": url.path])
@@ -324,6 +327,11 @@ extension NativeArchiveBridge: UIDocumentPickerDelegate {
             folderPickerResult = nil
             guard let url = urls.first else { folderResult(nil); return }
             do {
+                // Mirrors FolderSyncManager.connect: create the bookmark while
+                // the picked URL's security scope is active, or iCloud items
+                // report "file doesn't exist".
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 let bookmark = try url.bookmarkData(options: [.minimalBookmark], includingResourceValuesForKeys: nil, relativeTo: nil)
                 UserDefaults.standard.set(bookmark, forKey: Self.localSyncBookmarkKey)
                 folderResult(["name": url.lastPathComponent, "path": url.path])

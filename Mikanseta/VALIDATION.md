@@ -170,3 +170,14 @@ Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate �
 - 每轮交换顺序：读取全部远端文件（任一损坏即中止、不写任何文件）→ 本地变更采集（每批一个 counter）→ 合并远端 → 投影回 Archive（保留本机 preferences/日历设置，删除写 `tombstones`/`courseTombstones`）→ 有变化才提交 → 内容有变化才写自己的 replica → 持久化设备号/counter/文档。
 - 触发：本机保存后 2 秒防抖、连接期间每 30 秒、回前台、手动“立即同步”。与 Supabase 同步可并行，二者都通过 `EntryStore` 的提交入口收敛。
 - iOS 使用 `.minimalBookmark`，macOS 使用 `.withSecurityScope`；Android 严格校验 `replica-<UUID>.json` 文件名，防止路径穿越。
+
+## 0.4.1 (7)：修复 iOS/macOS 文件夹授权保存（2026-10-17）
+
+真机选择 `Mikansei Cloud` 后报 `选择文件夹失败：PlatformException(bookmark, The file couldn't be opened because it doesn't exist.)`：移植 `FolderSyncManager.connect` 时漏掉了它的 `startAccessingSecurityScopedResource()` 包裹（原版 Sync/FolderSyncManager.swift:39-40），对 iCloud 项创建书签会报"文件不存在"。已在 iOS `UIDocumentPicker` 与 macOS `NSOpenPanel` 两条路径补上同一处理，版本升至 0.4.1 (7)（含 iOS 小组件扩展）。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查与测试 | `analyze` 通过；widget 与 local sync 测试 23 项通过。 |
+| iPhone 安装 | `install-iphone.py` 安装 0.4.1 (7) 成功（构建后手机锁定，需解锁打开）。 |
+| macOS 安装 | `install-mac.sh` 构建并替换 `Projects/Mikanseta-macOS.app` 成功，启动正常。 |
+| 真机重选文件夹 | 待用户在 Mikanseta（iPhone/Mac）重新选择 `Mikansei Cloud` 验证。 |

@@ -17,7 +17,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.0 (6)';
+const appVersion = '0.4.1 (7)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
