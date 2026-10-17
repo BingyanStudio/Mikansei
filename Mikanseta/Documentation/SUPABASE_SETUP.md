@@ -22,22 +22,23 @@ Mikanseta 0.3.0 (5) 起支持登录 Supabase 账号，同一账号的 iPhone、�
 
 ### 让验证码出现在邮件里（必做一次）
 
-当前 Supabase 控制台要求**先启用自定义 SMTP，邮件模板才能编辑**（模板页会显示 "Set up custom SMTP to edit templates"；默认模板只读）。推荐用 Gmail，免费：
+当前 Supabase 控制台要求**先启用自定义 SMTP，邮件模板才能编辑**（模板页会显示 "Set up custom SMTP to edit templates"；默认模板只读）。国内网络推荐直接用 QQ 或 163 邮箱，不需要 Google 身份验证：
 
-1. 在 Google 账号开启两步验证后，打开 <https://myaccount.google.com/apppasswords> 生成一个 **16 位应用专用密码**（Gmail 的 SMTP 不能用登录密码）。
-2. 在 Supabase **Authentication → Emails → SMTP Settings** 填入：
+**QQ 邮箱**：网页版 mail.qq.com → 设置 → 账号 → 开启 **SMTP 服务** → 生成 **授权码**（不是 QQ 密码）。然后在 Supabase **Authentication → Emails → SMTP Settings** 填入：
 
-   | 字段 | 值 |
-   | --- | --- |
-   | Enable custom SMTP | 开启 |
-   | Sender email address | 你的 Gmail 地址 |
-   | Sender name | 任意，如 `Mikanseta` |
-   | Host | `smtp.gmail.com` |
-   | Port number | `465` |
-   | Username | 你的 Gmail 地址 |
-   | Password | 16 位应用专用密码 |
+| 字段 | 值 |
+| --- | --- |
+| Enable custom SMTP | 开启 |
+| Sender email address | 你的 QQ 邮箱完整地址 |
+| Sender name | 任意，如 `Mikanseta` |
+| Host | `smtp.qq.com` |
+| Port number | `465` |
+| Username | 你的 QQ 邮箱完整地址 |
+| Password | QQ 邮箱授权码 |
 
-   保存后内置邮件每小时 2 封的限制会提高到 30 封。
+**163 邮箱**：同样先开启 SMTP 并获取授权码，Host 用 `smtp.163.com`，其余填法与上表相同。保存后内置邮件每小时 2 封的限制会提高到 30 封。
+
+Gmail 也可用（Host `smtp.gmail.com`，密码为应用专用密码），但国内网络访问“应用专用密码”页面可能触发 Google 身份验证拦截，需在常用设备与网络下操作。
 3. 回到 **Emails → Templates**，把 **Confirm signup** 和 **Magic Link** 两个模板的主题改为 `Your sign-in code`，正文都替换为：
 
    ```html
