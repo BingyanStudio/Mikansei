@@ -181,3 +181,5 @@ Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate �
 | iPhone 安装 | `install-iphone.py` 安装 0.4.1 (7) 成功（构建后手机锁定，需解锁打开）。 |
 | macOS 安装 | `install-mac.sh` 构建并替换 `Projects/Mikanseta-macOS.app` 成功，启动正常。 |
 | 真机重选文件夹 | 待用户在 Mikanseta（iPhone/Mac）重新选择 `Mikansei Cloud` 验证。 |
+
+| Android Release 构建 | 为保持三端版本一致重建 **0.4.1 (7)** 通用 APK 60.5 MB，SHA-256 `602120bdc691cf0ba2b2ad9b44aa16d479974c9c93263f56f0d8f5641ebc8b1e`。该修复不影响 Android（SAF 持久授权不涉及书签），0.4.0+6 APK 亦含完整本机同步功能。 |
