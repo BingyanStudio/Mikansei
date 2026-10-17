@@ -22,18 +22,34 @@ Mikanseta 0.3.0 (5) 起支持登录 Supabase 账号，同一账号的 iPhone、�
 
 ### 让验证码出现在邮件里（必做一次）
 
-Supabase 默认的邮件模板只有链接、没有数字码，而 App 登录需要 6 位数字码。请在控制台 **Authentication → Emails**（旧界面为 Authentication → Email Templates）里，把 **Confirm signup** 和 **Magic Link** 两个模板的正文都替换为：
+当前 Supabase 控制台要求**先启用自定义 SMTP，邮件模板才能编辑**（模板页会显示 "Set up custom SMTP to edit templates"；默认模板只读）。推荐用 Gmail，免费：
 
-```html
-<h2>Mikanseta 登录验证码</h2>
-<p>在 App 的“账户同步”里填入下面的 6 位验证码：</p>
-<p style="font-size:32px;font-weight:700;letter-spacing:10px;margin:16px 0">{{ .Token }}</p>
-<p>验证码 1 小时内有效。也可以直接点击链接：<br /><a href="{{ .ConfirmationURL }}">登录</a></p>
-```
+1. 在 Google 账号开启两步验证后，打开 <https://myaccount.google.com/apppasswords> 生成一个 **16 位应用专用密码**（Gmail 的 SMTP 不能用登录密码）。
+2. 在 Supabase **Authentication → Emails → SMTP Settings** 填入：
 
-保存即可。邮件里的链接仍会跳到 Site URL（新项目默认 `http://localhost:3000`，显示“拒绝连接”是正常现象），忽略链接、只用数字码。
+   | 字段 | 值 |
+   | --- | --- |
+   | Enable custom SMTP | 开启 |
+   | Sender email address | 你的 Gmail 地址 |
+   | Sender name | 任意，如 `Mikanseta` |
+   | Host | `smtp.gmail.com` |
+   | Port number | `465` |
+   | Username | 你的 Gmail 地址 |
+   | Password | 16 位应用专用密码 |
 
-**首次用某个邮箱登录分两步**（未改模板时的旧流程）：第一次收到的是标题 **Confirm your email address** 的邮件，只有链接；点一次确认邮箱后再回 App 重新发送验证码。改好模板后首封邮件也带数字码，可直接登录；该邮箱在之后所有设备上都只需输入验证码。
+   保存后内置邮件每小时 2 封的限制会提高到 30 封。
+3. 回到 **Emails → Templates**，把 **Confirm signup** 和 **Magic Link** 两个模板的主题改为 `Your sign-in code`，正文都替换为：
+
+   ```html
+   <h2>Mikanseta 登录验证码</h2>
+   <p>在 App 的“账户同步”里填入下面的 6 位验证码：</p>
+   <p style="font-size:32px;font-weight:700;letter-spacing:10px;margin:16px 0">{{ .Token }}</p>
+   <p>验证码 1 小时内有效。也可以直接点击链接：<br /><a href="{{ .ConfirmationURL }}">登录</a></p>
+   ```
+
+   分别保存。邮件里的链接仍会跳到 Site URL（新项目默认 `http://localhost:3000`，显示“拒绝连接”是正常现象），忽略链接、只用数字码。
+
+**首次用某个邮箱登录分两步**（未启用自定义 SMTP、无法改模板时的旧流程）：第一次收到的是标题 **Confirm your email address** 的邮件，只有链接；点一次确认邮箱后再回 App 重新发送。模板改好后首封邮件也带数字码，可直接登录；该邮箱在之后所有设备上都只需输入验证码。
 
 ## 二、同步行为
 
@@ -64,7 +80,7 @@ Supabase 默认的邮件模板只有链接、没有数字码，而 App 登录需
 ## 五、常见问题
 
 - **收不到验证码**：内置发件人 `noreply@mail.app.supabase.co` 常进垃圾箱；一小时内超过 2 封会被限流，稍后再试。
-- **邮件里没有验证码，只有链接**：邮件模板还没改。按上文"让验证码出现在邮件里（必做一次）"把 `{{ .Token }}` 加进 Confirm signup 与 Magic Link 模板；在此之前首次登录只能靠邮件里的确认链接。
+- **邮件里没有验证码，只有链接**：还没启用自定义 SMTP、模板仍是只读默认版。按上文"让验证码出现在邮件里（必做一次）"配置 Gmail SMTP 并修改模板；在此之前首次登录只能靠邮件里的确认链接。
 - **设置里显示"未配置"**：构建时没读到 `LocalInstall/supabase.env`。确认文件存在且两行都以 `SUPABASE_URL=` / `SUPABASE_ANON_KEY=` 开头，再重新构建。
 - **同步提示错误**：本机数据始终保留，回到前台或点"立即同步"重试；若持续失败，检查设备联网与项目是否被暂停（控制台恢复）。
 - **换了 Supabase 项目**：把新值写进 env 重新构建即可；旧项目数据不会自动迁移，可先在一台设备导出 JSON 备份再导入。
