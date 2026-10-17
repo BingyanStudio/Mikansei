@@ -147,3 +147,26 @@ Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate �
 ### 数据规则说明
 
 墓碑存放于 archive metadata 的 `tombstones`（条目）与 `courseTombstones`（课表），键为大写编号、值为整秒 UTC 时间戳；`Archive.merge` 丢弃更新时间不晚于墓碑的记录，晚于墓碑的编辑视为重新创建并保留。墓碑永久保留（体量可忽略）。备份导入走同一合并规则，因此旧备份不会再复活已删除条目。Android 日历来源设置（`androidCalendarSync`）在应用云端副本时保留本机值，与原版"日历来源按设备"一致；云端数据明文存于用户自己的 Supabase 项目，行级安全限制本人读写。
+
+## 0.4.0 (6)：共享文件夹同步（macOS + iOS + Android）（2026-10-17）
+
+本轮新增：Mikanseta 与原生 Mikansei 的**共享文件夹自动同步**。三端各选一次文件夹后，自动交换 `Mikansei-sync/replica-<设备UUID>.json`（协议与原生版 iCloud 文件夹同步一致：Lamport 修订号 + 永久墓碑 + 每设备独立文件），无需手动导出/导入。macOS/iOS 使用安全作用域书签，Android 使用 SAF 持久授权；macOS 两个 entitlements 补充 `com.apple.security.files.bookmarks.app-scope`；iOS 小组件扩展版本同步为 0.4.0 (6)。使用说明见 `Documentation/LOCAL_SYNC_SETUP.md`。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查 | `./Scripts/flutter.sh analyze` 通过，`No issues found!`。修正过 `Archive.find` 不存在、未使用导入与 null-aware 元素三处。 |
+| 单元与 Widget 测试 | `./Scripts/flutter.sh test` 通过：`+74: All tests passed!`。本轮新增 14 项：`local_folder_sync_test.dart` 13 项（首轮写出、远端合并、本地修改采集、删除墓碑与防复活、远端墓碑、修订号覆盖、无变化不重写、损坏远端中止且不动本地、设备号/计数器重启保持、null 归一化、课表同步与墓碑、按设备元数据保留、原生格式解码/再编码）与设置页共享文件夹连接 1 项。 |
+| 时区变体 | `TZ=America/Los_Angeles ./Scripts/flutter.sh test test/local_folder_sync_test.dart` 通过（13 项）。 |
+| 原生解码兼容 | 用 Dart 生成含条目、课表与墓碑的 replica 文件，在 `/tmp` 复制原生 `Sources/MikanseiCore` 并以 `swift test` 实际调用 `WorkspaceSyncDocument.decode`：解码、校验与原生再编码全部通过。首次失败是夹具课表日期写成日期-only，改为完整 ISO 时间戳后通过（真实数据格式即完整时间戳）。 |
+| macOS 集成测试 | `./Scripts/flutter.sh test integration_test/app_test.dart -d macos` 通过。 |
+| macOS Release 构建/安装 | `./Scripts/install-mac.sh` 通过，`Mikanseta.app` 53.1 MB；已安装到 `Projects/Mikanseta-macOS.app` 并启动。校验：版本 0.4.0 (6)、`x86_64 + arm64` 通用、签名含 `bookmarks.app-scope`、`codesign --verify --deep --strict` 通过。 |
+| Android Release 构建 | `./Scripts/build-android.sh` 通过，导出 **0.4.0 (6)** 通用 APK 60.5 MB（60,468,624 字节），SHA-256 `36483aa3e9a0871fa8de92039ef2ed51bc14885d905b356110706b47d1fe8695`。首次编译即通过（SAF 使用系统 `DocumentsContract`，未新增依赖）。 |
+| iOS Release 构建 | `install-iphone.py` 的构建阶段 **BUILD SUCCEEDED**（新的书签/文件夹选择代码编译通过），随后安装在设备定位阶段中断：`CoreDeviceService was unable to locate a device`（手机未连接/锁屏）。修正小组件扩展版本后的重新安装待手机可用时执行。 |
+| 真实设备端到端 | 未验证：需要在 Mikanseta（Mac/iPhone/Android）与原生 Mikansei 上各选择同一个文件夹。原生 Mac 当前的 replica 文件为空（原生档案 0 条），格式解析通过。 |
+
+### 协议与实现说明
+
+- 文件结构 `{version:1, entries:[{id, revision:{counter, device}, value?}], courses:[...], deletedCalendarOccurrences?:[...]}`；无 `value` 即墓碑。修订号按 counter、再按 device 字符串排序，平手保留本地。
+- 每轮交换顺序：读取全部远端文件（任一损坏即中止、不写任何文件）→ 本地变更采集（每批一个 counter）→ 合并远端 → 投影回 Archive（保留本机 preferences/日历设置，删除写 `tombstones`/`courseTombstones`）→ 有变化才提交 → 内容有变化才写自己的 replica → 持久化设备号/counter/文档。
+- 触发：本机保存后 2 秒防抖、连接期间每 30 秒、回前台、手动“立即同步”。与 Supabase 同步可并行，二者都通过 `EntryStore` 的提交入口收敛。
+- iOS 使用 `.minimalBookmark`，macOS 使用 `.withSecurityScope`；Android 严格校验 `replica-<UUID>.json` 文件名，防止路径穿越。

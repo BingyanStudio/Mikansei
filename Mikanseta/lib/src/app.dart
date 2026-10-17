@@ -9,6 +9,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'domain.dart';
 import 'store.dart';
 import 'cloud_sync.dart';
+import 'local_folder_sync.dart';
 import 'theme.dart';
 import 'editor.dart';
 import 'android_system.dart';
@@ -16,12 +17,18 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.3.0 (5)';
+const appVersion = '0.4.0 (6)';
 
 class MikansetaApp extends StatelessWidget {
-  const MikansetaApp({super.key, required this.store, this.cloud});
+  const MikansetaApp({
+    super.key,
+    required this.store,
+    this.cloud,
+    this.localSync,
+  });
   final EntryStore store;
   final CloudSync? cloud;
+  final LocalFolderSync? localSync;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
@@ -38,15 +45,16 @@ class MikansetaApp extends StatelessWidget {
         "dark" => ThemeMode.dark,
         _ => ThemeMode.system,
       },
-      home: HomePage(store: store, cloud: cloud),
+      home: HomePage(store: store, cloud: cloud, localSync: localSync),
     ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.store, this.cloud});
+  const HomePage({super.key, required this.store, this.cloud, this.localSync});
   final EntryStore store;
   final CloudSync? cloud;
+  final LocalFolderSync? localSync;
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -68,6 +76,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   String? calendarSyncError;
   EntryStore get store => widget.store;
   CloudSync? get cloud => widget.cloud;
+  LocalFolderSync? get localSync => widget.localSync;
   @override
   void initState() {
     super.initState();
@@ -109,6 +118,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       store.refreshServices();
       readRoutes();
       cloud?.syncNow();
+      localSync?.syncNow();
     }
   }
 
@@ -775,6 +785,18 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
       const SizedBox(height: 20),
+      Text('本机同步（与 Mikansei）', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      if (localSync != null)
+        _LocalSyncSettings(localSync: localSync!)
+      else
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(18),
+            child: Text('共享文件夹同步不可用。'),
+          ),
+        ),
+      const SizedBox(height: 20),
       Text('迁移进度', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
       const Card(
@@ -792,7 +814,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               Text('同步', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
               Text(
-                '账户与跨设备云同步已接入 Supabase（见上方账户同步），源码与单元测试通过，真实设备登录同步待验证。原版 iCloud Drive 文件夹同步未迁移。',
+                '账户与跨设备云同步已接入 Supabase（见上方账户同步），源码与单元测试通过，真实设备登录同步待验证。共享文件夹同步已接入 macOS、iOS 与 Android，可与原版 Mikansei 及其它 Mikanseta 设备自动合并。',
               ),
               SizedBox(height: 12),
               Text(
@@ -1583,5 +1605,149 @@ class _AccountSettingsState extends State<_AccountSettings> {
       ),
     );
     if (confirmed == true) await cloud.signOut();
+  }
+}
+
+class _LocalSyncSettings extends StatelessWidget {
+  const _LocalSyncSettings({required this.localSync});
+  final LocalFolderSync localSync;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: localSync,
+    builder: (context, _) {
+      final cloud = Theme.of(context).colorScheme;
+      if (!localSync.initialized) {
+        return const Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('正在读取同步设置…'),
+        );
+      }
+      if (!localSync.connected) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.folder_shared_outlined),
+                title: const Text('共享文件夹自动同步'),
+                subtitle: const Text(
+                  '选择与 Mikansei（或其它 Mikanseta 设备）相同的文件夹，之后自动合并，无需导入导出。',
+                ),
+              ),
+              if (localSync.error != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: Text(
+                    localSync.error!,
+                    style: TextStyle(color: cloud.error),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: localSync.busy
+                          ? null
+                          : () => localSync.chooseFolder(),
+                      icon: const Icon(Icons.folder_open),
+                      label: const Text('选择共享文件夹'),
+                    ),
+                  ],
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                child: Text(
+                  'Apple 设备可以选 iCloud Drive 里的文件夹（例如原版 Mikansei 正在使用的同步文件夹）；要让安卓也一起同步，请选 Google Drive、OneDrive 等三端都能访问的云盘文件夹。',
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+        );
+      }
+      final time = localSync.lastSyncedAt;
+      final timeLabel = time == null
+          ? ''
+          : ' · ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+      final status = localSync.busy
+          ? '正在同步…'
+          : localSync.error != null
+          ? localSync.error!
+          : time == null
+          ? '等待同步'
+          : '已同步$timeLabel';
+      return Column(
+        children: [
+          ListTile(
+            leading: Icon(
+              localSync.error == null
+                  ? Icons.folder_shared
+                  : Icons.folder_off_outlined,
+            ),
+            title: Text(localSync.folderLabel),
+            subtitle: Text('${localSync.folderPath ?? ''}\n$status'),
+            isThreeLine: true,
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: localSync.busy ? null : () => localSync.syncNow(),
+                  child: const Text('立即同步'),
+                ),
+                TextButton(
+                  onPressed: localSync.busy
+                      ? null
+                      : () => localSync.chooseFolder(),
+                  child: const Text('更换文件夹'),
+                ),
+                TextButton(
+                  onPressed: localSync.busy
+                      ? null
+                      : () => _confirmDisconnect(context),
+                  child: const Text('停止同步'),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              '本机保存后约 2 秒写出同步文件，并每 30 秒检查一次；回到前台和手动“立即同步”也会触发。删除会同步，旧副本不会复活。同一账号的 Supabase 同步与本机同步可以同时使用。',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  Future<void> _confirmDisconnect(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('停止本机同步？'),
+        content: const Text('本机数据与同步文件夹中的已有记录都会保留，之后不再自动交换。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('停止同步'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await localSync.disconnect();
   }
 }

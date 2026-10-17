@@ -117,9 +117,12 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.3.0 (5)';
+  String displayVersion = '0.4.0 (6)';
   String? error;
   String? serviceError;
+
+  /// Read-only view for local folder sync (capture compares against it).
+  Archive get archive => _archive;
 
   /// Notified after the archive is durably written locally (and once after a
   /// successful load), so account sync can schedule an upload.
@@ -494,6 +497,16 @@ class EntryStore extends ChangeNotifier {
       Archive(entries: merged.entries, metadata: metadata),
       clock(),
     );
+    if (next.encode() == _archive.encode()) return false;
+    _commit(next);
+    return true;
+  }
+
+  /// Apply an archive projected from the shared-folder replica document.
+  /// Returns true when the local archive changed.
+  bool applyLocalSyncArchive(Archive archive) {
+    if (readOnly || loading) return false;
+    final next = collapseRunningSessions(archive, clock());
     if (next.encode() == _archive.encode()) return false;
     _commit(next);
     return true;

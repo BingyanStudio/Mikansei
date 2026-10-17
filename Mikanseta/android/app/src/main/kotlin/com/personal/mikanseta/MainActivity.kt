@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.net.Uri
 import android.provider.Settings
+import android.provider.DocumentsContract
 import android.provider.CalendarContract
 import android.provider.AlarmClock
 import android.util.AtomicFile
@@ -27,6 +28,11 @@ class MainActivity : FlutterActivity() {
     private var notificationDelivery = "popup"
     private var nativeChannel: MethodChannel? = null
     private var calendarPermission: MethodChannel.Result? = null
+    private var folderPending: MethodChannel.Result? = null
+    private val syncPrefs by lazy { getSharedPreferences("mikanseta-local-sync", MODE_PRIVATE) }
+    private val syncFilePattern = Regex(
+        "^replica-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\\.json$"
+    )
     private val calendarDeviceID by lazy {
         // Calendar provider IDs belong to this installation. Android backup must
         // not restore this identity onto another phone with unrelated calendars.
@@ -174,6 +180,58 @@ class MainActivity : FlutterActivity() {
                     try { startActivityForResult(intent, if (exporting) 202 else 201) }
                     catch (exception: Exception) { pending = null; exportContent = null; result.error("document", exception.localizedMessage, null) }
                 }
+                "pickLocalSyncFolder" -> {
+                    if (folderPending != null) { result.error("busy", "请稍后重试", null); return@setMethodCallHandler }
+                    folderPending = result
+                    val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION or
+                            Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
+                    )
+                    try { startActivityForResult(intent, 203) }
+                    catch (exception: Exception) { folderPending = null; result.error("picker", exception.localizedMessage, null) }
+                }
+                "localSyncFolder" -> background(result) {
+                    val tree = syncTree()
+                    if (tree == null || !syncTreeAllowed(tree)) mapOf("connected" to false)
+                    else mapOf("connected" to true, "name" to (syncDisplayName(tree) ?: "共享文件夹"), "path" to tree.toString())
+                }
+                "disconnectLocalSyncFolder" -> {
+                    syncTree()?.let { tree ->
+                        try {
+                            contentResolver.releasePersistableUriPermission(
+                                tree,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            )
+                        } catch (_: Exception) { }
+                    }
+                    syncPrefs.edit().clear().apply()
+                    result.success(true)
+                }
+                "readLocalSyncFiles" -> background(result) {
+                    syncReadFiles(requireSyncTree())
+                }
+                "writeLocalSyncFile" -> background(result) {
+                    val args = call.arguments as Map<*, *>
+                    val name = args["name"] as? String ?: error("缺少同步文件名")
+                    val content = args["content"] as? String ?: error("缺少同步内容")
+                    require(syncFilePattern.matches(name)) { "同步文件名无效" }
+                    val tree = requireSyncTree()
+                    syncWriteFile(tree, syncDirectory(tree), name, content)
+                }
+                "readLocalSyncState" -> background(result) {
+                    val file = File(filesDir, "Mikanseta/local-sync-state.json")
+                    if (file.exists()) file.readText(Charsets.UTF_8) else null
+                }
+                "writeLocalSyncState" -> background(result) {
+                    val content = call.arguments as? String ?: error("缺少同步状态")
+                    val file = File(filesDir, "Mikanseta/local-sync-state.json")
+                    file.parentFile?.mkdirs()
+                    val temp = File(file.parentFile, "${file.name}.tmp")
+                    temp.writeText(content, Charsets.UTF_8)
+                    if (!temp.renameTo(file)) { file.delete(); temp.renameTo(file) }
+                    null
+                }
                 else -> result.notImplemented()
             }
         }
@@ -217,6 +275,123 @@ class MainActivity : FlutterActivity() {
         }
         return result
     }
+    private fun syncTree(): Uri? = syncPrefs.getString("tree", null)?.let(Uri::parse)
+    private fun syncTreeAllowed(uri: Uri): Boolean = contentResolver.persistedUriPermissions.any {
+        it.uri == uri && it.isReadPermission && it.isWritePermission
+    }
+    private fun requireSyncTree(): Uri {
+        val tree = syncTree() ?: error("尚未选择同步文件夹")
+        require(syncTreeAllowed(tree)) { "同步文件夹授权已失效，请重新选择" }
+        return tree
+    }
+    private fun syncDisplayName(tree: Uri): String? {
+        val root = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+        return contentResolver.query(
+            root,
+            arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+            null, null, null
+        )?.use { if (it.moveToFirst()) it.getString(0) else null }
+    }
+    private fun syncDirectory(tree: Uri): Uri {
+        val rootId = DocumentsContract.getTreeDocumentId(tree)
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(tree, rootId)
+        contentResolver.query(
+            children,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE
+            ),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                if (cursor.getString(1) == "Mikansei-sync" &&
+                    cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR
+                ) {
+                    return DocumentsContract.buildDocumentUriUsingTree(tree, cursor.getString(0))
+                }
+            }
+        }
+        val root = DocumentsContract.buildDocumentUriUsingTree(tree, rootId)
+        return DocumentsContract.createDocument(
+            contentResolver,
+            root,
+            DocumentsContract.Document.MIME_TYPE_DIR,
+            "Mikansei-sync"
+        ) ?: error("无法创建同步文件夹")
+    }
+    private fun syncReadFiles(tree: Uri): Map<String, String> {
+        val directory = syncDirectory(tree)
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(
+            tree, DocumentsContract.getDocumentId(directory)
+        )
+        val files = mutableMapOf<String, String>()
+        contentResolver.query(
+            children,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_MIME_TYPE
+            ),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val id = cursor.getString(0) ?: continue
+                val name = cursor.getString(1) ?: continue
+                if (cursor.getString(2) == DocumentsContract.Document.MIME_TYPE_DIR) continue
+                if (!syncFilePattern.matches(name)) continue
+                val uri = DocumentsContract.buildDocumentUriUsingTree(tree, id)
+                contentResolver.openInputStream(uri)?.use {
+                    files[name] = it.readBytes().toString(Charsets.UTF_8)
+                }
+            }
+        }
+        return files
+    }
+    private fun syncWriteFile(tree: Uri, directory: Uri, name: String, content: String): Boolean {
+        val children = DocumentsContract.buildChildDocumentsUriUsingTree(
+            tree, DocumentsContract.getDocumentId(directory)
+        )
+        var existing: String? = null
+        contentResolver.query(
+            children,
+            arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME
+            ),
+            null, null, null
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                if (cursor.getString(1) == name) existing = cursor.getString(0)
+            }
+        }
+        if (existing != null) {
+            val uri = DocumentsContract.buildDocumentUriUsingTree(tree, existing!!)
+            val current = runCatching {
+                contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+            }.getOrNull()
+            if (current == content) return false
+            DocumentsContract.deleteDocument(contentResolver, uri)
+        }
+        val created = DocumentsContract.createDocument(
+            contentResolver, directory, "application/json", name
+        ) ?: error("无法写入同步文件")
+        // Providers may append an extension; keep the protocol filename exact.
+        val createdName = runCatching {
+            contentResolver.query(
+                created,
+                arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME),
+                null, null, null
+            )?.use { if (it.moveToFirst()) it.getString(0) else null }
+        }.getOrNull()
+        if (createdName != null && createdName != name) {
+            runCatching { DocumentsContract.renameDocument(contentResolver, created, name) }
+        }
+        contentResolver.openOutputStream(created, "wt")?.use {
+            it.write(content.toByteArray(Charsets.UTF_8))
+        } ?: error("无法写入同步文件")
+        return true
+    }
     private fun background(result: MethodChannel.Result, block: () -> Any?) {
         io.execute {
             try { val value = block(); runOnUiThread { result.success(value) } }
@@ -226,6 +401,25 @@ class MainActivity : FlutterActivity() {
     @Deprecated("Android activity result bridge for Flutter")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == 203) {
+            val result = folderPending ?: return
+            folderPending = null
+            val uri = data?.data
+            if (resultCode != Activity.RESULT_OK || uri == null) { result.success(null); return }
+            try {
+                contentResolver.takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+                syncPrefs.edit().putString("tree", uri.toString()).apply()
+                background(result) {
+                    mapOf("name" to (syncDisplayName(uri) ?: "共享文件夹"), "path" to uri.toString())
+                }
+            } catch (exception: Exception) {
+                result.error("permission", exception.localizedMessage, null)
+            }
+            return
+        }
         if (requestCode != 201 && requestCode != 202) return
         val result = pending ?: return
         val content = exportContent

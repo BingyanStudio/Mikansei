@@ -5,10 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mikanseta/src/app.dart';
 import 'package:mikanseta/src/cloud_sync.dart';
 import 'package:mikanseta/src/domain.dart';
+import 'package:mikanseta/src/local_folder_sync.dart';
 import 'package:mikanseta/src/store.dart';
 
 import 'cloud_sync_test.dart' show FakeCloudBackend;
 import 'domain_test.dart' show MemoryStorage;
+import 'local_folder_sync_test.dart' show FakeLocalSyncBackend;
 
 void main() {
   Future<EntryStore> loaded() async {
@@ -317,10 +319,7 @@ void main() {
     await tester.ensureVisible(find.text('发送验证码'));
     await tester.tap(find.text('发送验证码'));
     await tester.pumpAndSettle();
-    expect(
-      find.textContaining('验证码（已发送至 me@example.com）'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('验证码（已发送至 me@example.com）'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.byType(TextField).last,
       120,
@@ -336,6 +335,47 @@ void main() {
     expect(tester.takeException(), null);
     store.onLocalWrite = null;
     cloud.dispose();
+    await tester.pumpWidget(const SizedBox());
+    await store.settled;
+  });
+
+  testWidgets('settings connects a shared folder for local sync', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    final backend = FakeLocalSyncBackend();
+    final localSync = LocalFolderSync(
+      store,
+      backend,
+      exchangeDelay: Duration.zero,
+      period: null,
+    );
+    await localSync.whenReady;
+    await tester.pumpWidget(MikansetaApp(store: store, localSync: localSync));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('本机同步（与 Mikansei）'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('共享文件夹自动同步'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('选择共享文件夹'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.text('选择共享文件夹'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mikansei Cloud'), findsOneWidget);
+    expect(find.text('立即同步'), findsOneWidget);
+    expect(tester.takeException(), null);
+    localSync.dispose();
     await tester.pumpWidget(const SizedBox());
     await store.settled;
   });

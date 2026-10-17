@@ -37,8 +37,8 @@
 "CODE_SIGN_ENTITLEMENTS" = "Runner/Mikanseta.entitlements";
 "MIKANSETA_SHARED_KEYCHAIN_SUFFIX" = "com.personal.mikanseta.shared";
 "INFOPLIST_FILE" = "Widgets/Info.plist";
-"MARKETING_VERSION" = "0.2.0";
-"CURRENT_PROJECT_VERSION" = "4";
+"MARKETING_VERSION" = "0.4.0";
+"CURRENT_PROJECT_VERSION" = "6";
 "IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
 "SDKROOT" = "iphoneos";
 "TARGETED_DEVICE_FAMILY" = "1,2";
@@ -671,8 +671,8 @@
 "CODE_SIGN_ENTITLEMENTS" = "Runner/Mikanseta.entitlements";
 "MIKANSETA_SHARED_KEYCHAIN_SUFFIX" = "com.personal.mikanseta.shared";
 "INFOPLIST_FILE" = "Widgets/Info.plist";
-"MARKETING_VERSION" = "0.2.0";
-"CURRENT_PROJECT_VERSION" = "4";
+"MARKETING_VERSION" = "0.4.0";
+"CURRENT_PROJECT_VERSION" = "6";
 "IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
 "SDKROOT" = "iphoneos";
 "TARGETED_DEVICE_FAMILY" = "1,2";
@@ -787,8 +787,8 @@
 "CODE_SIGN_ENTITLEMENTS" = "Runner/Mikanseta.entitlements";
 "MIKANSETA_SHARED_KEYCHAIN_SUFFIX" = "com.personal.mikanseta.shared";
 "INFOPLIST_FILE" = "Widgets/Info.plist";
-"MARKETING_VERSION" = "0.2.0";
-"CURRENT_PROJECT_VERSION" = "4";
+"MARKETING_VERSION" = "0.4.0";
+"CURRENT_PROJECT_VERSION" = "6";
 "IPHONEOS_DEPLOYMENT_TARGET" = "17.0";
 "SDKROOT" = "iphoneos";
 "TARGETED_DEVICE_FAMILY" = "1,2";
