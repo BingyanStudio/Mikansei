@@ -55,15 +55,18 @@ class EntryStore extends ChangeNotifier {
     );
   }
 
-  void deleteCourse(String id) => _commit(
-    Archive(
+  void deleteCourse(String id) {
+    final remaining = courses
+        .where((c) => c.id != id)
+        .map((c) => c.data)
+        .toList();
+    final staged = Archive(
       entries: entries,
-      metadata: {
-        ..._archive.metadata,
-        'courses': courses.where((c) => c.id != id).map((c) => c.data).toList(),
-      },
-    ),
-  );
+      metadata: {..._archive.metadata, 'courses': remaining},
+    );
+    _commit(staged.withTombstone('courseTombstones', id, now: clock()));
+  }
+
   int importCourses(List<Course> added) {
     for (final c in added) {
       c.validate();
@@ -114,9 +117,13 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.2.0 (4)';
+  String displayVersion = '0.3.0 (5)';
   String? error;
   String? serviceError;
+
+  /// Notified after the archive is durably written locally (and once after a
+  /// successful load), so account sync can schedule an upload.
+  void Function()? onLocalWrite;
   Future<void> refreshServices() async {
     if (storage is! NativeStorage || readOnly) return;
     final revision = _revision;
@@ -326,11 +333,21 @@ class EntryStore extends ChangeNotifier {
   }
 
   int cleanUnselectedCalendarEntries() {
-    final ids = cleanableCalendarEntries.map((e) => e.id).toSet();
+    final removed = cleanableCalendarEntries;
+    final ids = removed.map((e) => e.id).toSet();
     if (ids.isEmpty || readOnly) return 0;
-    _commit(
-      _archive.withEntries(entries.where((e) => !ids.contains(e.id)).toList()),
+    var staged = _archive.withEntries(
+      entries.where((e) => !ids.contains(e.id)).toList(),
     );
+    for (final entry in removed) {
+      staged = staged.withTombstone(
+        'tombstones',
+        entry.id,
+        lastUpdate: entry.updatedAt,
+        now: clock(),
+      );
+    }
+    _commit(staged);
     return ids.length;
   }
 
@@ -350,6 +367,7 @@ class EntryStore extends ChangeNotifier {
       error = '本地数据无法读取，原文件已保留。请勿卸载测试版。\n$exception';
     }
     if (!readOnly) await refreshServices();
+    if (!readOnly) onLocalWrite?.call();
     loading = false;
     notifyListeners();
   }
@@ -375,6 +393,7 @@ class EntryStore extends ChangeNotifier {
           saving = false;
           saveFailed = false;
           error = null;
+          onLocalWrite?.call();
         }
       } catch (exception) {
         if (revision == _revision) {
@@ -414,9 +433,10 @@ class EntryStore extends ChangeNotifier {
   }
 
   void delete(String id) {
-    final link = find(id)?.data['androidCalendarLink'] as Map?;
+    final target = find(id);
+    final link = target?.data['androidCalendarLink'] as Map?;
     final settings = androidCalendarSettings;
-    final metadata = {..._archive.metadata};
+    var metadata = {..._archive.metadata};
     if (link != null && settings['deviceID'] == link['deviceID']) {
       metadata['androidCalendarSync'] = {
         ...settings,
@@ -426,10 +446,16 @@ class EntryStore extends ChangeNotifier {
         }.toList(),
       };
     }
+    final staged = Archive(
+      entries: entries.where((e) => e.id != id).toList(),
+      metadata: metadata,
+    );
     _commit(
-      Archive(
-        entries: entries.where((e) => e.id != id).toList(),
-        metadata: metadata,
+      staged.withTombstone(
+        'tombstones',
+        id,
+        lastUpdate: target?.updatedAt,
+        now: clock(),
       ),
     );
   }
@@ -450,28 +476,37 @@ class EntryStore extends ChangeNotifier {
     _commit(_archive.withEntries(next));
   }
 
+  /// Merge an incoming account copy from another device. Returns true when the
+  /// local archive changed. Throws FormatException on unreadable remote data;
+  /// in that case the local archive is untouched.
+  bool applyCloudArchive(String content) {
+    if (readOnly || loading) return false;
+    final remote = Archive.decode(content);
+    final merged = _archive.merge(remote);
+    // The Android calendar source is a per-device setting; account data must
+    // not swap this device's calendar identities or suppression list.
+    final localCalendar = _archive.metadata['androidCalendarSync'];
+    final metadata = {...merged.metadata};
+    if (localCalendar != null) {
+      metadata['androidCalendarSync'] = localCalendar;
+    }
+    final next = collapseRunningSessions(
+      Archive(entries: merged.entries, metadata: metadata),
+      clock(),
+    );
+    if (next.encode() == _archive.encode()) return false;
+    _commit(next);
+    return true;
+  }
+
   Future<int?> importBackup() async {
     if (readOnly) return null;
     final content = await storage.pickBackup();
     if (content == null) return null;
     final imported = Archive.decode(content);
     final merged = _archive.merge(imported);
-    // Ensure a backup with several active sessions does not run multiple timers.
-    final sessions =
-        merged.entries
-            .where((e) => e.startedAt != null && !e.completed)
-            .toList()
-          ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-    final winner = sessions.firstOrNull?.id;
-    final now = clock();
-    final next = merged.entries
-        .map(
-          (e) => e.startedAt != null && (e.completed || e.id != winner)
-              ? e.pause(now)
-              : e,
-        )
-        .toList();
-    _commit(merged.withEntries(next));
+    // A merged copy may carry several running sessions; only one may run.
+    _commit(collapseRunningSessions(merged, clock()));
     await settled;
     if (saveFailed) throw StateError('导入的事项尚未写入磁盘，请重试保存。');
     return imported.entries.length;

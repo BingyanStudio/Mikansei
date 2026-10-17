@@ -470,6 +470,51 @@ class Archive {
   });
   Archive withEntries(List<Entry> next) =>
       Archive(entries: next, metadata: metadata);
+
+  /// Deletion markers survive a merge so an offline copy of a removed entry or
+  /// course cannot resurrect it on another device. Keys are uppercase entry or
+  /// course ids; values are whole-second UTC stamps. Malformed stamps are
+  /// ignored, which drops them instead of failing the whole archive.
+  Map<String, DateTime> tombstones(String key) {
+    final raw = metadata[key];
+    if (raw is! Map) return {};
+    return {
+      for (final marker in raw.entries)
+        if (marker.key is String && marker.value is String)
+          if (DateTime.tryParse(marker.value as String) != null)
+            (marker.key as String).toUpperCase(): DateTime.parse(
+              marker.value as String,
+            ),
+    };
+  }
+
+  /// Stamp a deletion marker that is strictly newer than the record it removes
+  /// (and than any earlier marker), so it wins the next merge even when the
+  /// delete follows an edit within the same second.
+  Archive withTombstone(
+    String key,
+    String id, {
+    DateTime? lastUpdate,
+    DateTime? now,
+  }) {
+    final effectiveNow = now ?? DateTime.now();
+    final existing = tombstones(key);
+    var stamp = DateTime.parse(isoDate(effectiveNow));
+    final previous = existing[id.toUpperCase()];
+    if (previous != null && !stamp.isAfter(previous)) {
+      stamp = previous.add(const Duration(seconds: 1));
+    }
+    if (lastUpdate != null) {
+      final latest = DateTime.parse(isoDate(lastUpdate));
+      if (!stamp.isAfter(latest)) {
+        stamp = latest.add(const Duration(seconds: 1));
+      }
+    }
+    final raw = Map<String, dynamic>.from(metadata[key] as Map? ?? {});
+    raw[id.toUpperCase()] = isoDate(stamp);
+    return Archive(entries: entries, metadata: {...metadata, key: raw});
+  }
+
   Archive merge(Archive other) {
     final indexed = {for (final e in entries) e.id.toUpperCase(): e};
     for (final entry in other.entries) {
@@ -478,6 +523,13 @@ class Archive {
         indexed[entry.id.toUpperCase()] = entry;
       }
     }
+    final dead = _mergedTombstones(other, 'tombstones');
+    // An entry edited after its deletion timestamp is a deliberate recreation
+    // and survives; anything at or before the marker stays deleted.
+    indexed.removeWhere(
+      (id, entry) => dead[id] != null && !entry.updatedAt.isAfter(dead[id]!),
+    );
+    final deadCourses = _mergedTombstones(other, 'courseTombstones');
     final courses = <String, dynamic>{};
     for (final course in [
       ...(other.metadata['courses'] as List? ?? []),
@@ -485,6 +537,7 @@ class Archive {
     ]) {
       courses[(course['id'] as String).toUpperCase()] = course;
     }
+    courses.removeWhere((id, _) => deadCourses.containsKey(id));
     // A backup is a copy. A native replica belongs to its source device and must
     // not be replayed after editing these records on an independent beta device.
     final mergedMetadata = {
@@ -492,8 +545,52 @@ class Archive {
       ...other.metadata,
       'courses': courses.values.toList(),
     }..remove('replica');
+    _keepTombstones(mergedMetadata, dead, 'tombstones');
+    _keepTombstones(mergedMetadata, deadCourses, 'courseTombstones');
     return Archive(entries: indexed.values.toList(), metadata: mergedMetadata);
   }
+
+  Map<String, DateTime> _mergedTombstones(Archive other, String key) {
+    final merged = tombstones(key);
+    other.tombstones(key).forEach((id, time) {
+      final existing = merged[id];
+      if (existing == null || time.isAfter(existing)) merged[id] = time;
+    });
+    return merged;
+  }
+
+  void _keepTombstones(
+    Map<String, dynamic> metadata,
+    Map<String, DateTime> merged,
+    String key,
+  ) {
+    if (merged.isEmpty) {
+      metadata.remove(key);
+    } else {
+      metadata[key] = {
+        for (final marker in merged.entries)
+          marker.key: isoDate(marker.value.toUtc()),
+      };
+    }
+  }
+}
+
+/// Exactly one focus session may run per account. After merging copies from
+/// several devices, keep the most recently updated one and pause the rest.
+Archive collapseRunningSessions(Archive archive, DateTime now) {
+  final sessions =
+      archive.entries.where((e) => e.startedAt != null && !e.completed).toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  final winner = sessions.isEmpty ? null : sessions.first.id;
+  return archive.withEntries(
+    archive.entries
+        .map(
+          (e) => e.startedAt != null && (e.completed || e.id != winner)
+              ? e.pause(now)
+              : e,
+        )
+        .toList(),
+  );
 }
 
 void validateEntry(Entry e) {

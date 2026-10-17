@@ -1,5 +1,8 @@
 allprojects {
     repositories {
+        // 阿里云镜像优先，避免国内网络访问 Maven Central / Google 被中断（403）。
+        maven("https://maven.aliyun.com/repository/google")
+        maven("https://maven.aliyun.com/repository/public")
         google()
         mavenCentral()
     }

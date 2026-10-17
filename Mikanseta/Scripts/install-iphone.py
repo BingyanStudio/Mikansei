@@ -33,9 +33,19 @@ def main():
     local = root / 'LocalInstall'
     local.mkdir(exist_ok=True)
     log = local / 'install.log'
+    defines = []
+    env = local / 'supabase.env'
+    if env.exists():
+        for line in env.read_text().splitlines():
+            line = line.strip()
+            for key in ('SUPABASE_URL', 'SUPABASE_ANON_KEY'):
+                if line.startswith(key + '='):
+                    value = line.split('=', 1)[1].strip().strip('"').strip("'")
+                    if value:
+                        defines.append(f'--dart-define={key}={value}')
     with log.open('w') as stream:
         print('正在构建 Mikanseta，请保持手机解锁。', flush=True)
-        subprocess.run([str(root / 'Scripts/flutter.sh'), 'build', 'ios', '--release', '--flavor', 'Mikanseta', '--no-codesign'], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
+        subprocess.run([str(root / 'Scripts/flutter.sh'), 'build', 'ios', '--release', '--flavor', 'Mikanseta', '--no-codesign'] + defines, cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
         subprocess.run(['xcodebuild', '-workspace', str(root / 'ios/Mikanseta.xcworkspace'), '-scheme', 'Mikanseta',
                         '-configuration', 'Release', '-destination', 'id=' + device['hardwareProperties']['udid'],
                         '-derivedDataPath', str(local / 'DerivedData'), '-allowProvisioningUpdates',

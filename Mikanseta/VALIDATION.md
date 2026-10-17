@@ -125,3 +125,25 @@ Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate �
 交付文件 `Deliveries/Mikanseta/Mikanseta-0.2.0+4-android.apk` 于 **2026-10-16 11:10 +0800** 由本轮 Release 构建生成，SHA-256 为 `b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`；相应 `.sha256` 文件已生成。旧的 2026-10-15 构建已由本轮构建替换。
 
 此 APK 包含日 / 周视图、提醒、小组件与路由修复等当前构建源码；系统日历编辑结果即时回流仍未实现，设备行为也尚未实测。APK 构建成功不等于所有迁移功能均已验收。
+
+## 0.3.0 (5)：Supabase 账户与跨设备同步（2026-10-17）
+
+本轮新增：Supabase 邮箱验证码登录、每账号一行整份 Archive 的拉取-合并-上传同步、实时频道订阅（秒级推送）、条目与课表删除墓碑（防止跨设备复活）、回前台与手动同步入口；Android 主 manifest 补 INTERNET 权限，macOS 两个 entitlements 补 `network.client`；三个一键安装/打包脚本从 git 忽略的 `LocalInstall/supabase.env` 注入 `--dart-define`。配置与限制见 `Documentation/SUPABASE_SETUP.md` 与 `Documentation/supabase-schema.sql`。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查 | `./Scripts/flutter.sh analyze` 通过，`No issues found!`。修正过两处：`Supabase.hasInstance` 在 2.18.3 不存在（改为后端内部一次性初始化标记）、`anonKey` 参数已更名 `publishableKey`。 |
+| 单元与 Widget 测试 | `./Scripts/flutter.sh test` 通过：`+60: All tests passed!`。新增 16 项：墓碑合并 4（删除跨设备不复活、删除后重建保留、旧备份导入不复活、课表墓碑）、`cloud_sync_test.dart` 10（新账号上传、已有账号双向合并、防抖上传、实时拉取合并、按 revision 忽略自己事件、Android 日历设置按设备保留、双端计时收敛、损坏远端报错不动本地、退出登录保留数据、删除墓碑上传与防复活）、设置页账户区块 2（未配置占位、登录流程）。 |
+| 时区变体 | `TZ=America/Los_Angeles` 下 `test/domain_test.dart`（23 项）与 `test/cloud_sync_test.dart`（10 项）全部通过。 |
+| 原版备份往返 | `./Scripts/verify-backup.sh` 通过：Swift → Dart → Swift；墓碑仅作为未知 metadata 键被原版忽略。 |
+| macOS 集成测试 | `./Scripts/flutter.sh test integration_test/app_test.dart -d macos` 通过。首次运行因 `Failed to foreground app; open returned 1` 失败一次，重跑通过；未改动任何代码。 |
+| macOS Release 构建 | `./Scripts/flutter.sh build macos --release` 通过，52.8 MB；`app_links`、`shared_preferences_foundation`、`url_launcher_macos` 插件随 supabase_flutter 编译通过，网络客户端 entitlement 已加入。本轮未在 Mac 上登录真实账号。 |
+| Android Release 构建 | 首次失败两次后通过，详见下方两行。最终 `./Scripts/build-android.sh` 通过，导出 **0.3.0 (5)** 通用 APK 60.0 MB（59,960,480 字节）。 |
+| Android 失败一：网络 | Gradle 解析 `kotlin-stdlib` 等构建插件时 `repo.maven.apache.org` 返回 403（国内网络中断）。已在 `android/settings.gradle.kts` 与 `android/build.gradle.kts` 的仓库列表前加阿里云镜像（gradle-plugin/google/public），官方源保留为后备。 |
+| Android 失败二：残留生成文件 | `:app:compileReleaseJavaWithJavac` 报 `程序包dev.flutter.plugins.integration_test不存在`：此前 Android 模拟器集成测试以 debug 模式生成的 `GeneratedPluginRegistrant.java` 残留了 dev 依赖插件，而 release 构建按规则不链接它。删除该（被 gitignore 的）生成文件后，release 构建按 release 依赖集重新生成，编译通过；`build-android.sh` 已加入构建前清理该文件的步骤防复发。 |
+| APK 校验 | 交付 `Deliveries/Mikanseta/Mikanseta-0.3.0+5-android.apk`，SHA-256 `f4781e8ee758287abbd50eff075e90278ac9488a57efd8272e954fca37dab3da`，`.sha256` 文件已生成。本轮 APK 未注入 Supabase 连接值（构建时本地 env 尚未创建），含完整账户同步代码，未配置时设置页显示"未配置"。 |
+| 真实 Supabase 同步 | 未验证：需要用户创建项目（已注册）、执行 `Documentation/supabase-schema.sql`、在 `LocalInstall/supabase.env` 填入 URL 与 anon key 后重新构建安装并登录。Fake 后端单元测试覆盖了合并、防抖、防回声与防复活规则。 |
+
+### 数据规则说明
+
+墓碑存放于 archive metadata 的 `tombstones`（条目）与 `courseTombstones`（课表），键为大写编号、值为整秒 UTC 时间戳；`Archive.merge` 丢弃更新时间不晚于墓碑的记录，晚于墓碑的编辑视为重新创建并保留。墓碑永久保留（体量可忽略）。备份导入走同一合并规则，因此旧备份不会再复活已删除条目。Android 日历来源设置（`androidCalendarSync`）在应用云端副本时保留本机值，与原版"日历来源按设备"一致；云端数据明文存于用户自己的 Supabase 项目，行级安全限制本人读写。

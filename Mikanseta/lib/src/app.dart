@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'domain.dart';
 import 'store.dart';
+import 'cloud_sync.dart';
 import 'theme.dart';
 import 'editor.dart';
 import 'android_system.dart';
@@ -15,11 +16,12 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.2.0 (4)';
+const appVersion = '0.3.0 (5)';
 
 class MikansetaApp extends StatelessWidget {
-  const MikansetaApp({super.key, required this.store});
+  const MikansetaApp({super.key, required this.store, this.cloud});
   final EntryStore store;
+  final CloudSync? cloud;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
@@ -36,14 +38,15 @@ class MikansetaApp extends StatelessWidget {
         "dark" => ThemeMode.dark,
         _ => ThemeMode.system,
       },
-      home: HomePage(store: store),
+      home: HomePage(store: store, cloud: cloud),
     ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.store});
+  const HomePage({super.key, required this.store, this.cloud});
   final EntryStore store;
+  final CloudSync? cloud;
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -64,6 +67,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   bool initialCalendarSync = false;
   String? calendarSyncError;
   EntryStore get store => widget.store;
+  CloudSync? get cloud => widget.cloud;
   @override
   void initState() {
     super.initState();
@@ -104,6 +108,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       syncCalendar();
       store.refreshServices();
       readRoutes();
+      cloud?.syncNow();
     }
   }
 
@@ -756,6 +761,20 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       const SizedBox(height: 20),
+      Text('账户同步', style: Theme.of(context).textTheme.titleMedium),
+      const SizedBox(height: 8),
+      if (cloud != null)
+        _AccountSettings(store: store, cloud: cloud!)
+      else
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(18),
+            child: Text(
+              '未配置 Supabase 账户服务。构建时通过 --dart-define 提供 SUPABASE_URL 与 SUPABASE_ANON_KEY 后可用，步骤见 Documentation/SUPABASE_SETUP.md。',
+            ),
+          ),
+        ),
+      const SizedBox(height: 20),
       Text('迁移进度', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
       const Card(
@@ -772,7 +791,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               SizedBox(height: 18),
               Text('同步', style: TextStyle(fontWeight: FontWeight.w700)),
               SizedBox(height: 6),
-              Text('本轮不包含账户和跨设备云同步。'),
+              Text(
+                '账户与跨设备云同步已接入 Supabase（见上方账户同步），源码与单元测试通过，真实设备登录同步待验证。原版 iCloud Drive 文件夹同步未迁移。',
+              ),
               SizedBox(height: 12),
               Text(
                 '系统功能需要对应权限。iPhone 实时活动需要 iOS 17、原生闹钟需要 iOS 26；Mac 使用系统通知，安卓的锁屏展示为常驻通知。',
@@ -782,7 +803,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         ),
       ),
       const SizedBox(height: 18),
-      const Text('两个 App 的本地数据分别保存。导入备份会复制事项，不会自动共享修改。主题跟随系统切换浅色与深色。'),
+      const Text(
+        '两个 App 的本地数据分别保存。导入备份会复制事项，不会自动共享修改；Mikanseta 登录同一账号后，各设备的数据经账户自动同步。主题跟随系统切换浅色与深色。',
+      ),
       if (MediaQuery.sizeOf(context).width >= 760) ...[
         const SizedBox(height: 16),
         const Text('电脑快捷键：⌘/Ctrl + N 添加，⌘/Ctrl + F 搜索。'),
@@ -1372,4 +1395,193 @@ class EmptyState extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _AccountSettings extends StatefulWidget {
+  const _AccountSettings({required this.store, required this.cloud});
+  final EntryStore store;
+  final CloudSync cloud;
+  @override
+  State<_AccountSettings> createState() => _AccountSettingsState();
+}
+
+class _AccountSettingsState extends State<_AccountSettings> {
+  final emailController = TextEditingController();
+  final codeController = TextEditingController();
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    codeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: widget.cloud,
+    builder: (context, _) {
+      final cloud = widget.cloud;
+      if (!cloud.initialized) {
+        return const Padding(
+          padding: EdgeInsets.all(20),
+          child: Text('正在连接账户服务…'),
+        );
+      }
+      if (cloud.initError != null) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Text(cloud.initError!),
+        );
+      }
+      return cloud.email == null ? _loginForm(cloud) : _statusForm(cloud);
+    },
+  );
+
+  Widget _loginForm(CloudSync cloud) => Padding(
+    padding: const EdgeInsets.fromLTRB(4, 4, 4, 12),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          leading: const Icon(Icons.cloud_outlined),
+          title: const Text('登录 Supabase 账户'),
+          subtitle: const Text('同一账号的设备之间自动同步待办、日程、笔记、课表与计时'),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: const InputDecoration(labelText: '邮箱'),
+          ),
+        ),
+        if (cloud.codeTarget != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: codeController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: '验证码（已发送至 ${cloud.codeTarget}）',
+              ),
+            ),
+          ),
+        if (cloud.loginError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Text(
+              cloud.loginError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 8, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: cloud.sendingCode
+                    ? null
+                    : () async {
+                        if (emailController.text.trim().isEmpty) return;
+                        await cloud.sendCode(emailController.text);
+                      },
+                child: Text(cloud.codeTarget == null ? '发送验证码' : '重新发送'),
+              ),
+              if (cloud.codeTarget != null)
+                TextButton(
+                  onPressed: () async {
+                    final signedIn = await cloud.verifyCode(
+                      codeController.text,
+                    );
+                    if (signedIn) codeController.clear();
+                  },
+                  child: const Text('登录'),
+                ),
+            ],
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+          child: Text(
+            '验证码邮件由 Supabase 发送，内置邮件服务每小时限 2 封，邮件可能进入垃圾箱。登录状态保存在本机，之后无需重复登录。',
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _statusForm(CloudSync cloud) {
+    final time = cloud.lastSyncedAt;
+    final timeLabel = time == null
+        ? ''
+        : ' · ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    final status = cloud.busy
+        ? '正在同步…'
+        : cloud.syncError != null
+        ? cloud.syncError!
+        : time == null
+        ? '等待同步'
+        : '已同步$timeLabel';
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(
+            cloud.syncError == null
+                ? Icons.cloud_done_outlined
+                : Icons.cloud_off_outlined,
+          ),
+          title: Text(cloud.email!),
+          subtitle: Text(status),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: cloud.busy ? null : () => cloud.syncNow(),
+                child: const Text('立即同步'),
+              ),
+              TextButton(
+                onPressed: () => _confirmSignOut(cloud),
+                child: const Text('退出登录'),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        const Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            '登录后，待办、日程、笔记、Checklist、课表、完成状态与计时在本账号设备间自动同步；删除也会同步，不会因另一台设备的旧副本复活。系统日历来源按设备设置。退出登录保留本机数据，账户数据不变。首次在新设备登录会合并两端已有内容，请勿把存有本机数据的设备登录到他人账号。',
+            style: TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmSignOut(CloudSync cloud) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('退出登录？'),
+        content: const Text('本机数据保留，账户与其他设备不受影响；本机之后的修改不再同步。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('退出登录'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await cloud.signOut();
+  }
 }

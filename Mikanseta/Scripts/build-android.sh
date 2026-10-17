@@ -14,7 +14,15 @@ if [[ ! -f "$mks_root/android/key.properties" ]]; then
   exit 1
 fi
 cd "$mks_root"
-"$mks_root/Scripts/flutter.sh" build apk --release
+# 集成测试以 debug 模式生成时会把 dev 依赖插件（integration_test）写进
+# GeneratedPluginRegistrant.java，导致 release 编译找不到程序包；删除后本次
+# 构建会按 release 依赖集重新生成（该文件被 Flutter 模板 gitignore）。
+rm -f "$mks_root/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java"
+mks_defines=()
+while IFS= read -r mks_flag; do
+  [[ -n "$mks_flag" ]] && mks_defines+=("$mks_flag")
+done < <("$mks_root/Scripts/dart-defines.sh")
+"$mks_root/Scripts/flutter.sh" build apk --release ${mks_defines[@]+"${mks_defines[@]}"}
 mks_version="$(awk '/^version:/ { print $2; exit }' pubspec.yaml)"
 mks_output="${MIKANSETA_OUTPUT_DIR:-$mks_root/../../Deliveries/Mikanseta}"
 mkdir -p "$mks_output"

@@ -1,6 +1,6 @@
 # Mikanseta · Flutter 测试版
 
-**0.2.0 (4)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。
+**0.3.0 (5)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮新增 Supabase 账户登录与同账号多设备同步。
 
 本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
 
@@ -20,10 +20,11 @@
 - 设置里的版本号直接读取安装包，包含构建编号。
 - 安卓系统日历：勾选来源，导入今天起 30 天的日程；可在打开或返回 App 时自动更新，首次不勾选节假日等任何来源。
 - 安卓事项详情可查看系统事件、预填系统日历新增页，以及创建系统闹钟和倒计时；铃声、重复和振动由系统时钟设置。
+- Supabase 账户登录（邮箱验证码）与同账号多设备同步：本机保存后约 2 秒上传，其他设备实时收到并合并；删除带墓碑标记，不会因旧副本复活；系统日历来源按设备设置。配置见 [Supabase 配置指南](Documentation/SUPABASE_SETUP.md)。
 
 ## 迁移进度
 
-本轮迁移源码已通过 Dart 静态检查与 44 项 Flutter 测试、Android Release 构建和 iOS 模拟器构建；APK 签名与版本元数据也已校验。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
+本轮迁移源码已通过 Dart 静态检查与 60 项 Flutter 测试、macOS Release 构建、macOS 集成测试、Swift 原版备份往返和 Android Release 构建；APK 签名与版本元数据也已校验。Supabase 登录与跨设备同步尚未在真实设备和真实项目上验证（需要先按配置指南创建项目并填入连接值）。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
 
 | 能力 | 当前状态 |
 | --- | --- |
@@ -42,6 +43,7 @@
 | Android 系统服务：本地提醒、小组件、前台响铃 | Release 编译通过；设备行为未验证 |
 | Android 系统日历编辑结果即时回流 | 尚未实现；需后续完成原生异步结果与事项匹配 |
 | iCloud Drive 同一 Apple ID 自动同步 | 未迁移；本版使用独立本机数据与手动备份 |
+| Supabase 账户登录与同账号多设备同步 | 本轮新增：源码、单元与 Widget 测试通过；真实设备登录同步待验证，见 [配置指南](Documentation/SUPABASE_SETUP.md) |
 
 这些原生功能仍可在原版 Mikansei 中使用。测试版尚未代替原版作为唯一提醒工具。
 
@@ -55,9 +57,9 @@
 
 ## 安装到安卓手机
 
-已生成 **0.2.0 (4)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+已生成 **0.3.0 (5)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
 
-本轮已重新构建并导出 **0.2.0 (4)** Release APK，55.9 MB。SHA-256 与签名验证结果见 [验证记录](VALIDATION.md)。
+本轮已重新构建并导出 **0.3.0 (5)** Release APK，60.0 MB（未含 Supabase 连接值，构建时读取 `LocalInstall/supabase.env` 即可注入）。SHA-256 与签名验证结果见 [验证记录](VALIDATION.md)。
 
 双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。此前 Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；本轮 Android 设备未连接，新加入的提醒和小组件仍待设备验证。
 
@@ -87,13 +89,15 @@ Xcode 工程、运行方案和 App 目标均名为 `Mikanseta`。源码目录 `i
 
 备份导入会复制并合并数据，两端的后续编辑不会自动共享。原版课表与 Apple 日历配置在备份中保留，不触发原版服务。Android 日历来源与关联按本机安装身份隔离，换手机或重装后需重新选择来源；安装身份不随 Android 系统备份恢复，以免复用另一部手机的日历编号。原设备的 `replica` 同步副本不会随备份复制或回传；原版导入时由原版重建本机同步记录，避免复用另一个设备的同步身份。本版不写入原版 iCloud 同步文件夹。
 
+Mikanseta 登录 Supabase 账号后，本机保存的数据（含课表与完成状态，不含 Android 日历来源选择）整份加密传输到你自己项目的 `mikanseta_archives` 表，行级安全保证只有登录者本人可读写；数据在服务器端为明文，详见 [Supabase 配置指南](Documentation/SUPABASE_SETUP.md)。本机与账户的合并规则与备份导入一致：同编号保留较新版本，删除带墓碑标记。
+
 原版日期使用 UTC ISO 8601 整秒字符串，测试版导出保持这一格式；连续编辑保证更新时间递增，避免备份合并时丢失同一秒内的改动。导出已与原版 `EntryArchive.decode` 实际往返验证，详见 [验证记录](VALIDATION.md)。
 
 ## 开发与验证
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
 
-本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 44 项全部通过。只读模式下拖动选择时段的回归测试一度失败，已在 `lib/src/calendar_view.dart` 修复后通过。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
+本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 60 项全部通过（新增墓碑合并 4 项、账户同步 Fake 后端 10 项、设置页账户区块 2 项 Widget 测试）；洛杉矶时区下的 domain 与 cloud 同步测试通过；`./Scripts/verify-backup.sh` 原版往返通过；macOS Release 构建通过（52.8 MB）；macOS 集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
 
 `Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或工作区 `.toolchains/flutter`，否则查找已安装的 Flutter。缓存存放于工作区 `.toolchains/pub-cache`。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 
@@ -111,12 +115,15 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 ./Scripts/build-android.sh
 ```
 
+账户同步的连接值放在 git 忽略的 `LocalInstall/supabase.env`；三个一键安装 / 打包脚本会自动通过 `--dart-define` 注入，手动构建时参考 `Scripts/dart-defines.sh`。未配置时应用照常构建运行，设置页显示"未配置"。
+
 新机器可按 [Flutter 安装文档](https://docs.flutter.dev/install/manual) 安装本项目固定版本，再设置 `FLUTTER_SDK`。iPhone 测试需 iOS 15 或更新，Mac 构建目标为 macOS 12 或更新。Mac 发布包同时包含 x86_64 和 arm64，本轮运行验证使用 Intel Mac；Apple Silicon 运行尚未实测。
 
 ### 代码组织
 
 - `lib/src/domain.dart`：事项、排序、循环、计时计算、备份验证和合并；纯 Dart，可单独验证。
 - `lib/src/store.dart`：操作状态、串行保存、失败重试；通过可替换存储接口调用平台能力。
+- `lib/src/cloud_sync.dart`：Supabase 账户登录、账户行拉取合并与实时上传；传输层可替换，便于测试注入。
 - `lib/src/app.dart` / `editor.dart` / `theme.dart`：自适应界面、录入表单和牛皮浅棕主题。
 - `lib/src/calendar_view.dart`：月历、周视图与日视图，长按拖动选时段。
 - `lib/src/student_tools.dart`：课程模型、CSV / ICS 解析与粘贴消息解析。

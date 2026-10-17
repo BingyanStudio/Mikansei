@@ -353,4 +353,85 @@ void main() {
     expect(store.entries.single.title, '保留我');
     expect(Archive.decode(storage.content!).entries.single.title, '保留我');
   });
+  group('tombstones', () {
+    test('deletion markers keep removed entries dead across merges', () {
+      final removed = Entry.create(title: '已删除', now: now);
+      final deletedDevice = Archive(entries: const []).withTombstone(
+        'tombstones',
+        removed.id,
+        lastUpdate: removed.updatedAt,
+        now: now,
+      );
+      final staleDevice = Archive(entries: [removed]);
+      final firstWay = staleDevice.merge(deletedDevice);
+      final otherWay = deletedDevice.merge(staleDevice);
+      expect(firstWay.entries, isEmpty);
+      expect(otherWay.entries, isEmpty);
+      expect(firstWay.tombstones('tombstones').containsKey(removed.id), true);
+    });
+    test('an edit newer than the deletion is a deliberate recreation', () {
+      final removed = Entry.create(title: '删除后重建', now: now);
+      final deletedDevice = Archive(entries: const []).withTombstone(
+        'tombstones',
+        removed.id,
+        lastUpdate: removed.updatedAt,
+        now: now,
+      );
+      final recreated = removed.change({
+        'title': '重建后的标题',
+      }, now: now.add(const Duration(hours: 1)));
+      final merged = Archive(entries: [recreated]).merge(deletedDevice);
+      expect(merged.entries.single.title, '重建后的标题');
+    });
+    test('backup import no longer resurrects deleted entries', () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final entry = task('离线删除', 0, null);
+      store.save(entry);
+      await store.settled;
+      final backup = Archive(entries: [entry]).encode();
+      store.delete(entry.id);
+      await store.settled;
+      storage.selected = backup;
+      await store.importBackup();
+      expect(store.find(entry.id), isNull);
+    });
+    test('course deletion survives a merge with a stale copy', () {
+      final course = {
+        'id': newId(),
+        'name': '数学',
+        'weekday': 1,
+        'startMinutes': 480,
+        'endMinutes': 540,
+        'firstDate': '2026-09-01',
+        'lastDate': '2027-01-31',
+        'location': '',
+      };
+      final stale = Archive(
+        entries: const [],
+        metadata: {
+          'version': 1,
+          'courses': [course],
+          'calendarSync': {'enabled': false, 'selected': [], 'suppressed': []},
+        },
+      );
+      final deleting = Archive(
+        entries: const [],
+        metadata: {
+          'version': 1,
+          'courses': [],
+          'calendarSync': {'enabled': false, 'selected': [], 'suppressed': []},
+        },
+      ).withTombstone('courseTombstones', course['id'] as String, now: now);
+      final merged = stale.merge(deleting);
+      expect(merged.metadata['courses'] as List, isEmpty);
+      expect(
+        merged
+            .tombstones('courseTombstones')
+            .containsKey((course['id'] as String).toUpperCase()),
+        true,
+      );
+    });
+  });
 }

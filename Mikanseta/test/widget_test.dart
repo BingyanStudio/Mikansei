@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mikanseta/src/app.dart';
+import 'package:mikanseta/src/cloud_sync.dart';
 import 'package:mikanseta/src/domain.dart';
 import 'package:mikanseta/src/store.dart';
 
+import 'cloud_sync_test.dart' show FakeCloudBackend;
 import 'domain_test.dart' show MemoryStorage;
 
 void main() {
@@ -252,5 +254,89 @@ void main() {
         .group(1)!
         .split('+');
     expect(appVersion, '${version[0]} (${version[1]})');
+  });
+
+  testWidgets('settings shows the account section when unconfigured', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    await tester.pumpWidget(MikansetaApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('账户同步'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('账户同步'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.textContaining('未配置 Supabase 账户服务'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.textContaining('未配置 Supabase 账户服务'), findsOneWidget);
+    expect(tester.takeException(), null);
+    await tester.pumpWidget(const SizedBox());
+    await store.settled;
+  });
+
+  testWidgets('account login sends a code and signs in from settings', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    final backend = FakeCloudBackend();
+    final cloud = CloudSync(
+      store,
+      backend,
+      pushDelay: Duration.zero,
+      pullDelay: Duration.zero,
+    );
+    store.onLocalWrite = cloud.schedulePush;
+    await tester.pumpWidget(MikansetaApp(store: store, cloud: cloud));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('设置'));
+    await tester.pumpAndSettle();
+    final emailField = find.byWidgetPredicate(
+      (widget) => widget is TextField && widget.decoration?.labelText == '邮箱',
+    );
+    await tester.scrollUntilVisible(
+      emailField,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(emailField, 'me@example.com');
+    await tester.ensureVisible(find.text('发送验证码'));
+    await tester.tap(find.text('发送验证码'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('验证码（已发送至 me@example.com）'),
+      findsOneWidget,
+    );
+    await tester.scrollUntilVisible(
+      find.byType(TextField).last,
+      120,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.enterText(find.byType(TextField).last, '123456');
+    await tester.ensureVisible(find.text('登录'));
+    await tester.tap(find.text('登录'));
+    await tester.pumpAndSettle();
+    expect(cloud.email, 'me@example.com');
+    expect(find.text('me@example.com'), findsOneWidget);
+    expect(find.text('退出登录'), findsOneWidget);
+    expect(tester.takeException(), null);
+    store.onLocalWrite = null;
+    cloud.dispose();
+    await tester.pumpWidget(const SizedBox());
+    await store.settled;
   });
 }
