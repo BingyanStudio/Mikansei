@@ -294,8 +294,10 @@ struct TasksView: View {
     var body: some View {
         let visibleEntries = filtered
         let rows = taskRows(visibleEntries)
-        return ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
+        // Fixed header like the 日程 tab: pull-down moves only the list, so the
+        // two screens animate consistently.
+        return VStack(spacing: 0) {
+            VStack(spacing: 12) {
                 ChoiceStrip(label: "事项类型", choices: TaskFilter.allCases, selection: $filter, title: { $0.rawValue })
                 HStack {
                     Picker("状态", selection: $showCompleted) { Text("当前清单").tag(false); Text("历史记录").tag(true) }
@@ -307,22 +309,26 @@ struct TasksView: View {
                         ForEach(categories, id: \.self) { value in Button(value) { category = value } }
                     } label: { Label(category.isEmpty ? "分类" : category, systemImage: "line.3.horizontal.decrease").foregroundStyle(.primary) }
                 }.font(.subheadline)
-                SectionLabel(title: showCompleted ? "历史记录" : "我的清单", count: showCompleted ? visibleEntries.count : visibleEntries.filter { !$0.isCompleted }.count, color: Theme.accent)
-                if visibleEntries.isEmpty {
-                    EmptyCard(symbol: showCompleted ? "checkmark.seal" : "checklist", title: query.isEmpty ? "清单里还没有事项" : "没有找到相关事项",
-                              message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
-                              actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
-                              action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
-                } else {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .section(let title, let count, let color): SectionLabel(title: title, count: count, color: color)
-                        case .entry(let entry): EntryCard(entry: entry, edit: { edit(entry) }, now: now)
+            }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 16) {
+                    SectionLabel(title: showCompleted ? "历史记录" : "我的清单", count: showCompleted ? visibleEntries.count : visibleEntries.filter { !$0.isCompleted }.count, color: Theme.accent)
+                    if visibleEntries.isEmpty {
+                        EmptyCard(symbol: showCompleted ? "checkmark.seal" : "checklist", title: query.isEmpty ? "清单里还没有事项" : "没有找到相关事项",
+                                  message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
+                                  actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
+                                  action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
+                    } else {
+                        ForEach(rows) { row in
+                            switch row {
+                            case .section(let title, let count, let color): SectionLabel(title: title, count: count, color: color)
+                            case .entry(let entry): EntryCard(entry: entry, edit: { edit(entry) }, now: now)
+                            }
                         }
                     }
-                }
-            }.padding(20).padding(.bottom, 16)
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: rows.map(\.id))
+                }.padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 16)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: rows.map(\.id))
+            }
         }.background(Theme.background).navigationTitle("待办")
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }

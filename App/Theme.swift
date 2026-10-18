@@ -1,5 +1,18 @@
 import SwiftUI
 
+enum StruckTitle {
+    /// iOS 26 drops `.strikethrough` and `AttributedString` strike styles on a
+    /// title that shares its button with a non-empty body Text. A conditional
+    /// overlay line is drawn by the view renderer instead; thinner frames are
+    /// collapsed to zero height in this layout, so keep it at 3pt.
+    @ViewBuilder static func overlay(_ completed: Bool) -> some View {
+        if completed {
+            Rectangle().fill(Color(uiColor: .label)).frame(height: 3)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
 enum Theme {
     static let accent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
@@ -129,8 +142,11 @@ struct EntryCard: View {
                 Button(action: edit) {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text(entry.title).font(.body.weight(.semibold)).foregroundStyle(.primary)
-                                .strikethrough(entry.isCompleted).multilineTextAlignment(.leading)
+                            Text(entry.title)
+                                .font(.body.weight(.semibold)).foregroundStyle(.primary)
+                                .multilineTextAlignment(.leading)
+                                .overlay { StruckTitle.overlay(entry.isCompleted) }
+                                .accessibilityLabel(entry.title)
                             if entry.priority != .normal {
                                 Label(entry.priority.title, systemImage: "flag.fill").font(.caption)
                                     .foregroundStyle(entry.priority == .urgent ? .red : Theme.warm)

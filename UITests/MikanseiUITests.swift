@@ -15,7 +15,7 @@ final class MikanseiUITests: XCTestCase {
         let version = app.descendants(matching: .any).matching(identifier: "app-version").firstMatch
         for _ in 0..<12 { if version.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(version.exists)
-        XCTAssertEqual(version.value as? String, "0.3.0 (4)")
+        XCTAssertEqual(version.value as? String, "0.3.1 (5)")
     }
     @MainActor
     func testCalendarMonthNavigationDayTimelineAndViewPreference() {

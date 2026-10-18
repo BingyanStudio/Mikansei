@@ -2,6 +2,15 @@
 
 2026-10-13
 
+## 完成圈划线修复与待办页顶部控件固定 · 0.3.1 (5) · 2026-10-18
+
+- **问题复现**：把用户真实同步数据投影到 "Mikansei QA" 模拟器后，部分已完成事项只显示实心勾选圈、标题没有删除线；对比全部条目发现规律——**正文非空**的已完成事项划线丢失，正文为空的正常。仅清空正文（不改代码、同一二进制）后划线立即恢复，确认为 iOS 26 SwiftUI 的渲染问题：标题与正文处于同一个 Button 内时，标题的 `.strikethrough` 被丢弃。
+- **尝试与结论**：显式删除线颜色、调整修饰符顺序、`AttributedString` 删除线属性均被同一路径丢弃；`GeometryReader` / `Canvas` overlay 在该布局中拿不到尺寸；细于约 2.5pt 的 overlay 线会被折叠为 0 高度。最终改为条件 overlay 的 3pt `UIColor.label` 矩形线（`StruckTitle.overlay`），模拟器截图确认：正文非空的已完成事项（微积分练习册、乐队演唱信息提交、询问表演键盘配置）全部恢复划线，未完成及无正文事项表现不变。
+- **动效统一**：待办页的类型切换条与状态/分类筛选行从 `ScrollView` 内移到滚动区外的固定头部，与日程页一致；滑动两次后的截图确认列表内容滚动时顶部控件保持在原位。自动化 `isHittable` 断言在滑动动画期间不稳定，因此以截图为准，未计为通过。
+- **回归**：`swift test` **91 项核心测试全部通过**；iPhone UI 用例 `testFolderSyncSettingsAndVersionAreVisible`（版本已更新为 0.3.1 (5)）与 `testCreateHomeworkAndCompleteItsChecklist` 均通过。
+- **版本**：主 App 与小组件扩展均由 0.3.0 (4) 升至 **0.3.1 (5)**。
+- **真机安装**：本轮结束时 iPhone 未连接，`Scripts/install_iphone.py` 报告未找到设备；安装待手机连接后执行。模拟器验证覆盖视觉与交互，真机最终确认仍待完成。
+
 ## iCloud Drive 同步、原生 macOS 与角色图标 · 0.3.0 (4)
 
 - 沿用免费 Personal Team；用户在两端各选择一次同一个 iCloud Drive 文件夹。共享事项、笔记、Checklist、完成状态、计时、课表和删除标记；来源日历选择与权限保持本机设置。文件交换使用安全作用域授权、NSFileCoordinator、每设备副本和原子写入；保存成功、前台恢复及前台 30 秒轮询合并。
