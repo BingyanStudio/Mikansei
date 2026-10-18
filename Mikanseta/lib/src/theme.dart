@@ -42,14 +42,49 @@ class KraftTheme {
         foregroundColor: scheme.onSurface,
         centerTitle: false,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        toolbarHeight: 64,
+        titleTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontSize: 26,
+          fontWeight: FontWeight.w700,
+          letterSpacing: .2,
+        ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: scheme.primary,
         foregroundColor: scheme.onPrimary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surfaceContainer,
-        indicatorColor: scheme.primary.withValues(alpha: .16),
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        height: 64,
+        indicatorColor: scheme.primary.withValues(alpha: .12),
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: 22,
+            color: states.contains(WidgetState.selected)
+                ? scheme.primary
+                : scheme.onSurfaceVariant,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 11.5,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w600
+                : FontWeight.w500,
+            color: states.contains(WidgetState.selected)
+                ? scheme.onSurface
+                : scheme.onSurfaceVariant,
+          ),
+        ),
       ),
       cardTheme: CardThemeData(
         color: scheme.surfaceContainerLow,
@@ -57,19 +92,46 @@ class KraftTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: scheme.surfaceContainerLow,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+        side: BorderSide(color: scheme.outline.withValues(alpha: .6)),
+      ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLow,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
+        prefixIconColor: scheme.onSurfaceVariant,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(22),
+          borderSide: BorderSide.none,
+        ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outline.withValues(alpha: .35)),
+          borderRadius: BorderRadius.circular(22),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(22),
+          borderSide: BorderSide(
+            color: scheme.primary.withValues(alpha: .45),
+            width: 1.2,
+          ),
         ),
         labelStyle: TextStyle(color: scheme.onSurfaceVariant),
       ),
       chipTheme: ChipThemeData(
-        side: BorderSide(color: scheme.outline.withValues(alpha: .35)),
-        labelStyle: TextStyle(color: scheme.onSurface),
+        side: BorderSide(color: scheme.outline.withValues(alpha: .3)),
+        labelStyle: TextStyle(color: scheme.onSurface, fontSize: 13),
+        shape: const StadiumBorder(),
       ),
       dividerTheme: DividerThemeData(
         color: scheme.outline.withValues(alpha: .2),

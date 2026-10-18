@@ -10,6 +10,7 @@ import 'domain.dart';
 import 'store.dart';
 import 'cloud_sync.dart';
 import 'local_folder_sync.dart';
+import 'segmented_strip.dart';
 import 'theme.dart';
 import 'editor.dart';
 import 'android_system.dart';
@@ -17,7 +18,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.1 (7)';
+const appVersion = '0.4.2 (8)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -333,66 +334,107 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                 appBar: AppBar(
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        page == 0 ? 'Mikanseta' : titles[page],
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                      Text(titles[page]),
                       if (page == 0)
-                        Text(
-                          '${dateLabel(DateTime.now(), time: false)} · 一件一件，慢慢完成',
-                          style: Theme.of(context).textTheme.bodySmall,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            '${dateLabel(DateTime.now(), time: false)} · 一件一件，慢慢完成',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
                         ),
                     ],
                   ),
                   actions: [
-                    if (desktop && page != 4)
+                    if (page != 4)
                       Padding(
-                        padding: const EdgeInsets.only(right: 18),
-                        child: Tooltip(
-                          message: '添加事项',
-                          child: FilledButton.icon(
-                            onPressed: store.readOnly
-                                ? null
-                                : () => edit(
-                                    kind: page == 3 ? EntryKind.note : null,
+                        padding: const EdgeInsets.only(right: 14),
+                        child: desktop
+                            ? Tooltip(
+                                message: '添加事项',
+                                child: FilledButton.icon(
+                                  onPressed: store.readOnly
+                                      ? null
+                                      : () => edit(
+                                          kind: page == 3
+                                              ? EntryKind.note
+                                              : null,
+                                        ),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('添加事项'),
+                                ),
+                              )
+                            : IconButton.filledTonal(
+                                tooltip: '添加事项',
+                                style: IconButton.styleFrom(
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
                                   ),
-                            icon: const Icon(Icons.add),
-                            label: const Text('添加事项'),
-                          ),
-                        ),
+                                  minimumSize: const Size(44, 44),
+                                ),
+                                onPressed: store.readOnly
+                                    ? null
+                                    : () => edit(
+                                        kind: page == 2
+                                            ? EntryKind.schedule
+                                            : page == 3
+                                            ? EntryKind.note
+                                            : null,
+                                      ),
+                                icon: const Icon(Icons.add),
+                              ),
                       ),
                   ],
                 ),
                 bottomNavigationBar: desktop
                     ? null
-                    : NavigationBar(
-                        selectedIndex: page,
-                        onDestinationSelected: (index) =>
-                            setState(() => page = index),
-                        destinations: List.generate(
-                          titles.length,
-                          (i) => NavigationDestination(
-                            icon: Icon(destinations[i]),
-                            label: titles[i],
+                    : SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: Theme.of(context).colorScheme.outline
+                                    .withValues(alpha: .16),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: .05),
+                                  blurRadius: 18,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: NavigationBar(
+                                selectedIndex: page,
+                                onDestinationSelected: (index) =>
+                                    setState(() => page = index),
+                                destinations: List.generate(
+                                  titles.length,
+                                  (i) => NavigationDestination(
+                                    icon: Icon(destinations[i]),
+                                    label: titles[i],
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                floatingActionButton: !desktop && page != 4
-                    ? FloatingActionButton(
-                        tooltip: '添加事项',
-                        onPressed: store.readOnly
-                            ? null
-                            : () => edit(
-                                kind: page == 2
-                                    ? EntryKind.schedule
-                                    : page == 3
-                                    ? EntryKind.note
-                                    : null,
-                              ),
-                        child: const Icon(Icons.add),
-                      )
-                    : null,
                 body: Row(
                   children: [
                     if (desktop)
@@ -440,11 +482,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   constraints: const BoxConstraints(
                                     maxWidth: 1000,
                                   ),
-                                  child: page == 2
-                                      ? calendar(desktop)
-                                      : page == 4
-                                      ? settings()
-                                      : taskPage(),
+                                  child: AnimatedSwitcher(
+                                    duration:
+                                        MediaQuery.maybeOf(context)
+                                                ?.disableAnimations ==
+                                            true
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 160),
+                                    switchInCurve: Curves.easeOut,
+                                    switchOutCurve: Curves.easeIn,
+                                    child: KeyedSubtree(
+                                      key: ValueKey(page),
+                                      child: page == 2
+                                          ? calendar(desktop)
+                                          : page == 4
+                                          ? settings()
+                                          : taskPage(),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -482,60 +537,93 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
     entries = entries.where((e) => e.matches(query)).toList();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 100),
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
       children: [
         if (page == 0) ...[
-          Row(
-            children: [
-              Expanded(
-                child: metric(
-                  '${board.open.length}',
-                  '未完成',
-                  Icons.radio_button_unchecked,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: metric('${board.overdue.length}', '已超时', Icons.schedule),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: metric(
-                  '${board.finishedToday.length}',
-                  '今日完成',
-                  Icons.done,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          if (store.running case final Entry running) ...[
-            Card(
-              child: ListTile(
-                leading: const Icon(Icons.timelapse),
-                title: Text(
-                  '正在做 ${running.title}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(
-                  durationLabel(running.focusSeconds(now)),
-                  style: const TextStyle(
-                    fontFeatures: [FontFeature.tabularFigures()],
-                    fontSize: 20,
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Row(
+                children: [
+                  Expanded(child: metric('${board.open.length}', '未完成')),
+                  metricDivider(),
+                  Expanded(
+                    child: metric(
+                      '${board.overdue.length}',
+                      '已超时',
+                      alert: true,
+                    ),
                   ),
-                ),
-                trailing: IconButton(
-                  tooltip: '暂停计时',
-                  onPressed: store.readOnly
-                      ? null
-                      : () => store.focus(running.id),
-                  icon: const Icon(Icons.pause_rounded),
-                ),
-                onTap: () => details(running),
+                  metricDivider(),
+                  Expanded(
+                    child: metric('${board.finishedToday.length}', '今日完成'),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
+          ),
+          const SizedBox(height: 14),
+          if (store.running case final Entry running) ...[
+            Card(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(18),
+                onTap: () => details(running),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.timelapse,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '正在做 · ${running.title}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              durationLabel(running.focusSeconds(now)),
+                              style: const TextStyle(
+                                fontFeatures: [FontFeature.tabularFigures()],
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: '暂停计时',
+                        onPressed: store.readOnly
+                            ? null
+                            : () => store.focus(running.id),
+                        icon: const Icon(Icons.pause_rounded),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
           ],
         ],
         TextField(
@@ -544,12 +632,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           onChanged: (value) => setState(() => query = value),
           decoration: InputDecoration(
             hintText: '搜索事项、科目或提交平台',
-            prefixIcon: const Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search, size: 20),
             suffixIcon: query.isEmpty
                 ? null
                 : IconButton(
                     tooltip: '清除搜索',
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close, size: 20),
                     onPressed: () {
                       searchController.clear();
                       setState(() => query = '');
@@ -557,22 +645,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   ),
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         if (page == 1) ...[
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: ['全部', '已超时', '紧急', '作业', '常态', '历史']
-                .map(
-                  (label) => ChoiceChip(
-                    label: Text(
-                      label == '已超时' ? '$label ${board.overdue.length}' : label,
-                    ),
-                    selected: filter == label,
-                    onSelected: (_) => setState(() => filter = label),
-                  ),
-                )
-                .toList(),
+          SegmentedStrip<String>(
+            label: '事项筛选',
+            choices: const ['全部', '已超时', '紧急', '作业', '常态', '历史'],
+            selection: filter,
+            title: (label) => label,
+            onChanged: (label) => setState(() => filter = label),
           ),
           const SizedBox(height: 12),
         ],
@@ -600,23 +680,32 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  Widget metric(String value, String label, IconData icon) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
+  Widget metric(String value, String label, {bool alert = false}) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 22,
+            height: 1.1,
+            fontWeight: FontWeight.w700,
+            color: alert ? colors.error : colors.onSurface,
           ),
-          Text(label, style: Theme.of(context).textTheme.bodySmall),
-        ],
-      ),
-    ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
+        ),
+      ],
+    );
+  }
+
+  Widget metricDivider() => Container(
+    width: 1,
+    height: 28,
+    color: Theme.of(context).colorScheme.outline.withValues(alpha: .15),
   );
   Widget calendar(bool desktop) => ScheduleCalendar(
     store: store,
@@ -922,18 +1011,43 @@ class _AnimatedEntryListState extends State<AnimatedEntryList> {
           if (heading != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(3, 14, 0, 10),
-              child: Text(
-                heading,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: heading == '已超时'
-                      ? Theme.of(context).colorScheme.error
-                      : null,
-                  fontWeight: FontWeight.w700,
-                ),
+              child: Row(
+                children: [
+                  Text(
+                    heading,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontSize: 13,
+                      letterSpacing: .3,
+                      color: heading == '已超时'
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${items.where((e) => group(e) == heading).length}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 10),
             child: EntryTile(
               entry: entry,
               now: widget.now,
@@ -983,32 +1097,44 @@ class EntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final overdue = entry.overdue(now);
+    final metaColor = overdue ? scheme.error : scheme.onSurfaceVariant;
     final when = entry.kind == EntryKind.schedule && entry.start != null
         ? '${dateLabel(entry.start!, time: !entry.allDay)}${entry.allDay ? ' 全天' : '–${clockLabel(entry.end!)}'}'
         : entry.due != null
         ? 'DDL ${dateLabel(entry.due!)}'
         : '未设截止时间';
-    final details = [
-      entry.kind.label,
-      if (entry.priority > 0) priorities[entry.priority],
-      if (entry.isTask) when,
+    final tags = [
       if (entry.category.isNotEmpty) entry.category,
       if (entry.platform.isNotEmpty) entry.platform,
       if (entry.location.isNotEmpty) entry.location,
       if (entry.repeatRule != 'never') repeatLabels[entry.repeatRule]!,
     ];
+    Widget meta(IconData icon, String text, Color color) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12.5, color: color),
+        const SizedBox(width: 3),
+        Text(text, style: TextStyle(fontSize: 12, color: color)),
+      ],
+    );
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onDetails,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 8, 6, 8),
+          padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (entry.isTask)
                 IconButton(
                   tooltip: entry.completed ? '恢复未完成' : '标记完成',
+                  iconSize: 24,
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(44, 44),
+                    padding: EdgeInsets.zero,
+                  ),
                   onPressed: store.readOnly
                       ? null
                       : () => store.toggle(entry.id),
@@ -1021,8 +1147,16 @@ class EntryTile extends StatelessWidget {
                 )
               else
                 Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Icon(Icons.notes, color: scheme.primary),
+                  padding: const EdgeInsets.all(10),
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: scheme.primaryContainer,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.notes, size: 19, color: scheme.primary),
+                  ),
                 ),
               Expanded(
                 child: Column(
@@ -1033,6 +1167,7 @@ class EntryTile extends StatelessWidget {
                           ? Duration.zero
                           : const Duration(milliseconds: 220),
                       style: Theme.of(context).textTheme.titleMedium!.copyWith(
+                        fontSize: 17,
                         fontWeight: FontWeight.w600,
                         decoration: entry.completed
                             ? TextDecoration.lineThrough
@@ -1046,18 +1181,42 @@ class EntryTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      details.join(' · '),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: entry.overdue(now)
-                            ? scheme.error
-                            : scheme.onSurfaceVariant,
-                      ),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 3,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        meta(
+                          switch (entry.kind) {
+                            EntryKind.task => Icons.check_circle_outline,
+                            EntryKind.schedule => Icons.calendar_today_outlined,
+                            EntryKind.homework => Icons.menu_book_outlined,
+                            EntryKind.note => Icons.notes,
+                          },
+                          entry.kind.label,
+                          metaColor,
+                        ),
+                        if (entry.priority > 0)
+                          meta(
+                            Icons.flag_outlined,
+                            priorities[entry.priority],
+                            entry.priority == 2 ? scheme.error : scheme.primary,
+                          ),
+                        if (entry.isTask) meta(Icons.schedule, when, metaColor),
+                      ],
                     ),
+                    if (tags.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          tags.join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 12, color: metaColor),
+                        ),
+                      ),
                     if (entry.steps.isNotEmpty) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       _InlineChecklist(
                         entry: entry,
                         store: store,
@@ -1070,6 +1229,11 @@ class EntryTile extends StatelessWidget {
               if (entry.isTask && !entry.completed)
                 IconButton(
                   tooltip: entry.startedAt == null ? '开始计时' : '暂停计时',
+                  iconSize: 22,
+                  style: IconButton.styleFrom(
+                    fixedSize: const Size(40, 40),
+                    padding: EdgeInsets.zero,
+                  ),
                   onPressed: store.readOnly
                       ? null
                       : () => store.focus(entry.id),
@@ -1081,7 +1245,7 @@ class EntryTile extends StatelessWidget {
                   ),
                 )
               else
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
             ],
           ),
         ),
@@ -1113,9 +1277,11 @@ class _InlineChecklist extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             SizedBox(
-              width: 80,
+              width: 64,
               child: LinearProgressIndicator(
                 value: done / steps.length,
+                minHeight: 3,
+                borderRadius: BorderRadius.circular(2),
                 semanticsLabel:
                     '${entry.title}的子事项进度，已完成 $done 项，共 ${steps.length} 项',
               ),
@@ -1134,6 +1300,8 @@ class _InlineChecklist extends StatelessWidget {
                 key: ValueKey('inline-step-${entry.id}-${step.id}'),
                 contentPadding: EdgeInsets.zero,
                 controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                visualDensity: VisualDensity.compact,
                 value: step.done,
                 title: Text(
                   step.title,

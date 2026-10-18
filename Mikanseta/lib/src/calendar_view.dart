@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'domain.dart';
+import 'segmented_strip.dart';
 import 'store.dart';
 
 class CalendarItem {
@@ -203,24 +204,18 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
           child: Row(
             children: [
               Expanded(
-                child: Wrap(
-                  spacing: 6,
-                  children:
-                      [
-                            ('month', '月'),
-                            ('day', '日'),
-                            ('week', '周'),
-                            ('list', '列表'),
-                          ]
-                          .map(
-                            (v) => ChoiceChip(
-                              key: ValueKey('calendar-${v.$1}'),
-                              label: Text(v.$1 == 'list' ? '列表' : '${v.$2}视图'),
-                              selected: mode == v.$1,
-                              onSelected: (_) => selectMode(v.$1),
-                            ),
-                          )
-                          .toList(),
+                child: SegmentedStrip<String>(
+                  label: '日历视图',
+                  choices: const ['month', 'day', 'week', 'list'],
+                  selection: mode,
+                  identifier: (value) => 'calendar-$value',
+                  title: (value) => switch (value) {
+                    'month' => '月视图',
+                    'day' => '日视图',
+                    'week' => '周视图',
+                    _ => '列表',
+                  },
+                  onChanged: selectMode,
                 ),
               ),
               PopupMenuButton<bool>(

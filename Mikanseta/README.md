@@ -1,6 +1,6 @@
 # Mikanseta · Flutter 测试版
 
-**0.4.0 (6)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮新增 Supabase 账户登录与同账号多设备同步，以及 macOS / iOS / Android 的共享文件夹同步（与原生 Mikansei 自动互通）。
+**0.4.2 (8)**。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮对齐原生 Mikansei 的手机布局：大标题与胶囊添加按钮、胶囊搜索框、分段式筛选条、白卡 + 图标化元信息、悬浮胶囊底栏。此前已加入 Supabase 账户登录与同账号多设备同步，以及 macOS / iOS / Android 的共享文件夹同步（与原生 Mikansei 自动互通）。
 
 本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
 
@@ -22,6 +22,7 @@
 - 安卓事项详情可查看系统事件、预填系统日历新增页，以及创建系统闹钟和倒计时；铃声、重复和振动由系统时钟设置。
 - Supabase 账户登录（邮箱验证码）与同账号多设备同步：本机保存后约 2 秒上传，其他设备实时收到并合并；删除带墓碑标记，不会因旧副本复活；系统日历来源按设备设置。配置见 [Supabase 配置指南](Documentation/SUPABASE_SETUP.md)。
 - 共享文件夹同步：macOS、iOS、Android 各选一次文件夹，之后自动与原生 Mikansei 及其它 Mikanseta 设备交换合并；协议与原生版 iCloud 文件夹同步一致（每设备一个 replica 文件、修订号、永久墓碑）。设置见 [共享文件夹同步说明](Documentation/LOCAL_SYNC_SETUP.md)。
+- 手机布局对齐原生 Mikansei：大标题 + 胶囊添加按钮、无描边胶囊搜索框、分段式筛选条与日历视图切换、白卡圆角与图标化元信息、悬浮胶囊底栏；桌面布局与快捷键保持不变。
 
 ## 迁移进度
 
@@ -53,15 +54,15 @@
 
 当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到工作区的 `Mikanseta-macOS.app` 并打开。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
 
-本轮 macOS Release 构建通过并已安装到 `Projects/Mikanseta-macOS.app`（0.4.0 (6)，x86_64 + arm64 通用，含共享文件夹书签权限），启动成功；Mac 原生界面仍未逐项验证，见 [验证记录](VALIDATION.md)。
+本轮 macOS Release 构建通过并已安装到 `Projects/Mikanseta-macOS.app`（0.4.2 (8)，x86_64 + arm64 通用，含共享文件夹书签权限），启动成功；Mac 原生界面仍未逐项验证，见 [验证记录](VALIDATION.md)。
 
 第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
 
 ## 安装到安卓手机
 
-已生成 **0.4.0 (6)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+已生成 **0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
 
-本轮已重新构建并导出 **0.4.0 (6)** Release APK，60.5 MB（含 Supabase 连接值读取与共享文件夹同步）。SHA-256 与签名验证结果见 [验证记录](VALIDATION.md)。
+本轮已重新构建并导出 **0.4.2 (8)** Release APK，60.5 MB（含 Supabase 连接值读取、共享文件夹同步与对齐原生 Mikansei 的手机布局），SHA-256 `2a0217153e20a605947a494798191abed62426f92535178f961d3223221048c5`。
 
 双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。此前 Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；本轮 Android 设备未连接，新加入的提醒和小组件仍待设备验证。
 
@@ -101,7 +102,7 @@ Mikanseta 登录 Supabase 账号后，本机保存的数据（含课表与完成
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
 
-本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 74 项全部通过（0.3.0 新增 16 项；0.4.0 新增共享文件夹协议与设置页测试 14 项）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 实际解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
+本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 74 项全部通过（0.3.0 新增 16 项；0.4.0 新增共享文件夹协议与设置页测试 14 项；0.4.2 布局重构复用现有用例全部通过，并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 实际解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
 
 `Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或工作区 `.toolchains/flutter`，否则查找已安装的 Flutter。缓存存放于工作区 `.toolchains/pub-cache`。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 
