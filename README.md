@@ -2,6 +2,8 @@
 
 把课堂作业、社团工作和日常琐事放在一张随时可见的待办清单里。先用一句话记下，再补充截止时间、提交平台、处理地点和耗时。
 
+团队介绍与产品思路见 [产品点子稿](Documentation/Mikansei-产品点子稿.md)。
+
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
 当前版本 **0.3.0 (4)**：新增 iCloud Drive 文件夹同步和原生 macOS 版本，两端共享待办、日程、笔记、Checklist、完成状态、计时与课表。沿用免费团队，首次在两端选择同一个 iCloud Drive 文件夹即可，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
