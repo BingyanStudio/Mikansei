@@ -229,6 +229,8 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 - 主机 Flutter 静态检查通过：No issues found。
 - 完整 Flutter 数据与界面测试通过：83/83。新增 9 项覆盖 Unicode/步骤/计时持久化、替换失败保留原档、取消文件操作、文本与备份、共享文件夹与状态重启恢复、非法 replica 路径、文件夹失效、外链限制和 Windows 功能说明。
 - Swift → Dart → Swift 备份往返通过。
-- 新增 Windows 2022 GitHub Actions，计划进行同套测试、Windows 应用集成、Release、Inno Setup 安装/卸载及启动验证。上述 Windows 专属构建与安装结果尚待远端运行确认，当前不记为通过。
+- Windows 2022 GitHub Actions 首轮构建 [39435492858](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39435492858) 全部通过，源码提交 `c6c213ae916e566b8a1577d2440af79729f9e397`。包括静态检查、Flutter 数据与界面套件、Windows 应用集成、Release、ZIP、Inno Setup 安装、安装后进程存活 8 秒及卸载。该结果不代替个人 Windows 电脑上的视觉和长期运行验收。
+- macOS Release 回归构建通过；本轮未替换本机已安装 App。
+- 后续补充读取保护：本机档案不可读或为目录时报告错误，只有文件不存在才视为首次使用，避免误将读取失败当作空档案。新增对应回归用例，最终构建结果将在发布后补记。
 - 提供完整 ZIP 与每用户 Setup EXE 构建脚本，包含 VC 运行库与校验文件；不删除用户 AppData 清单。安装包暂未做 Windows 代码签名。
 - 账号同步服务连接仅从经授权的 CI 配置或显式环境变量加入；未配置时仍可使用本地及共享文件夹功能。

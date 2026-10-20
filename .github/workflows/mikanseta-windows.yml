@@ -4,7 +4,17 @@ on:
   push:
     branches: [main, experimental/sync]
     paths:
-      - "Mikanseta/**"
+      - "Mikanseta/lib/**"
+      - "Mikanseta/assets/**"
+      - "Mikanseta/test/**"
+      - "Mikanseta/integration_test/**"
+      - "Mikanseta/windows/**"
+      - "Mikanseta/pubspec.*"
+      - "Mikanseta/.metadata"
+      - "Mikanseta/.flutter-version"
+      - "Mikanseta/analysis_options.yaml"
+      - "Mikanseta/Scripts/build-windows.ps1"
+      - "Mikanseta/packaging/windows/**"
       - ".github/workflows/mikanseta-windows.yml"
   workflow_dispatch:
 
@@ -39,6 +49,7 @@ jobs:
       - name: Data and interface tests
         run: flutter test
       - name: Windows storage and interface integration
+        timeout-minutes: 10
         run: flutter test integration_test/app_test.dart -d windows
       - name: Install Inno Setup
         run: |

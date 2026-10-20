@@ -94,8 +94,16 @@ class WindowsNative {
     return _child(directory, name);
   }
 
-  Future<String?> _readOptional(File file) async =>
-      await file.exists() ? file.readAsString() : null;
+  Future<String?> _readOptional(File file) async {
+    try {
+      return await file.readAsString();
+    } on FileSystemException catch (error) {
+      final code = error.osError?.errorCode;
+      if (code == 2 || (Platform.isWindows && code == 3)) return null;
+      // A denied or malformed archive is not a fresh installation.
+      rethrow;
+    }
+  }
 
   Future<void> _writeAtomic(File target, String content) async {
     await target.parent.create(recursive: true);

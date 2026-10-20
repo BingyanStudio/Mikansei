@@ -77,6 +77,17 @@ void main() {
     },
   );
 
+  test(
+    'a non-file archive is reported instead of becoming an empty archive',
+    () async {
+      await Directory('${support.path}/entries.json').create();
+      await expectLater(
+        backend().invoke('readArchive'),
+        throwsA(isA<FileSystemException>()),
+      );
+    },
+  );
+
   test('cancelled import and export preserve the existing archive', () async {
     final native = backend();
     await native.invoke('writeArchive', 'keep me');
