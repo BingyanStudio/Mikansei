@@ -5,7 +5,7 @@ import 'domain.dart';
 import 'store.dart';
 import 'student_tools.dart' show ReminderControls;
 import 'system_services.dart' show requestReminderAccess;
-import 'android_system.dart' show addToSystemCalendar;
+import 'android_system.dart' show AndroidSystem, addToSystemCalendar;
 
 class EntryEditor extends StatefulWidget {
   const EntryEditor({
@@ -259,7 +259,8 @@ class _EntryEditorState extends State<EntryEditor> {
       await widget.store.settled;
       if (widget.store.saveFailed) throw StateError('事项暂未写入磁盘，请重试保存。');
       bool allowed = true;
-      if (next.data['reminder'] != null &&
+      if (NativeStorage.supportsSystemServices &&
+          next.data['reminder'] != null &&
           widget.store.storage is NativeStorage) {
         allowed = await requestReminderAccess(
           next.data['reminderDelivery'] as String? ?? 'popup',
@@ -267,7 +268,8 @@ class _EntryEditorState extends State<EntryEditor> {
         await widget.store.refreshServices();
       }
       if (!mounted) return;
-      if ((widget.entry == null || widget.isNew) &&
+      if (AndroidSystem.supported &&
+          (widget.entry == null || widget.isNew) &&
           next.kind == EntryKind.schedule &&
           widget.store.preferences['offerCalendar'] == true) {
         try {

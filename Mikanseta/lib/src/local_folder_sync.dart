@@ -458,11 +458,9 @@ abstract class LocalSyncBackend {
 }
 
 class NativeLocalSyncBackend implements LocalSyncBackend {
-  static const _channel = NativeStorage.channel;
-
   @override
   Future<LocalSyncFolderStatus?> pickFolder() async {
-    final raw = await _channel.invokeMapMethod<String, dynamic>(
+    final raw = await NativeStorage.invokeMapMethod<String, dynamic>(
       'pickLocalSyncFolder',
     );
     if (raw == null) return null;
@@ -476,7 +474,9 @@ class NativeLocalSyncBackend implements LocalSyncBackend {
   @override
   Future<LocalSyncFolderStatus> folder() async {
     final raw =
-        await _channel.invokeMapMethod<String, dynamic>('localSyncFolder') ??
+        await NativeStorage.invokeMapMethod<String, dynamic>(
+          'localSyncFolder',
+        ) ??
         const {};
     return LocalSyncFolderStatus(
       connected: raw['connected'] == true,
@@ -488,19 +488,21 @@ class NativeLocalSyncBackend implements LocalSyncBackend {
 
   @override
   Future<void> disconnect() =>
-      _channel.invokeMethod<void>('disconnectLocalSyncFolder');
+      NativeStorage.invokeMethod<void>('disconnectLocalSyncFolder');
 
   @override
   Future<Map<String, String>> readFiles() async {
     final raw =
-        await _channel.invokeMapMethod<String, dynamic>('readLocalSyncFiles') ??
+        await NativeStorage.invokeMapMethod<String, dynamic>(
+          'readLocalSyncFiles',
+        ) ??
         const {};
     return {for (final entry in raw.entries) entry.key: entry.value.toString()};
   }
 
   @override
   Future<bool> writeFile(String name, String content) async =>
-      await _channel.invokeMethod<bool>('writeLocalSyncFile', {
+      await NativeStorage.invokeMethod<bool>('writeLocalSyncFile', {
         'name': name,
         'content': content,
       }) ??
@@ -508,11 +510,11 @@ class NativeLocalSyncBackend implements LocalSyncBackend {
 
   @override
   Future<String?> readState() =>
-      _channel.invokeMethod<String>('readLocalSyncState');
+      NativeStorage.invokeMethod<String>('readLocalSyncState');
 
   @override
   Future<void> writeState(String content) =>
-      _channel.invokeMethod<void>('writeLocalSyncState', content);
+      NativeStorage.invokeMethod<void>('writeLocalSyncState', content);
 }
 
 /// Automatically exchanges the archive with the folder used by the native

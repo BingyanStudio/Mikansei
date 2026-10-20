@@ -18,7 +18,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.2 (8)';
+const appVersion = '0.4.3 (9)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -162,7 +162,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ],
           ),
         );
-        await NativeStorage.channel.invokeMethod('foregroundAction', {
+        await NativeStorage.invokeMethod('foregroundAction', {
           'id': next['id'],
           'action': action ?? 'dismiss',
         });
@@ -177,8 +177,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     readingRoutes = true;
     try {
       final routes =
-          await NativeStorage.channel.invokeListMethod<dynamic>("takeRoutes") ??
-          [];
+          await NativeStorage.invokeListMethod<dynamic>("takeRoutes") ?? [];
       for (final raw in routes) {
         if (!mounted) break;
         final route = Map<String, dynamic>.from(raw as Map);
@@ -1386,7 +1385,7 @@ class EntryDetails extends StatelessWidget {
                       TextButton.icon(
                         onPressed: () async {
                           try {
-                            await NativeStorage.channel.invokeMethod(
+                            await NativeStorage.invokeMethod(
                               'openExternalURL',
                               entry.platform,
                             );

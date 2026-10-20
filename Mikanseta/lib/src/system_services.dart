@@ -182,11 +182,11 @@ Map<String, dynamic> serviceSnapshot(Archive archive, DateTime now) {
 }
 
 Future<bool> requestReminderAccess(String delivery) async {
+  if (!NativeStorage.supportsSystemServices) return false;
   try {
-    return await NativeStorage.channel.invokeMethod<bool>(
-          'requestReminderAccess',
-          {'delivery': delivery},
-        ) ??
+    return await NativeStorage.invokeMethod<bool>('requestReminderAccess', {
+          'delivery': delivery,
+        }) ??
         false;
   } catch (_) {
     return false;
@@ -211,8 +211,9 @@ class _ServicesSettingsState extends State<ServicesSettings> {
   }
 
   Future<void> load() async {
+    if (!NativeStorage.supportsSystemServices) return;
     try {
-      final s = await NativeStorage.channel.invokeMapMethod<String, dynamic>(
+      final s = await NativeStorage.invokeMapMethod<String, dynamic>(
         'systemStatus',
       );
       if (mounted) setState(() => status = s ?? {});
@@ -235,94 +236,104 @@ class _ServicesSettingsState extends State<ServicesSettings> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('提醒、小组件与实时活动')),
-    body: ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text('通知：${status['notification'] ?? '读取中'}'),
-        Text('闹钟：${status['alarm'] ?? '读取中'}'),
-        Text('已安排 ${status['scheduled'] ?? 0} 个提醒'),
-        if (status['error'] != null) Text('${status['error']}'),
-        FilledButton(
-          onPressed: busy ? null : () => request('popup'),
-          child: const Text('开启弹窗通知'),
-        ),
-        OutlinedButton(
-          onPressed: busy ? null : () => request('alarm'),
-          child: const Text('开启闹钟权限'),
-        ),
-        TextButton(
-          onPressed: () async {
-            try {
-              await NativeStorage.channel.invokeMethod('openSystemSettings', {
-                'target': 'notifications',
-              });
-            } catch (e) {
-              if (mounted) setState(() => error = '$e');
-            }
-          },
-          child: const Text('打开系统通知设置'),
-        ),
-        if (defaultTargetPlatform == TargetPlatform.android)
-          TextButton(
-            onPressed: () async {
-              try {
-                await NativeStorage.channel.invokeMethod('openSystemSettings', {
-                  'target': 'fullscreen',
-                });
-              } catch (e) {
-                if (mounted) setState(() => error = '$e');
-              }
-            },
-            child: const Text('全屏闹钟设置'),
+  Widget build(BuildContext context) => !NativeStorage.supportsSystemServices
+      ? Scaffold(
+          appBar: AppBar(title: const Text('系统服务')),
+          body: const Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Windows 版提供清单、Checklist、日历视图、循环、计时、备份和同步。系统日历、后台提醒、桌面小组件与实时活动尚未接入；保留的提醒配置可供支持这些能力的设备使用。',
+            ),
           ),
-        if (error != null) Text(error!),
-        const Text(
-          '事项和课表分别设置提醒方式、铃声、提前量及稍后提醒。完成、删除、改期后重新安排本 App 管理的提醒；手动创建到系统时钟的独立闹钟仍需手动管理。',
-        ),
-        const SizedBox(height: 20),
-        const Text('主屏幕小组件：待办清单、快速添加、今日进度、正在做与计时。长按主屏幕添加 Mikanseta 小组件。'),
-        SwitchListTile(
-          title: Text(
-            defaultTargetPlatform == TargetPlatform.android
-                ? '显示今日 DDL 常驻通知'
-                : '自动显示今日 DDL 实时活动',
-          ),
-          subtitle: const Text('锁屏显示最重要的事项及倒计时；只包含标题，不显示备注和消息原文。'),
-          value: widget.store.preferences['liveEnabled'] == true,
-          onChanged: widget.store.readOnly
-              ? null
-              : (v) async {
-                  widget.store.setPreferences({'liveEnabled': v});
-                  await widget.store.settled;
+        )
+      : Scaffold(
+          appBar: AppBar(title: const Text('提醒、小组件与实时活动')),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text('通知：${status['notification'] ?? '读取中'}'),
+              Text('闹钟：${status['alarm'] ?? '读取中'}'),
+              Text('已安排 ${status['scheduled'] ?? 0} 个提醒'),
+              if (status['error'] != null) Text('${status['error']}'),
+              FilledButton(
+                onPressed: busy ? null : () => request('popup'),
+                child: const Text('开启弹窗通知'),
+              ),
+              OutlinedButton(
+                onPressed: busy ? null : () => request('alarm'),
+                child: const Text('开启闹钟权限'),
+              ),
+              TextButton(
+                onPressed: () async {
                   try {
-                    await NativeStorage.channel.invokeMethod<bool>(
-                      'setLiveEnabled',
-                      {'enabled': v},
-                    );
-                    await widget.store.refreshServices();
-                    await load();
+                    await NativeStorage.invokeMethod('openSystemSettings', {
+                      'target': 'notifications',
+                    });
                   } catch (e) {
                     if (mounted) setState(() => error = '$e');
                   }
-                  if (mounted) setState(() {});
                 },
-        ),
-        if (status['live'] != null) Text('${status['live']}'),
-        TextButton(
-          onPressed: () async {
-            await widget.store.refreshServices();
-            await load();
-          },
-          child: const Text('更新系统服务状态'),
-        ),
-        const Text(
-          'iPhone 使用 WidgetKit / ActivityKit；安卓使用桌面小组件和常驻通知。后台展示与提醒遵循系统权限及电池设置。',
-        ),
-      ],
-    ),
-  );
+                child: const Text('打开系统通知设置'),
+              ),
+              if (defaultTargetPlatform == TargetPlatform.android)
+                TextButton(
+                  onPressed: () async {
+                    try {
+                      await NativeStorage.invokeMethod('openSystemSettings', {
+                        'target': 'fullscreen',
+                      });
+                    } catch (e) {
+                      if (mounted) setState(() => error = '$e');
+                    }
+                  },
+                  child: const Text('全屏闹钟设置'),
+                ),
+              if (error != null) Text(error!),
+              const Text(
+                '事项和课表分别设置提醒方式、铃声、提前量及稍后提醒。完成、删除、改期后重新安排本 App 管理的提醒；手动创建到系统时钟的独立闹钟仍需手动管理。',
+              ),
+              const SizedBox(height: 20),
+              const Text('主屏幕小组件：待办清单、快速添加、今日进度、正在做与计时。长按主屏幕添加 Mikanseta 小组件。'),
+              SwitchListTile(
+                title: Text(
+                  defaultTargetPlatform == TargetPlatform.android
+                      ? '显示今日 DDL 常驻通知'
+                      : '自动显示今日 DDL 实时活动',
+                ),
+                subtitle: const Text('锁屏显示最重要的事项及倒计时；只包含标题，不显示备注和消息原文。'),
+                value: widget.store.preferences['liveEnabled'] == true,
+                onChanged: widget.store.readOnly
+                    ? null
+                    : (v) async {
+                        widget.store.setPreferences({'liveEnabled': v});
+                        await widget.store.settled;
+                        try {
+                          await NativeStorage.invokeMethod<bool>(
+                            'setLiveEnabled',
+                            {'enabled': v},
+                          );
+                          await widget.store.refreshServices();
+                          await load();
+                        } catch (e) {
+                          if (mounted) setState(() => error = '$e');
+                        }
+                        if (mounted) setState(() {});
+                      },
+              ),
+              if (status['live'] != null) Text('${status['live']}'),
+              TextButton(
+                onPressed: () async {
+                  await widget.store.refreshServices();
+                  await load();
+                },
+                child: const Text('更新系统服务状态'),
+              ),
+              const Text(
+                'iPhone 使用 WidgetKit / ActivityKit；安卓使用桌面小组件和常驻通知。后台展示与提醒遵循系统权限及电池设置。',
+              ),
+            ],
+          ),
+        );
 }
 
 Map<String, dynamic> buildServicePayload(Map<String, Object> input) =>

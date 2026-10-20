@@ -1,0 +1,17 @@
+Mikanseta Windows 测试版
+
+免安装版：完整解压 ZIP 后，打开 Mikanseta.exe。
+请保留同目录的 DLL 和 data 文件夹，不要只复制单个 EXE。
+
+安装版：运行 Mikanseta-Windows-x64-Setup.exe，按提示完成安装。
+安装到当前用户目录，不需要管理员权限。
+
+支持 Windows 10 / 11，64 位 x64。
+清单数据保存在 AppData 的应用支持目录；更新和卸载程序不主动删除这些数据。
+可以在设置中导入或导出 Mikansei JSON 备份。
+
+本版支持清单、Checklist、日历视图、循环、计时、备份和共享文件夹同步。
+账户同步需要构建时配置服务连接。
+Windows 系统日历、后台提醒、小组件和实时活动尚未接入。
+
+此测试包尚未进行 Windows 代码签名，系统可能显示发布者未知。

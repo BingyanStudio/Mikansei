@@ -1,0 +1,79 @@
+name: Mikanseta Windows
+
+on:
+  push:
+    branches: [main, experimental/sync]
+    paths:
+      - "Mikanseta/**"
+      - ".github/workflows/mikanseta-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mikanseta-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: Mikanseta
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.7"
+          cache: true
+      - name: Resolve dependencies
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze
+        run: flutter analyze
+      - name: Data and interface tests
+        run: flutter test
+      - name: Windows storage and interface integration
+        run: flutter test integration_test/app_test.dart -d windows
+      - name: Install Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { throw "Inno Setup installation failed" }
+          }
+      - name: Build and package Windows x64
+        env:
+          SUPABASE_URL: ${{ secrets.MIKANSETA_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.MIKANSETA_SUPABASE_ANON_KEY }}
+        run: ./Scripts/build-windows.ps1
+      - name: Verify installer and Release startup
+        run: |
+          $delivery = Resolve-Path "build/windows-delivery"
+          $installPath = Join-Path $env:RUNNER_TEMP "Mikanseta-install-check"
+          $installer = Start-Process (Join-Path $delivery "Mikanseta-Windows-x64-Setup.exe") -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=$installPath") -Wait -PassThru
+          if ($installer.ExitCode -ne 0) { throw "Installer exited $($installer.ExitCode)" }
+          $app = Start-Process (Join-Path $installPath "Mikanseta.exe") -PassThru
+          try {
+            Start-Sleep -Seconds 8
+            if ($app.HasExited) { throw "Installed Release app exited early: $($app.ExitCode)" }
+          } finally {
+            if (-not $app.HasExited) { Stop-Process -Id $app.Id }
+          }
+          $uninstaller = Start-Process (Join-Path $installPath "unins000.exe") -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru
+          if ($uninstaller.ExitCode -ne 0) { throw "Uninstaller verification failed" }
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: Mikanseta-Windows-x64
+          path: |
+            Mikanseta/build/windows-delivery/*.zip
+            Mikanseta/build/windows-delivery/*.exe
+            Mikanseta/build/windows-delivery/*.sha256
+            Mikanseta/build/windows-delivery/build-info.json
+          if-no-files-found: error
+          retention-days: 30

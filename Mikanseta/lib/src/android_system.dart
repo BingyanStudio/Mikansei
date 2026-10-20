@@ -14,7 +14,7 @@ class AndroidSystem {
         TargetPlatform.macOS,
       ].contains(defaultTargetPlatform);
   static Future<T?> call<T>(String method, [Object? args]) =>
-      NativeStorage.channel.invokeMethod<T>(method, args);
+      NativeStorage.invokeMethod<T>(method, args);
   static Future<int> sync(
     EntryStore store, {
     bool manual = false,

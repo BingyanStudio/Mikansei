@@ -603,9 +603,7 @@ class _CourseImportDialogState extends State<_CourseImportDialog> {
   Future<void> read() async {
     setState(() => busy = true);
     try {
-      final text = await NativeStorage.channel.invokeMethod<String>(
-        'importText',
-      );
+      final text = await NativeStorage.invokeMethod<String>('importText');
       if (mounted && text != null) {
         controller.text = text;
         setState(() => preview = null);
@@ -641,6 +639,7 @@ class _CourseImportDialogState extends State<_CourseImportDialog> {
       final allowed =
           !reminders ||
           widget.store.storage is! NativeStorage ||
+          !NativeStorage.supportsSystemServices ||
           await requestReminderAccess('popup');
       await widget.store.refreshServices();
       if (!mounted) return;
@@ -859,6 +858,7 @@ class _CourseEditorState extends State<CourseEditor> {
                   final allowed =
                       data['reminderEnabled'] != true ||
                       widget.store.storage is! NativeStorage ||
+                      !NativeStorage.supportsSystemServices ||
                       await requestReminderAccess(
                         data['reminderDelivery'] as String? ?? 'popup',
                       );

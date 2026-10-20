@@ -220,3 +220,15 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 | 实际安装包运行 | 已启动实际安装包；主代理捕获的 `LocalInstall/macos-renderer-runtime.log` 明确出现 `Using the Skia rendering backend (Metal).`。 |
 
 限制：本机 `screencapture` 未能取得该窗口图像，因此尚未视觉复测截图中的中文标题和多个筛选状态。不能据此确认条纹已消失，也不能据此确定 Impeller 的具体缺陷。
+
+
+## 0.4.3 (9)：Windows 桌面接入与打包（2026-10-20）
+
+新增 Windows x64 runner、沿用现有牛皮浅棕主题与批准图标、Windows 原子本机保存、系统文件选择、备份、HTTP(S) 外链和共享文件夹同步适配。其他平台继续使用原有原生通道。Windows 明确显示系统日历、后台提醒、小组件与实时活动未接入，不将其表现为权限错误。
+
+- 主机 Flutter 静态检查通过：No issues found。
+- 完整 Flutter 数据与界面测试通过：83/83。新增 9 项覆盖 Unicode/步骤/计时持久化、替换失败保留原档、取消文件操作、文本与备份、共享文件夹与状态重启恢复、非法 replica 路径、文件夹失效、外链限制和 Windows 功能说明。
+- Swift → Dart → Swift 备份往返通过。
+- 新增 Windows 2022 GitHub Actions，计划进行同套测试、Windows 应用集成、Release、Inno Setup 安装/卸载及启动验证。上述 Windows 专属构建与安装结果尚待远端运行确认，当前不记为通过。
+- 提供完整 ZIP 与每用户 Setup EXE 构建脚本，包含 VC 运行库与校验文件；不删除用户 AppData 清单。安装包暂未做 Windows 代码签名。
+- 账号同步服务连接仅从经授权的 CI 配置或显式环境变量加入；未配置时仍可使用本地及共享文件夹功能。

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'domain.dart';
 import 'student_tools.dart' show Course;
 import 'system_services.dart';
+import 'windows_native.dart';
 
 abstract class ArchiveStorage {
   Future<String?> read();
@@ -17,17 +18,42 @@ abstract class ArchiveStorage {
 
 class NativeStorage implements ArchiveStorage {
   static const channel = MethodChannel('mikanseta/native');
-  Future<String?> appVersion() => channel.invokeMethod<String>('appInfo');
+  static bool get supportsSystemServices =>
+      kIsWeb || defaultTargetPlatform != TargetPlatform.windows;
+  static Future<T?> invokeMethod<T>(String method, [Object? arguments]) async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      return await WindowsNative.instance.invoke(method, arguments) as T?;
+    }
+    return channel.invokeMethod<T>(method, arguments);
+  }
+
+  static Future<Map<K, V>?> invokeMapMethod<K, V>(
+    String method, [
+    Object? arguments,
+  ]) async {
+    final value = await invokeMethod<Map<Object?, Object?>>(method, arguments);
+    return value?.cast<K, V>();
+  }
+
+  static Future<List<T>?> invokeListMethod<T>(
+    String method, [
+    Object? arguments,
+  ]) async {
+    final value = await invokeMethod<List<Object?>>(method, arguments);
+    return value?.cast<T>();
+  }
+
+  Future<String?> appVersion() => invokeMethod<String>('appInfo');
   @override
-  Future<String?> read() => channel.invokeMethod<String>('readArchive');
+  Future<String?> read() => invokeMethod<String>('readArchive');
   @override
   Future<void> write(String content) =>
-      channel.invokeMethod<void>('writeArchive', content);
+      invokeMethod<void>('writeArchive', content);
   @override
-  Future<String?> pickBackup() => channel.invokeMethod<String>('importArchive');
+  Future<String?> pickBackup() => invokeMethod<String>('importArchive');
   @override
   Future<bool> exportBackup(String content) async =>
-      await channel.invokeMethod<bool>('exportArchive', content) ?? false;
+      await invokeMethod<bool>('exportArchive', content) ?? false;
 }
 
 class EntryStore extends ChangeNotifier {
@@ -117,7 +143,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.4.2 (8)';
+  String displayVersion = '0.4.3 (9)';
   String? error;
   String? serviceError;
 
@@ -128,7 +154,11 @@ class EntryStore extends ChangeNotifier {
   /// successful load), so account sync can schedule an upload.
   void Function()? onLocalWrite;
   Future<void> refreshServices() async {
-    if (storage is! NativeStorage || readOnly) return;
+    if (storage is! NativeStorage ||
+        readOnly ||
+        !NativeStorage.supportsSystemServices) {
+      return;
+    }
     final revision = _revision;
     try {
       final payload = await compute(buildServicePayload, {
@@ -136,7 +166,7 @@ class EntryStore extends ChangeNotifier {
         'now': clock().millisecondsSinceEpoch,
       });
       if (revision != _revision || readOnly) return;
-      await NativeStorage.channel.invokeMethod('reconcileServices', payload);
+      await NativeStorage.invokeMethod('reconcileServices', payload);
       serviceError = null;
     } catch (e) {
       serviceError = '系统服务尚未更新：$e';
