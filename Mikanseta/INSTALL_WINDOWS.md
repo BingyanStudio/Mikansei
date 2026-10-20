@@ -4,10 +4,10 @@
 
 ## 下载与安装
 
-在仓库的 [Releases](https://github.com/KikuchiHeinrich/Mikansei/releases) 中选择包含 Windows 附件的版本：
+直接下载 **0.4.3 (9) 公开测试版**，或打开 [版本发布页](https://github.com/KikuchiHeinrich/Mikansei/releases/tag/mikanseta-windows-v0.4.3)：
 
-- **Mikanseta-Windows-x64-Setup.exe**：运行并按提示安装到当前用户的程序目录，提供开始菜单快捷方式，可选择创建桌面快捷方式。
-- **Mikanseta-Windows-x64.zip**：完整解压后打开 Mikanseta.exe。保留旁边的 DLL 和 data 文件夹。
+- **[下载安装版 EXE](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64-Setup.exe)**：运行并按提示安装到当前用户的程序目录，提供开始菜单快捷方式，可选择创建桌面快捷方式。
+- **[下载免安装 ZIP](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64.zip)**：完整解压后打开 Mikanseta.exe。保留旁边的 DLL 和 data 文件夹。
 
 安装包包含所需的 Visual C++ 运行库文件，无需安装 Flutter 或 Visual Studio。测试包尚未做 Windows 代码签名，系统可能显示发布者未知。
 
@@ -17,7 +17,7 @@ Windows 版提供清单、Checklist、日历视图、循环、专注计时、课
 
 在设置中选择共享文件夹后，使用原版 Mikansei-sync 协议交换数据；各设备须能访问同一个文件夹。文件夹不可用时提示重新选择，保留本机清单。
 
-账号同步取决于构建时是否配置服务连接。Windows 系统日历、后台提醒、闹钟、小组件和实时活动尚未接入；提醒配置可随数据交给支持这些功能的设备。
+本次公开包已加入经授权的账号同步服务连接，可在设置中登录；Windows 上真实登录和跨设备账号同步尚未完成端到端验收。本地功能与共享文件夹同步可使用。Windows 系统日历、后台提醒、闹钟、小组件和实时活动尚未接入；提醒配置可随数据交给支持这些功能的设备。
 
 数据保存在 AppData 的应用支持目录，独立于安装目录。更新或卸载程序不主动删除清单。建议定期在设置中导出 JSON 备份。
 

@@ -4,13 +4,13 @@
 
 团队介绍与产品思路见 [产品点子稿](Documentation/Mikansei-产品点子稿.md)。
 
-[下载 Mikanseta 安卓公开测试版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-v0.4.2/Mikanseta-Android.apk) · [Windows 安装与构建说明](Mikanseta/INSTALL_WINDOWS.md)
+[下载 Mikanseta 安卓公开测试版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-v0.4.2/Mikanseta-Android.apk) · [下载 Windows 安装版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64-Setup.exe) · [下载 Windows 免安装版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64.zip) · [Windows 使用说明](Mikanseta/INSTALL_WINDOWS.md)
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
 当前版本 **0.3.0 (4)**：新增 iCloud Drive 文件夹同步和原生 macOS 版本，两端共享待办、日程、笔记、Checklist、完成状态、计时与课表。沿用免费团队，首次在两端选择同一个 iCloud Drive 文件夹即可，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
-另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前为 0.2.0 (4)，使用牛皮浅棕主题。日 / 周日历拖动选时段、课表与消息解析、提醒、小组件、实时活动、Apple 日历及 Android 系统服务的迁移源码已接入；Dart 静态检查与 44 项测试通过，Android Release APK 与 iOS 模拟器构建通过。原生服务尚未在设备上验收，Android 系统日历编辑结果即时回流仍未实现。iCloud Drive 云同步继续未迁移。两个 App 可并存，本机数据分别保存。新版 Android 安装包及验证范围见 [安卓安装与打包](Mikanseta/INSTALL_ANDROID.md) 和 [验证记录](Mikanseta/VALIDATION.md)。
+另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，源码与 Windows 包为 **0.4.3 (9)**，Android 公开包为 **0.4.2 (8)**，使用牛皮浅棕主题。提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 
 ## 已实现
 
