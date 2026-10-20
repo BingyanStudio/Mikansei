@@ -201,3 +201,22 @@ Flutter 命令在受限沙箱里会让 Dart 3.13.5 运行时于创建 isolate �
 | 全量测试 | `./Scripts/flutter.sh test` **74 项全部通过**；期间出现一次 `local_folder_sync_test` 偶发失败，单独与连续两次全量重跑均通过（与本次布局改动无关，属既有测试的时序波动）。 |
 | 模拟器视觉验收 | “Mikansei QA” 模拟器（390×844）安装 0.4.2 调试包并种入示例数据（超时 / 带步骤作业 / 进行中计时 / 日程 / 笔记）：浅色与深色截图确认大标题、胶囊按钮与搜索、分段筛选条、指标分段卡、图标化元信息、方形步骤勾选框、悬浮胶囊底栏均按预期渲染；“我的清单”页分段条与计数徽标正常。日程页复用同一 `SegmentedStrip`，未单独截图。 |
 | 构建与安装 | macOS Release（0.4.2 (8)，x86_64 + arm64）构建并安装启动；Android 签名 APK 0.4.2+8 导出（60.5 MB，SHA-256 `2a0217153e20a605947a494798191abed62426f92535178f961d3223221048c5`）；iPhone 本轮未连接，安装待设备可用后执行。 |
+
+## macOS 中文文字纹理兼容开关（2026-10-20）
+
+为规避 macOS Impeller 路径上的中文字形纹理异常，`macos/Runner/Info.plist` 仅新增 `FLTEnableImpeller=false`。该设置只影响 macOS renderer；中文内容、主题、App 数据、版本与应用标识均未改动。
+
+SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f8`，engine `deb287481e3ce9468f3434937ced4240a70539ca`）：
+
+- `engine/src/flutter/shell/platform/darwin/macos/framework/Source/FlutterDartProject.mm` 从主 App bundle 读取 `FLTEnableImpeller`，缺省返回 `YES`。
+- `dev/devicelab/bin/tasks/hello_world_impeller_macos_sdfs.dart` 在同一 SDK 中把该键设为 `false`，并明确断言启动日志应显示 `Using the Skia rendering backend (Metal).`。
+- 桌面工具源码及测试确认 `--no-enable-impeller` 会向 macOS 引擎传入 `enable-impeller=false`；`Info.plist` 是安装后直接启动时持久生效的配置入口。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| Plist 静态校验 | `plutil -lint` 通过，提取 `FLTEnableImpeller` 为 `false`。 |
+| macOS Release 构建与安装 | `Scripts/install-mac.sh` 带入现有本机同步配置重新完成 Release 构建，产物 53.1 MB，并安装到 `/Users/xuyilin/Desktop/Projects/Mikanseta-macOS.app`；日志为 `LocalInstall/macos-renderer-install.log`。 |
+| 安装包元数据与签名 | `CFBundleIdentifier` 为 `com.personal.mikanseta.macOS`，版本保持 0.4.2 (8)；安装包 `FLTEnableImpeller` 为 `false`，`codesign --verify --deep --strict` 通过。 |
+| 实际安装包运行 | 已启动实际安装包；主代理捕获的 `LocalInstall/macos-renderer-runtime.log` 明确出现 `Using the Skia rendering backend (Metal).`。 |
+
+限制：本机 `screencapture` 未能取得该窗口图像，因此尚未视觉复测截图中的中文标题和多个筛选状态。不能据此确认条纹已消失，也不能据此确定 Impeller 的具体缺陷。
