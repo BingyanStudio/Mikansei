@@ -87,7 +87,7 @@ void main() {
   }
 
   String ownName(FakeLocalSyncBackend backend) =>
-      backend.files.keys.singleWhere((name) => !name.contains('BAD'));
+      backend.files.keys.singleWhere((name) => name != 'replica-BAD.json');
 
   ReplicaDocument ownDocument(FakeLocalSyncBackend backend) =>
       ReplicaDocument.decode(backend.files[ownName(backend)]!);
