@@ -145,7 +145,7 @@ struct MacWorkspaceView: View {
         case .overdue: items = board.overdue
         case .notes: items = store.entries.filter { $0.kind == .note }
         case .homework: items = board.open.filter { $0.kind == .homework } + board.finishedToday.filter { $0.kind == .homework }
-        case .routine: items = store.entries.filter { $0.isRoutine && (!$0.isCompleted || board.finishedToday.contains($0)) }
+        case .routine: items = board.routines
         case .history: items = board.history
         case .schedule:
             let ids = Set(CalendarDisplay.items(on: scheduleDate, entries: store.entries).map { $0.entry.id })

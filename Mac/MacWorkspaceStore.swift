@@ -60,7 +60,10 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
         guard !entry.title.isEmpty else { return }
         let previous = entries.first { $0.id == entry.id }
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i] = entry } else { entries.append(entry) }
-        if entry.isCompleted && previous?.isCompleted != true, !entries.contains(where: { $0.previousOccurrenceID == entry.id }), let next = entry.nextOccurrence() { entries.append(next) }
+        if entry.isCompleted && previous?.isCompleted != true && entry.allowsLocalSuccessorGeneration,
+           !entries.contains(where: { $0.previousOccurrenceID == entry.id }), let next = entry.nextOccurrence() {
+            entries.append(next)
+        }
         changed()
     }
     func delete(_ id: UUID) {

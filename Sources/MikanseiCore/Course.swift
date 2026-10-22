@@ -79,7 +79,7 @@ public enum NotificationPlan {
         for entry in entries {
             guard entry.isTask, !entry.isCompleted, entry.reminder != nil, let due = entry.reminderReferenceDate else { continue }
             var dates: [Date]
-            if entry.repeatRule != .never {
+            if entry.allowsLocalSuccessorGeneration {
                 let horizon = calendar.date(byAdding: .day, value: 28, to: now)!
                 let lead = Double(entry.reminder!.rawValue)
                 let offset = due.timeIntervalSince(entry.recurrenceReferenceDate ?? due)

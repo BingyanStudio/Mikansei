@@ -161,6 +161,10 @@ class Entry {
       : start;
   DateTime? get recurrenceDate =>
       kind == EntryKind.schedule ? start : due ?? start;
+  bool get calendarRoutine => _calendarIdentities(this).isNotEmpty;
+  bool get isRoutine => repeatRule != 'never' || calendarRoutine;
+  String get routineLabel =>
+      repeatRule == 'never' ? '系统日历循环' : repeatLabels[repeatRule]!;
   List<StepItem> get steps => (data['checklist'] as List)
       .map((v) => StepItem.fromJson(Map<String, dynamic>.from(v as Map)))
       .toList();
@@ -233,7 +237,12 @@ class Entry {
 
   Entry? nextOccurrence(DateTime now) {
     final base = recurrenceDate;
-    if (!isTask || repeatRule == 'never' || base == null) return null;
+    if (!isTask ||
+        repeatRule == 'never' ||
+        calendarRoutine ||
+        base == null) {
+      return null;
+    }
     final anchor = date('repeatAnchorDate') ?? base;
     final lower = now.isAfter(base) ? now : base;
     final selected = (data['repeatDates'] as List? ?? [])
@@ -348,12 +357,292 @@ int entryOrder(Entry a, Entry b) {
   return result == 0 ? a.id.compareTo(b.id) : result;
 }
 
+String? _nonEmptyString(Object? value) {
+  if (value is! String) return null;
+  final text = value.trim();
+  return text.isEmpty ? null : text;
+}
+
+Map? _mapValue(Object? value) => value is Map ? value : null;
+
+class _OccurrenceIdentity {
+  const _OccurrenceIdentity(this.series, this.occurrence);
+  final String series;
+  final String occurrence;
+  String get key => jsonEncode([series, occurrence]);
+}
+
+_OccurrenceIdentity? _legacyAndroidIdentity(Map link) {
+  final key = _nonEmptyString(link['key']);
+  if (key == null) return null;
+  final firstSlash = key.indexOf('/');
+  final lastSlash = key.lastIndexOf('/');
+  if (firstSlash <= 0 || lastSlash <= firstSlash + 1) return null;
+  final occurrence = key.substring(lastSlash + 1);
+  // Android uses originalInstanceTime/begin milliseconds; Apple uses whole
+  // seconds. Restrict the format so a slash-containing external identifier is
+  // never mistaken for a recurring series.
+  if (_parsedProviderOccurrence(occurrence) == null) return null;
+  final calendarID = _nonEmptyString(link['calendarID']) ??
+      key.substring(0, firstSlash);
+  final deviceID = _nonEmptyString(link['deviceID']) ?? '';
+  final sourceID = key.substring(firstSlash + 1, lastSlash);
+  final series = jsonEncode([
+    'calendar',
+    deviceID,
+    calendarID,
+    sourceID,
+  ]);
+  return _OccurrenceIdentity(series, occurrence);
+}
+
+_OccurrenceIdentity? _androidOccurrenceIdentityFromLink(Map? link) {
+  if (link == null) return null;
+  final recurringFlag = link['recurring'];
+  if (recurringFlag == false) return null;
+  final explicitSeries = _nonEmptyString(link['seriesID']);
+  final explicitOccurrence = _nonEmptyString(link['originalOccurrence']);
+  if (explicitSeries != null &&
+      explicitOccurrence != null &&
+      explicitOccurrence != 'single' &&
+      (recurringFlag == true ||
+          _parsedProviderOccurrence(explicitOccurrence) != null)) {
+    final calendarID = _nonEmptyString(link['calendarID']) ?? '';
+    final deviceID = _nonEmptyString(link['deviceID']) ?? '';
+    return _OccurrenceIdentity(
+      jsonEncode(['calendar', deviceID, calendarID, explicitSeries]),
+      explicitOccurrence,
+    );
+  }
+  return _legacyAndroidIdentity(link);
+}
+
+_OccurrenceIdentity? _androidOccurrenceIdentity(Entry entry) =>
+    _androidOccurrenceIdentityFromLink(
+      _mapValue(entry.data['androidCalendarLink']),
+    );
+
+/// Stable provider identity for Android calendar imports. A one-off occurrence
+/// returns null even though its key still contains an event ID.
+({String seriesID, String occurrenceID})? androidRoutineIdentity(Map? link) {
+  final identity = _androidOccurrenceIdentityFromLink(link);
+  return identity == null
+      ? null
+      : (seriesID: identity.series, occurrenceID: identity.occurrence);
+}
+
+_OccurrenceIdentity? _appleOccurrenceIdentity(Entry entry) {
+  final link = _mapValue(entry.data['calendarEvent']);
+  final event = _mapValue(link?['event']);
+  final identity = _mapValue(event?['identity']);
+  if (identity == null) return null;
+  final occurrence = _nonEmptyString(identity['occurrence']);
+  if (occurrence == null) return null;
+  final calendarID = _nonEmptyString(identity['calendarID']) ?? '';
+  final sourceTitle = _nonEmptyString(identity['sourceTitle']) ?? '';
+  final eventID = _nonEmptyString(identity['eventID']) ??
+      _nonEmptyString(identity['localEventID']);
+  if (eventID == null) return null;
+  final series = jsonEncode([
+    'apple',
+    calendarID,
+    sourceTitle,
+    eventID,
+  ]);
+  return _OccurrenceIdentity(series, occurrence);
+}
+
+List<_OccurrenceIdentity> _calendarIdentities(Entry entry) {
+  final routineSeriesID = _nonEmptyString(entry.data['routineSeriesID']);
+  final routineOccurrenceID = _nonEmptyString(
+    entry.data['routineOccurrenceID'],
+  );
+  final identities = <_OccurrenceIdentity>[
+    ?_androidOccurrenceIdentity(entry),
+    ?_appleOccurrenceIdentity(entry),
+  ];
+  if (routineSeriesID != null) {
+    final date = entry.recurrenceDate;
+    final providerOccurrence = identities.firstOrNull?.occurrence;
+    identities.add(
+      _OccurrenceIdentity(
+        jsonEncode(['routineSeries', routineSeriesID]),
+        providerOccurrence ??
+            (routineOccurrenceID == 'single' ? null : routineOccurrenceID) ??
+            date?.toUtc().millisecondsSinceEpoch.toString() ??
+            entry.id,
+      ),
+    );
+  }
+  return identities;
+}
+
+class _IdentityGroups {
+  final parent = <String, String>{};
+  final rank = <String, int>{};
+  String find(String value) {
+    var root = value;
+    while ((parent[root] ?? root) != root) {
+      root = parent[root]!;
+    }
+    var current = value;
+    while (current != root) {
+      final next = parent[current] ?? root;
+      parent[current] = root;
+      current = next;
+    }
+    return root;
+  }
+
+  void union(String a, String b) {
+    final left = find(a), right = find(b);
+    if (left == right) return;
+    final leftRank = rank[left] ?? 0, rightRank = rank[right] ?? 0;
+    if (leftRank < rightRank) {
+      parent[left] = right;
+    } else {
+      parent[right] = left;
+      if (leftRank == rightRank) rank[left] = leftRank + 1;
+    }
+  }
+}
+
+DateTime? _parsedProviderOccurrence(String occurrence) {
+  if (RegExp(r'^-?\d{9,19}$').hasMatch(occurrence)) {
+    final value = int.tryParse(occurrence);
+    if (value != null) {
+      return _safeEpochDate(
+        occurrence.length >= 12 ? value : value * 1000,
+      );
+    }
+  }
+  if (occurrence.startsWith('time:')) {
+    final value = int.tryParse(occurrence.substring(5));
+    if (value != null) {
+      return _safeEpochDate(value * 1000);
+    }
+  }
+  if (occurrence.startsWith('day:')) {
+    return DateTime.tryParse(occurrence.substring(4));
+  }
+  return null;
+}
+
+DateTime? _safeEpochDate(int milliseconds) {
+  const maximum = 8640000000000000;
+  if (milliseconds < -maximum || milliseconds > maximum) return null;
+  return DateTime.fromMillisecondsSinceEpoch(milliseconds);
+}
+
+DateTime _logicalOccurrenceDate(
+  Entry entry, [
+  List<_OccurrenceIdentity>? identities,
+]) {
+  for (final identity in identities ?? _calendarIdentities(entry)) {
+    final occurrence = _parsedProviderOccurrence(identity.occurrence);
+    if (occurrence != null) return occurrence;
+  }
+  return entry.recurrenceDate ?? entry.attention ?? entry.createdAt;
+}
+
+/// A routine family is defined by explicit lineage or a provider's recurring
+/// series identity. Titles and repeat rules are deliberately not used.
+List<Entry> activeEntryFrontier(List<Entry> entries) {
+  final groups = _IdentityGroups();
+  final occurrenceKeys = <String, Set<String>>{};
+  final identitiesByEntry = <String, List<_OccurrenceIdentity>>{};
+  for (final entry in entries) {
+    final own = 'entry:${entry.id.toUpperCase()}';
+    final lineage = 'lineage:${entry.id.toUpperCase()}';
+    final identities = _calendarIdentities(entry);
+    identitiesByEntry[own] = identities;
+    groups.union(own, lineage);
+    final previous = _nonEmptyString(entry.data['previousOccurrenceID']);
+    if (previous != null) {
+      groups.union(lineage, 'lineage:${previous.toUpperCase()}');
+    }
+    for (final identity in identities) {
+      groups.union(own, 'series:${identity.series}');
+    }
+    final occurrence = entry.recurrenceDate;
+    for (final identity in identities) {
+      occurrenceKeys.putIfAbsent(own, () => <String>{}).add(identity.key);
+    }
+    if (previous != null) {
+      occurrenceKeys.putIfAbsent(own, () => <String>{}).add(
+        jsonEncode([
+          'lineageSibling',
+          previous.toUpperCase(),
+          occurrence?.toUtc().millisecondsSinceEpoch.toString() ?? entry.id,
+        ]),
+      );
+    }
+  }
+
+  final openByFamily = <String, List<Entry>>{};
+  final completedOccurrences = <String, Set<String>>{};
+  for (final entry in entries) {
+    final own = 'entry:${entry.id.toUpperCase()}';
+    final family = groups.find(own);
+    if (entry.isTask && !entry.completed) {
+      openByFamily.putIfAbsent(family, () => []).add(entry);
+    } else if (entry.isTask && entry.completed) {
+      completedOccurrences
+          .putIfAbsent(family, () => <String>{})
+          .addAll(occurrenceKeys[own] ?? const <String>{});
+    }
+  }
+
+  final active = <Entry>[];
+  for (final MapEntry(key: family, value: candidates)
+      in openByFamily.entries) {
+    final completed = completedOccurrences[family] ?? const <String>{};
+    final remaining = candidates.where((entry) {
+      final own = 'entry:${entry.id.toUpperCase()}';
+      final keys = occurrenceKeys[own] ?? const <String>{};
+      // A stale offline copy of the occurrence just completed must not surface
+      // after its sibling. Other out-of-order occurrences remain visible.
+      return keys.isEmpty || keys.every((key) => !completed.contains(key));
+    }).toList();
+    if (remaining.isEmpty) continue;
+    final openIDs = remaining.map((entry) => entry.id.toUpperCase()).toSet();
+    final roots = remaining.where((entry) {
+      final previous = _nonEmptyString(entry.data['previousOccurrenceID']);
+      return previous == null || !openIDs.contains(previous.toUpperCase());
+    }).toList();
+    // A cycle has no root. Its members remain eligible and use the same stable
+    // provider-occurrence ordering as multiple roots from a deleted ancestor.
+    final frontier = roots.isEmpty ? remaining : roots;
+    frontier.sort((a, b) {
+      final left = _logicalOccurrenceDate(
+        a,
+        identitiesByEntry['entry:${a.id.toUpperCase()}'],
+      );
+      final right = _logicalOccurrenceDate(
+        b,
+        identitiesByEntry['entry:${b.id.toUpperCase()}'],
+      );
+      final date = left.compareTo(right);
+      if (date != 0) return date;
+      if ((a.startedAt != null) != (b.startedAt != null)) {
+        return a.startedAt != null ? -1 : 1;
+      }
+      final updated = b.updatedAt.compareTo(a.updatedAt);
+      if (updated != 0) return updated;
+      final created = a.createdAt.compareTo(b.createdAt);
+      return created == 0 ? a.id.compareTo(b.id) : created;
+    });
+    active.add(frontier.first);
+  }
+  return active..sort(entryOrder);
+}
+
 class TaskBoard {
   TaskBoard(this.entries, this.now);
   final List<Entry> entries;
   final DateTime now;
   List<Entry> get open =>
-      entries.where((e) => e.isTask && !e.completed).toList()..sort(entryOrder);
+      activeEntryFrontier(entries);
   List<Entry> get overdue => open.where((e) => e.overdue(now)).toList();
   List<Entry> get finishedToday =>
       entries

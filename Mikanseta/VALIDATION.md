@@ -264,3 +264,46 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 | Windows | CI [39724313139](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39724313139) 已 completed success，对应修复提交 `51e6d3f2875bb64947c7a4ecf14939138b358d49`。Windows Analyze、全部单元测试、实际 `integration_test/app_test.dart`、Release 构建、Inno 安装及安装后启动/卸载验证、产物上传全部成功。下载 artifact 12402696936，归档 SHA-256 为 `6c6b92e7ec9fc43742849621c0f522b51180d37471c5e3ec72a7ddd713aee3e9`，解包后每个包的 `.sha256` 均一致。本地交付目录为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Windows/0.4.4+10/`，`Setup.exe` 为 11,869,035 bytes，portable ZIP 为 14,145,112 bytes，`build-info.json` 确认 version `0.4.4`、buildNumber `10`。 |
 
 限制：iOS 模拟器构建时因工程没有 `Debug-Mikanseta` 配置而由 Flutter 回退到通用 `Debug`，日志已如实记录，本次未修改工程配置。尚未完成 Android、iOS、macOS、Windows 真机 UI 验收；当前证据覆盖动画退出期间的旧快照问题，未在测试中复现稳定态持续错误，不能把本次修复解释为已覆盖所有可能场景。
+
+## 0.4.5 (11)：循环事项活动 frontier 与跨备份系列身份（2026-10-22）
+
+根因有两层：`TaskBoard.open` 直接返回全部未完成事项；日历桥接又会把 30 天窗口内每个 occurrence 保存为独立条目。因此同一循环会同时占用多张活动卡片。导入条目的本地 `repeatRule` 仍为 `never`，既会漏掉“常态”筛选，也无法表达来源系列与本地合成后继的边界。
+
+本轮把存储与列表投影分开：
+
+- `TaskBoard.open/visible/focus` 及依赖它们的常态、相关待办和系统摘要，按家族只返回一个活动项；历史仍返回全部已完成条目。独立事项不按标题、相同 `repeatRule` 或相同时间合并。
+- 家族来源只使用显式 `previousOccurrenceID` 血缘或可靠日历身份。本地血缘先选择没有未完成前驱的 rootmost 候选；循环链没有根时回退到稳定排序。provider occurrence 用原始 occurrence 时间排序，用户移动显示开始时间不会改变系列顺序。
+- 同名同父、同原始 occurrence 的离线重复后继只抑制 sibling，不删除底层记录。完成其中一项后，同一 sibling 不再出现；真实下一代即使被编辑到父项同一日期仍会显示。
+- 共享 `routineSeriesID` 别名优先继承 provider 的原始 occurrence；只有 provider 桥接详情缺失时才退回显示 recurrence 日期。
+- 日历的未来展开继续读取原 `entries`，不应用待办 frontier；日 / 周 / 月 / 列表预测仍可显示 30 天窗口中的来源实例。
+
+跨备份系列协议使用既有 `androidCalendarLink`，并新增两个可选顶层字符串：
+
+```json
+{
+  "routineSeriesID": "[\"calendar\",\"phone\",\"1\",\"10\"]",
+  "routineOccurrenceID": "1791878400000"
+}
+```
+
+值是对 `["calendar", deviceID, calendarID, masterID]` 做紧凑 JSON 编码后的字符串。Android 的 `masterID` 为 `ORIGINAL_ID`（无例外时使用 `event_id`）；Apple 使用共享的 external event identifier。bridge 同时返回：
+
+- `androidCalendarLink.seriesID`
+- `androidCalendarLink.recurring`
+- `androidCalendarLink.originalOccurrence`
+
+`routineOccurrenceID` 精确保存 provider 的原始 occurrence，优先于显示 recurrence 日期；导入的 task timing 为 `end` 时仍保存来源 START 身份。新桥接导入会同时写入两个字段。旧 Android link 若 key 的末段是 Dart 可表示的 9–19 位 epoch 数字且不是 `single`，会在本地加载、日历导入、云同步或备份合并时回填两个字段；越界值、`recurring:false`、缺失可靠原始 occurrence 的记录不视为循环。Apple 备份中的 `calendarEvent.event.identity.occurrence` 非空时，按 `calendarID + sourceTitle + eventID` scope 识别，不使用可变的日历标题。
+
+Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_id` 任一存在视为循环来源。key 保持 `calendarID/master/originalOccurrence` 结构；detached 例外使用原 master，展示用 `event_id` 不参与系列归组。
+
+共享 alias 的 occurrence 顺序是：provider 原始 occurrence → `routineOccurrenceID` → 显示 recurrence 日期。`routineSeriesID` 是 provider series marker：它参与 frontier 和“常态”展示，阻止 `nextOccurrence` 及 store 完成 transition 再合成本地后代；不写入伪造的本地 `repeatRule`，不改动计时、Checklist、完成状态或用户字段。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| Flutter 静态分析 | 最终 `flutter analyze` 通过，`No issues found! (ran in 22.5s)`。受限沙箱在 Dart CPU 探测阶段报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，因此使用主机环境执行只读分析。 |
+| 自动化测试 | 按本轮明确限制未新增、未运行测试。先前尝试在沙箱启动测试时仅发生上述 VM 崩溃，没有测试断言结果可报告。 |
+| Android Release | 源码冻结后构建通过，耗时 138.7 秒。APK 为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Mikanseta-0.4.5+11-android.apk`；Flutter 输出 60.6 MB，实际约 57.8 MiB。`apksigner verify` 通过，签名证书与 0.4.4 上一版一致；`aapt` 确认包名 `com.personal.mikanseta`、versionCode `11`、versionName `0.4.5`。SHA-256 为 `e524e7fd1f2d26b36b5817c9bb26fcec73032af95b0a6c616e05c29fdd73ec34`，随附校验文件一致。 |
+| macOS / iPhone | 构建仍在进行，最终结果待补录。 |
+| 版本 | `pubspec.yaml`、源码版本常量和 store 回退标签均为 `0.4.5 (11)`。 |
+
+限制：原生备份若只保留 `routineSeriesID` 而丢弃 occurrence 桥接细节，仍可保持系列归组，但原始 occurrence 顺序会退回当前 recurrence 时间；这样不产生假完成或删数据，但移动过发生日期的入口可能改变该回退排序。历史条目和未选中来源的显式清理行为保持原样。

@@ -113,7 +113,8 @@ final class AppleSystemServices: NSObject, UNUserNotificationCenterDelegate {
                     components.timeZone = TimeZone(secondsFromGMT:0)
                     return Calendar(identifier:.gregorian).date(from:components)!.timeIntervalSince1970*1000
                 }
-                return ["key":"\(event.calendar.calendarIdentifier)/\(id)/\(occurrence)","eventID":event.calendarItemIdentifier,"calendarID":event.calendar.calendarIdentifier,"calendarTitle":event.calendar.title,"title":event.title ?? "未命名日程","body":[event.notes ?? "",event.url?.absoluteString ?? ""].filter{!$0.isEmpty}.joined(separator:"\n"),"location":event.location ?? "","start":Int64(epoch(event.startDate)),"end":Int64(epoch(event.endDate)),"allDay":event.isAllDay]
+                let recurring = event.hasRecurrenceRules || event.isDetached
+                return ["key":"\(event.calendar.calendarIdentifier)/\(id)/\(occurrence)","eventID":event.calendarItemIdentifier,"calendarID":event.calendar.calendarIdentifier,"calendarTitle":event.calendar.title,"title":event.title ?? "未命名日程","body":[event.notes ?? "",event.url?.absoluteString ?? ""].filter{!$0.isEmpty}.joined(separator:"\n"),"location":event.location ?? "","start":Int64(epoch(event.startDate)),"end":Int64(epoch(event.endDate)),"allDay":event.isAllDay,"seriesID":id,"recurring":recurring,"originalOccurrence":occurrence]
             })
         case "takeCalendarEdits":let edits=calendarEdits;calendarEdits=[];result(edits)
         case "openExternalURL":
@@ -240,7 +241,8 @@ extension AppleSystemServices:EKEventEditViewDelegate,EKEventViewDelegate {
             func epoch(_ date:Date)->Int64 {if !event.isAllDay{return Int64(date.timeIntervalSince1970*1000)};var parts=Calendar.current.dateComponents([.year,.month,.day],from:date);parts.timeZone=TimeZone(secondsFromGMT:0);return Int64(Calendar(identifier:.gregorian).date(from:parts)!.timeIntervalSince1970*1000)}
             let external=event.calendarItemExternalIdentifier ?? event.calendarItemIdentifier
             let occurrence=event.hasRecurrenceRules || event.isDetached ? String(Int((event.occurrenceDate ?? event.startDate).timeIntervalSince1970)) : "single"
-            calendarEdits.append(["key":"\(calendar.calendarIdentifier)/\(external)/\(occurrence)","eventID":event.calendarItemIdentifier,"calendarID":calendar.calendarIdentifier,"calendarTitle":calendar.title,"title":event.title ?? "","body":event.notes ?? "","location":event.location ?? "","start":epoch(event.startDate),"end":epoch(event.endDate),"allDay":event.isAllDay])
+            let recurring = event.hasRecurrenceRules || event.isDetached
+            calendarEdits.append(["key":"\(calendar.calendarIdentifier)/\(external)/\(occurrence)","eventID":event.calendarItemIdentifier,"calendarID":calendar.calendarIdentifier,"calendarTitle":calendar.title,"title":event.title ?? "","body":event.notes ?? "","location":event.location ?? "","start":epoch(event.startDate),"end":epoch(event.endDate),"allDay":event.isAllDay,"seriesID":external,"recurring":recurring,"originalOccurrence":occurrence])
         }
         controller.dismiss(animated:true);calendarResult?(action == .saved);calendarResult=nil}
     func eventViewController(_ controller:EKEventViewController,didCompleteWith action:EKEventViewAction){controller.dismiss(animated:true)}

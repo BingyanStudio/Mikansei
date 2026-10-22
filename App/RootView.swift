@@ -257,7 +257,7 @@ private enum TaskFilter: String, CaseIterable, Identifiable {
     case all = "全部", tasks = "待办", schedules = "日程", homework = "作业", routine = "常态"
     var id: Self { self }
     func includes(_ entry: Entry) -> Bool {
-        entry.isTask && (self == .all || (self == .tasks && entry.kind == .task) || (self == .homework && entry.kind == .homework) || (self == .schedules && entry.kind == .schedule) || (self == .routine && entry.isRoutine))
+        entry.isTask && (self == .all || (self == .tasks && entry.kind == .task) || (self == .homework && entry.kind == .homework) || (self == .schedules && entry.kind == .schedule) || (self == .routine && entry.isRoutineSeriesMember))
     }
 }
 

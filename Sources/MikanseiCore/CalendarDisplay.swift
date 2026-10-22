@@ -23,7 +23,7 @@ public enum CalendarDisplay {
         let successors = Entry.successorDates(in: entries)
         for entry in entries where entry.isTask && (showCompleted || !entry.isCompleted) {
             var occurrences = [entry]
-            if entry.isRoutine && !entry.isCompleted {
+            if entry.allowsLocalSuccessorGeneration && !entry.isCompleted {
                 let base = entry.recurrenceReferenceDate ?? day.start
                 let startOffset = entry.plannedStart?.timeIntervalSince(base) ?? 0
                 let endOffset = entry.plannedEnd?.timeIntervalSince(base) ?? 0

@@ -117,6 +117,10 @@ public struct Entry: Identifiable, Codable, Equatable {
     public var repeatAnchorDate: Date? = nil
     public var reminderPattern: ReminderPattern = .single
     public var previousOccurrenceID: UUID? = nil
+    /// Cross-device routine identity. Provider series use a JSON array beginning with "calendar".
+    public var routineSeriesID: String? = nil
+    /// Original provider occurrence used for completion identity and chronological ordering.
+    public var routineOccurrenceID: String? = nil
     public var startedAt: Date? = nil
     public var elapsedSeconds: TimeInterval = 0
     public var calendarEvent: CalendarEventLink? = nil
@@ -152,6 +156,24 @@ public struct Entry: Identifiable, Codable, Equatable {
 
     public var isTask: Bool { kind != .note }
     public var isRoutine: Bool { isTask && repeatRule != .never }
+    /// EventKit records a stable series event identifier plus a nonempty original occurrence.
+    /// The full calendar/source scope avoids merging the same ICS identifier in copied calendars.
+    public var isRecurringCalendarOccurrence: Bool {
+        isTask && calendarEvent?.event.identity.occurrence.isEmpty == false
+    }
+    public var isRoutineSeriesMember: Bool {
+        isRoutine || isRecurringCalendarOccurrence ||
+            routineSeriesID?.isEmpty == false || routineOccurrenceID?.isEmpty == false
+    }
+    public var isProviderRoutineSeries: Bool {
+        guard let routineSeriesID, let data = routineSeriesID.data(using: .utf8),
+              let parts = try? JSONSerialization.jsonObject(with: data) as? [String],
+              let mechanism = parts.first else { return false }
+        return mechanism.caseInsensitiveCompare("calendar") == .orderedSame
+    }
+    public var allowsLocalSuccessorGeneration: Bool {
+        isRoutine && !isRecurringCalendarOccurrence && !isProviderRoutineSeries
+    }
     public var repeatDays: Int { repeatRule == .custom ? max(1, repeatIntervalDays) : repeatRule.days }
     public var repeatLabel: String {
         if repeatRule == .dates { return "已选 \(Set(repeatDates.map { Calendar.current.startOfDay(for: $0) }).count) 天" }
@@ -253,7 +275,7 @@ public struct Entry: Identifiable, Codable, Equatable {
     }
 
     public func nextOccurrence(after now: Date = Date(), calendar: Calendar = .current) -> Entry? {
-        guard isRoutine, let base = recurrenceReferenceDate else { return nil }
+        guard allowsLocalSuccessorGeneration, let base = recurrenceReferenceDate else { return nil }
         let upperBound = repeatRule == .dates
             ? repeatDates.max().flatMap { calendar.date(byAdding: .day, value: 1, to: $0) }
             : calendar.date(byAdding: .year, value: 5, to: max(now, base))
@@ -279,7 +301,7 @@ public struct Entry: Identifiable, Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, title, body, kind, category, priority, checklist, dueDate, reminder,
              isCompleted, completedAt, createdAt, updatedAt, platform, location,
-             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes
+             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, routineSeriesID, routineOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -308,6 +330,15 @@ public struct Entry: Identifiable, Codable, Equatable {
         repeatAnchorDate = try c.decodeIfPresent(Date.self, forKey: .repeatAnchorDate)
         reminderPattern = try c.decodeIfPresent(ReminderPattern.self, forKey: .reminderPattern) ?? .single
         previousOccurrenceID = try c.decodeIfPresent(UUID.self, forKey: .previousOccurrenceID)
+        routineSeriesID = try c.decodeIfPresent(String.self, forKey: .routineSeriesID)
+        routineOccurrenceID = try c.decodeIfPresent(String.self, forKey: .routineOccurrenceID)
+        if (routineSeriesID == nil || routineOccurrenceID == nil),
+           let legacy = try? decoder.container(keyedBy: LegacyAndroidKeys.self),
+           let android = try? legacy.decodeIfPresent(LegacyAndroidCalendarLink.self, forKey: .androidCalendarLink),
+           let identity = Self.legacyProviderIdentity(android) {
+            if routineSeriesID == nil { routineSeriesID = identity.seriesID }
+            if routineOccurrenceID == nil { routineOccurrenceID = identity.occurrenceID }
+        }
         startedAt = try c.decodeIfPresent(Date.self, forKey: .startedAt)
         elapsedSeconds = try c.decodeIfPresent(TimeInterval.self, forKey: .elapsedSeconds) ?? 0
         calendarEvent = try c.decodeIfPresent(CalendarEventLink.self, forKey: .calendarEvent)
@@ -324,6 +355,69 @@ public struct Entry: Identifiable, Codable, Equatable {
             let oldDue = link.event.isAllDay ? max(link.event.start, link.event.end.addingTimeInterval(-1)) : link.timing == .start ? link.event.start : link.event.end
             if link.timing == .start, dueDate == oldDue { dueDate = nil }
         }
+    }
+
+    private enum LegacyAndroidKeys: String, CodingKey { case androidCalendarLink }
+    private struct LegacyAndroidCalendarLink: Decodable {
+        let deviceID: String?
+        let key: String?
+        let calendarID: String?
+        let seriesID: String?
+        let recurring: Bool?
+        let originalOccurrence: String?
+    }
+
+    private struct LegacyProviderIdentity {
+        let seriesID: String
+        let occurrenceID: String
+    }
+
+    private static func legacyProviderIdentity(_ link: LegacyAndroidCalendarLink) -> LegacyProviderIdentity? {
+        guard link.recurring != false else { return nil }
+        let keyParts: (calendarID: String?, seriesID: String?, occurrence: String?)?
+        if let key = link.key, let firstSlash = key.firstIndex(of: "/"),
+           let lastSlash = key.lastIndex(of: "/"), firstSlash < lastSlash {
+            keyParts = (nonempty(String(key[..<firstSlash])),
+                        nonempty(String(key[key.index(after: firstSlash)..<lastSlash])),
+                        nonempty(String(key[key.index(after: lastSlash)...])))
+        } else {
+            keyParts = nil
+        }
+        let keyOccurrence = keyParts?.occurrence
+        let originalOccurrence = link.originalOccurrence.flatMap(nonempty)
+        guard originalOccurrence?.caseInsensitiveCompare("single") != .orderedSame,
+              keyOccurrence?.caseInsensitiveCompare("single") != .orderedSame else { return nil }
+        let occurrence = originalOccurrence ?? keyOccurrence
+        let numericOccurrence = occurrence.map(isSafeProviderOccurrence) == true
+        guard link.recurring == true || numericOccurrence else { return nil }
+        var calendarID = link.calendarID.flatMap(nonempty)
+        var seriesID = link.seriesID.flatMap(nonempty)
+        if let keyParts {
+            if calendarID == nil { calendarID = keyParts.calendarID }
+            if seriesID == nil, numericOccurrence { seriesID = keyParts.seriesID }
+        }
+        guard let calendarID, let seriesID, let occurrence,
+              let data = try? JSONSerialization.data(
+                withJSONObject: ["calendar", link.deviceID ?? "", calendarID, seriesID],
+                options: [.withoutEscapingSlashes]
+              ) else {
+            return nil
+        }
+        guard let series = String(data: data, encoding: .utf8) else { return nil }
+        return LegacyProviderIdentity(seriesID: series, occurrenceID: occurrence)
+    }
+
+    private static func isSafeProviderOccurrence(_ value: String) -> Bool {
+        let digits = value.first == "-" ? value.dropFirst() : Substring(value)
+        guard (9...19).contains(digits.count), digits.allSatisfy({ ("0"..."9").contains($0) }),
+              let parsed = Double(value) else { return false }
+        let milliseconds = value.count >= 12 ? parsed : parsed * 1000
+        return milliseconds.isFinite && abs(milliseconds) <= 8_640_000_000_000_000
+    }
+
+    private static func nonempty(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }
 
@@ -404,9 +498,12 @@ public struct TaskBoard {
         self.entries = entries
         self.now = now
         self.calendar = calendar
-        self.openEntries = entries.filter { $0.isTask && !$0.isCompleted }.sorted(by: Self.order)
+        self.openEntries = Self.frontierOpenEntries(entries, calendar: calendar)
     }
     public var open: [Entry] { openEntries }
+    public var routines: [Entry] {
+        open.filter(\.isRoutineSeriesMember) + finishedToday.filter(\.isRoutineSeriesMember)
+    }
     public var overdue: [Entry] { open.filter { $0.isOverdue(at: now) } }
     public var today: [Entry] {
         let day = calendar.startOfDay(for: now)
@@ -442,6 +539,158 @@ public struct TaskBoard {
     }
     public var focus: [Entry] { overdue + today + unplannedOrPast + finishedToday }
     public var completedToday: Int { finishedToday.count }
+
+    private struct CalendarSeriesKey: Hashable {
+        let calendarID: String
+        let sourceTitle: String
+        let eventID: String
+    }
+
+    private enum OccurrenceKey: Hashable {
+        case calendar(String)
+        case providerOccurrence(String)
+        case provider(Date)
+        case local(UUID?, Date)
+    }
+
+    private struct CompletedOccurrence: Hashable {
+        let family: UUID
+        let occurrence: OccurrenceKey
+    }
+
+    /// Lists expose one actionable point per routine while retaining every source occurrence in `entries`.
+    private static func frontierOpenEntries(_ entries: [Entry], calendar: Calendar) -> [Entry] {
+        let tasks = entries.filter(\.isTask)
+        guard !tasks.isEmpty else { return [] }
+
+        var parents: [UUID: UUID] = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0.id) })
+        var ranks: [UUID: UInt8] = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, 0) })
+        func root(_ id: UUID) -> UUID {
+            var current = id
+            var path: [UUID] = []
+            while let parent = parents[current], parent != current {
+                path.append(current)
+                current = parent
+            }
+            let top = current
+            for node in path { parents[node] = top }
+            return top
+        }
+        func union(_ a: UUID, _ b: UUID) {
+            let ra = root(a), rb = root(b)
+            guard ra != rb else { return }
+            let rankA = ranks[ra] ?? 0, rankB = ranks[rb] ?? 0
+            if rankA < rankB { parents[ra] = rb }
+            else {
+                parents[rb] = ra
+                if rankA == rankB { ranks[ra] = rankA &+ 1 }
+            }
+        }
+
+        // Only explicit lineage is used. Missing parents still group their successors together.
+        for entry in tasks {
+            guard let previous = entry.previousOccurrenceID else { continue }
+            parents[previous] = parents[previous] ?? previous
+            union(entry.id, previous)
+        }
+
+        var calendarSeries: [CalendarSeriesKey: UUID] = [:]
+        for entry in tasks {
+            guard entry.isRecurringCalendarOccurrence, let identity = entry.calendarEvent?.event.identity else { continue }
+            let key = CalendarSeriesKey(calendarID: identity.calendarID, sourceTitle: identity.sourceTitle,
+                                        eventID: identity.eventID)
+            if let first = calendarSeries[key] { union(entry.id, first) }
+            else { calendarSeries[key] = entry.id }
+        }
+        var sharedSeries: [String: UUID] = [:]
+        for entry in tasks {
+            guard let seriesID = entry.routineSeriesID, !seriesID.isEmpty else { continue }
+            if let first = sharedSeries[seriesID] { union(entry.id, first) }
+            else { sharedSeries[seriesID] = entry.id }
+        }
+
+        let completedEntries = tasks.filter(\.isCompleted)
+        let completedOccurrences = Set(completedEntries.map {
+            CompletedOccurrence(family: root($0.id),
+                                occurrence: duplicateOccurrenceKey($0, calendar: calendar))
+        })
+        let open = tasks.filter { entry in
+            guard !entry.isCompleted else { return false }
+            let key = CompletedOccurrence(family: root(entry.id),
+                                          occurrence: duplicateOccurrenceKey(entry, calendar: calendar))
+            guard completedOccurrences.contains(key) else { return true }
+            return false
+        }
+        let grouped = Dictionary(grouping: open) { root($0.id) }
+        let frontier = grouped.values.compactMap { members -> Entry? in
+            let ids = Set(members.map(\.id))
+            let roots = members.filter { entry in
+                guard let previous = entry.previousOccurrenceID else { return true }
+                return !ids.contains(previous)
+            }
+            let candidates = roots.isEmpty ? members : roots
+            return candidates.min { lhs, rhs in
+                frontierOrder(lhs, rhs, calendar: calendar)
+            }
+        }
+        return frontier.sorted(by: order)
+    }
+
+    private static func frontierOrder(_ lhs: Entry, _ rhs: Entry, calendar: Calendar) -> Bool {
+        let leftDate = logicalOccurrenceDate(lhs, calendar: calendar)
+        let rightDate = logicalOccurrenceDate(rhs, calendar: calendar)
+        if leftDate != rightDate { return leftDate < rightDate }
+        if (lhs.startedAt != nil) != (rhs.startedAt != nil) { return lhs.startedAt != nil }
+        if lhs.updatedAt != rhs.updatedAt { return lhs.updatedAt > rhs.updatedAt }
+        if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }
+        return lhs.id.uuidString < rhs.id.uuidString
+    }
+
+    private static func logicalOccurrenceDate(_ entry: Entry, calendar: Calendar) -> Date {
+        if let occurrence = entry.calendarEvent?.event.identity.occurrence,
+           let date = providerOccurrenceDate(occurrence, calendar: calendar) {
+            return date
+        }
+        if let occurrence = entry.routineOccurrenceID,
+           let date = providerOccurrenceDate(occurrence, calendar: calendar) {
+            return date
+        }
+        return entry.attentionDate ?? entry.createdAt
+    }
+
+    private static func providerOccurrenceDate(_ occurrence: String, calendar: Calendar) -> Date? {
+        if occurrence.hasPrefix("time:"), let seconds = TimeInterval(occurrence.dropFirst(5)),
+           seconds.isFinite, abs(seconds) <= 8_640_000_000_000 {
+            return Date(timeIntervalSince1970: seconds)
+        }
+        if occurrence.hasPrefix("day:") {
+            let formatter = DateFormatter()
+            formatter.calendar = calendar
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = calendar.timeZone
+            formatter.dateFormat = "yyyy-MM-dd"
+            return formatter.date(from: String(occurrence.dropFirst(4)))
+        }
+        let digits = occurrence.first == "-" ? occurrence.dropFirst() : Substring(occurrence)
+        guard (9...19).contains(digits.count), digits.allSatisfy({ ("0"..."9").contains($0) }),
+              let value = Double(occurrence) else { return nil }
+        let milliseconds = occurrence.count >= 12 ? value : value * 1000
+        guard milliseconds.isFinite, abs(milliseconds) <= 8_640_000_000_000_000 else { return nil }
+        return Date(timeIntervalSince1970: milliseconds / 1000)
+    }
+
+    private static func duplicateOccurrenceKey(_ entry: Entry, calendar: Calendar) -> OccurrenceKey {
+        if entry.isRecurringCalendarOccurrence, let occurrence = entry.calendarEvent?.event.identity.occurrence {
+            return .calendar(occurrence)
+        }
+        if let occurrence = entry.routineOccurrenceID, !occurrence.isEmpty {
+            return .providerOccurrence(occurrence)
+        }
+        let date = logicalOccurrenceDate(entry, calendar: calendar)
+        if entry.isProviderRoutineSeries { return .provider(date) }
+        return .local(entry.previousOccurrenceID, date)
+    }
+
     public static func order(_ lhs: Entry, _ rhs: Entry) -> Bool {
         if lhs.priority != rhs.priority { return lhs.priority.rawValue > rhs.priority.rawValue }
         if lhs.attentionDate != rhs.attentionDate { return (lhs.attentionDate ?? .distantFuture) < (rhs.attentionDate ?? .distantFuture) }

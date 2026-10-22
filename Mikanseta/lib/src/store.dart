@@ -143,7 +143,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.4.4 (10)';
+  String displayVersion = '0.4.5 (11)';
   String? error;
   String? serviceError;
 
@@ -182,6 +182,37 @@ class EntryStore extends ChangeNotifier {
       entries.where((e) => e.id.toUpperCase() == id.toUpperCase()).firstOrNull;
   Entry? get running =>
       entries.where((e) => !e.completed && e.startedAt != null).firstOrNull;
+
+  Archive _withRoutineIdentityFields(Archive archive) {
+    var changed = false;
+    final next = archive.entries.map((entry) {
+      final existingSeries = entry.data['routineSeriesID'];
+      final existingOccurrence = entry.data['routineOccurrenceID'];
+      final hasSeries =
+          existingSeries is String && existingSeries.trim().isNotEmpty;
+      final hasOccurrence =
+          existingOccurrence is String &&
+          existingOccurrence.trim().isNotEmpty &&
+          existingOccurrence != 'single';
+      if (hasSeries && hasOccurrence) {
+        return entry;
+      }
+      final identity = androidRoutineIdentity(
+        entry.data['androidCalendarLink'] as Map?,
+      );
+      if (identity == null) return entry;
+      final fields = <String, dynamic>{};
+      if (!hasSeries) fields['routineSeriesID'] = identity.seriesID;
+      if (!hasOccurrence) {
+        fields['routineOccurrenceID'] = identity.occurrenceID;
+      }
+      if (fields.isEmpty) return entry;
+      changed = true;
+      return Entry({...entry.data, ...fields});
+    }).toList();
+    return changed ? archive.withEntries(next) : archive;
+  }
+
   Map<String, dynamic> get androidCalendarSettings => Map<String, dynamic>.from(
     _archive.metadata['androidCalendarSync'] as Map? ?? {},
   );
@@ -302,14 +333,21 @@ class EntryStore extends ChangeNotifier {
         }
       }
       if (index < 0) fields['category'] = event['calendarTitle'];
-      fields['androidCalendarLink'] = {
+      final calendarLink = <String, dynamic>{
         'deviceID': deviceID,
         'key': key,
         'eventID': event['eventID'],
         'calendarID': event['calendarID'],
         'calendarTitle': event['calendarTitle'],
+        'seriesID': event['seriesID'],
+        'recurring': event['recurring'],
+        'originalOccurrence': event['originalOccurrence'],
         'snapshot': snapshot,
       };
+      fields['androidCalendarLink'] = calendarLink;
+      final routineIdentity = androidRoutineIdentity(calendarLink);
+      fields['routineSeriesID'] = routineIdentity?.seriesID;
+      fields['routineOccurrenceID'] = routineIdentity?.occurrenceID;
       if (index < 0) fields['source'] = '系统日历 · ${event['calendarTitle']}';
       // Comparing the normalized data avoids a save on every app resume.
       if (fields.entries.every(
@@ -326,7 +364,9 @@ class EntryStore extends ChangeNotifier {
       }
       changed++;
     }
-    if (changed > 0) _commit(_archive.withEntries(next));
+    if (changed > 0) {
+      _commit(_withRoutineIdentityFields(_archive.withEntries(next)));
+    }
     return changed;
   }
 
@@ -392,17 +432,29 @@ class EntryStore extends ChangeNotifier {
         /* Version lookup must not block archive recovery. */
       }
     }
+    var backfilled = false;
     try {
       final content = await storage.read();
-      if (content != null) _archive = Archive.decode(content);
+      if (content != null) {
+        _archive = Archive.decode(content);
+        final normalized = _withRoutineIdentityFields(_archive);
+        backfilled = normalized.encode() != _archive.encode();
+        _archive = normalized;
+      }
     } catch (exception) {
       readOnly = true;
       error = '本地数据无法读取，原文件已保留。请勿卸载测试版。\n$exception';
     }
     if (!readOnly) await refreshServices();
-    if (!readOnly) onLocalWrite?.call();
     loading = false;
     notifyListeners();
+    if (!readOnly) {
+      if (backfilled) {
+        _commit(_archive);
+      } else {
+        onLocalWrite?.call();
+      }
+    }
   }
 
   void _commit(Archive archive) {
@@ -445,7 +497,8 @@ class EntryStore extends ChangeNotifier {
     validateEntry(entry);
     final previous = find(entry.id);
     final next = entries.where((e) => e.id != entry.id).toList()..add(entry);
-    if (entry.completed &&
+    if (!entry.calendarRoutine &&
+        entry.completed &&
         previous?.completed != true &&
         !next.any((e) => e.data['previousOccurrenceID'] == entry.id)) {
       final successor = entry.nextOccurrence(clock());
@@ -523,10 +576,10 @@ class EntryStore extends ChangeNotifier {
     if (localCalendar != null) {
       metadata['androidCalendarSync'] = localCalendar;
     }
-    final next = collapseRunningSessions(
+    final next = _withRoutineIdentityFields(collapseRunningSessions(
       Archive(entries: merged.entries, metadata: metadata),
       clock(),
-    );
+    ));
     if (next.encode() == _archive.encode()) return false;
     _commit(next);
     return true;
@@ -536,7 +589,9 @@ class EntryStore extends ChangeNotifier {
   /// Returns true when the local archive changed.
   bool applyLocalSyncArchive(Archive archive) {
     if (readOnly || loading) return false;
-    final next = collapseRunningSessions(archive, clock());
+    final next = _withRoutineIdentityFields(
+      collapseRunningSessions(archive, clock()),
+    );
     if (next.encode() == _archive.encode()) return false;
     _commit(next);
     return true;
@@ -549,7 +604,9 @@ class EntryStore extends ChangeNotifier {
     final imported = Archive.decode(content);
     final merged = _archive.merge(imported);
     // A merged copy may carry several running sessions; only one may run.
-    _commit(collapseRunningSessions(merged, clock()));
+    _commit(
+      _withRoutineIdentityFields(collapseRunningSessions(merged, clock())),
+    );
     await settled;
     if (saveFailed) throw StateError('导入的事项尚未写入磁盘，请重试保存。');
     return imported.entries.length;

@@ -32,7 +32,7 @@ struct SettingsView: View {
                         Text("把琐碎事项放在同一张清单里。") .font(.subheadline).foregroundStyle(.secondary)
                     }
                 }.padding(.vertical, 8)
-                LabeledContent("待完成", value: "\(store.entries.filter { $0.isTask && !$0.isCompleted }.count) 件")
+                LabeledContent("待完成", value: "\(TaskBoard(entries: store.entries).open.count) 件")
                 LabeledContent("已完成", value: "\(store.entries.filter { $0.isTask && $0.isCompleted }.count) 件")
                 LabeledContent("笔记", value: "\(store.entries.filter { $0.kind == .note }.count) 条")
             }

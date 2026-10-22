@@ -18,7 +18,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.4 (10)';
+const appVersion = '0.4.5 (11)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -527,7 +527,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       entries = switch (filter) {
         '已超时' => board.overdue,
         '紧急' => board.visible.where((e) => e.priority == 2).toList(),
-        '常态' => board.visible.where((e) => e.repeatRule != 'never').toList(),
+        '常态' => board.visible.where((e) => e.isRoutine).toList(),
         '作业' =>
           board.visible.where((e) => e.kind == EntryKind.homework).toList(),
         '历史' => board.history,
@@ -1124,7 +1124,7 @@ class EntryTile extends StatelessWidget {
       if (entry.category.isNotEmpty) entry.category,
       if (entry.platform.isNotEmpty) entry.platform,
       if (entry.location.isNotEmpty) entry.location,
-      if (entry.repeatRule != 'never') repeatLabels[entry.repeatRule]!,
+      if (entry.isRoutine) entry.routineLabel,
     ];
     Widget meta(IconData icon, String text, Color color) => Row(
       mainAxisSize: MainAxisSize.min,
@@ -1460,8 +1460,8 @@ class EntryDetails extends StatelessWidget {
                       ),
                     ],
                     if (entry.source.isNotEmpty) detail('来源', entry.source),
-                    if (entry.repeatRule != 'never')
-                      detail('循环', repeatLabels[entry.repeatRule]!),
+                    if (entry.isRoutine)
+                      detail('循环', entry.routineLabel),
                     if (entry.isTask)
                       detail(
                         '累计专注',

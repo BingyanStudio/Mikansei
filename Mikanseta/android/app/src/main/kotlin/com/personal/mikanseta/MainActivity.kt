@@ -261,15 +261,17 @@ class MainActivity : FlutterActivity() {
         val uri = CalendarContract.Instances.CONTENT_URI.buildUpon().also {
             ContentUris.appendId(it, start); ContentUris.appendId(it, end)
         }.build()
-        val fields = arrayOf("event_id", "calendar_id", "title", "description", "eventLocation", "begin", "end", "allDay", "calendar_displayName", "rrule", "original_id", "originalInstanceTime")
+        val fields = arrayOf("event_id", "calendar_id", "title", "description", "eventLocation", "begin", "end", "allDay", "calendar_displayName", "rrule", "original_id", "originalInstanceTime", "rdate")
         val result = mutableListOf<Map<String, Any?>>()
         contentResolver.query(uri, fields, "calendar_id IN (${ids.joinToString(",") { "?" }}) AND (eventStatus IS NULL OR eventStatus != 2)", ids.toTypedArray(), "begin ASC")?.use { rows ->
             while (rows.moveToNext()) {
                 val eventID = rows.getLong(0).toString()
-                val recurring = !rows.isNull(9) && !rows.getString(9).isNullOrBlank() || !rows.isNull(10)
+                val recurring = !rows.isNull(9) && !rows.getString(9).isNullOrBlank() ||
+                    !rows.isNull(12) && !rows.getString(12).isNullOrBlank() ||
+                    !rows.isNull(10)
                 val master = if (rows.isNull(10)) eventID else rows.getLong(10).toString()
                 val occurrence = if (recurring) (if (rows.isNull(11)) rows.getLong(5) else rows.getLong(11)).toString() else "single"
-                result.add(mapOf("key" to "${rows.getLong(1)}/$master/$occurrence", "eventID" to eventID, "calendarID" to rows.getLong(1).toString(), "title" to (rows.getString(2) ?: "未命名日程"), "body" to (rows.getString(3) ?: ""), "location" to (rows.getString(4) ?: ""), "start" to rows.getLong(5), "end" to rows.getLong(6), "allDay" to (rows.getInt(7) != 0), "calendarTitle" to (rows.getString(8) ?: "日历")))
+                result.add(mapOf("key" to "${rows.getLong(1)}/$master/$occurrence", "eventID" to eventID, "calendarID" to rows.getLong(1).toString(), "title" to (rows.getString(2) ?: "未命名日程"), "body" to (rows.getString(3) ?: ""), "location" to (rows.getString(4) ?: ""), "start" to rows.getLong(5), "end" to rows.getLong(6), "allDay" to (rows.getInt(7) != 0), "calendarTitle" to (rows.getString(8) ?: "日历"), "seriesID" to master, "recurring" to recurring, "originalOccurrence" to occurrence))
                 check(result.size <= 10000) { "所选日历事件过多，请减少来源后重试" }
             }
         }

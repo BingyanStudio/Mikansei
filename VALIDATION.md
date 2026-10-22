@@ -1,5 +1,16 @@
 # 验证记录
 
+## Routine 待办 frontier 与跨格式完成身份 · 0.3.2 (6) · 2026-10-22
+
+- **根因**：随待办轮询按 occurrence 逐次导入循环日历事件后，`TaskBoard.open` 将所有未来 occurrence 都当作独立开放项；Mac“常态”列表又直接读取原始 `store.entries`。同时 Swift `Entry` 的显式 CodingKeys 会丢弃 Flutter 的日历关联字段，跨格式保存后可能失去系列和原始 occurrence，造成再次导入时重复或把已完成 occurrence 重新露出来。
+- **列表投影**：保留全部底层 occurrence、完成历史和用户修改，只在列表、今日、常态、设置计数与小组件入口建立 active frontier。每系列只显示当前最早尚未完成的一项；完成或撤销完成后按原数据重新投影，不伪造完成，也不按标题合并。
+- **可靠系列关系**：本地 routine 仅沿 `previousOccurrenceID` 血缘归组；Apple 循环日历仅在同一 `calendarID + sourceTitle + eventID` 作用域内，以非空原始 occurrence 归组。不同日历、同名事项、独立事项和非循环单次日程保持分开。日历月 / 日视图仍显示原始 future occurrence。
+- **共享身份**：新增可选 Codable `routineSeriesID` 与 `routineOccurrenceID`。旧 Android `androidCalendarLink` 在加载 / 导入时只补缺失身份，不删除或改写原事项；provider series 以原始 occurrence 参与完成去重和排序。provider / 循环日历不会再由本地 `nextOccurrence` 生成竞争后继；单次日历事件上手动设置的本地 routine 仍可生成。
+- **大输入保护**：血缘归组使用迭代 root、路径压缩和 rank；重复完成 occurrence 按“系列族 + 原始 occurrence”抑制 stale open 副本，本地血缘按 `previousOccurrenceID + recurrenceDate` 区分同一代副本与合法后继。
+- **构建检查**：最终共享核心 `swift build --disable-sandbox` 通过。无签名 macOS Release 构建 exit 0，产物为 `/private/tmp/Mikansei-Mac-verify/Build/Products/Release/Mikansei.app`，Info.plist 实测 `0.3.2 (6)`。iOS 无签名模拟器构建未完成，最终运行被交接中止；更早一次 target 构建因沙箱禁止写入 Xcode 默认 DerivedData / 模块缓存而失败，不能视为通过。
+- **测试状态**：修复前基线为 91 项执行、90 通过，唯一失败是沙箱内 `NSFileCoordinator` 无法创建临时同步目录。临时新增的 frontier 回归用例曾取得 10 个断言失败并复现问题，随后按要求移除，测试文件无差异。当前没有最终功能测试或 UI 测试通过记录，也未进行真机、个人日历、签名或安装验收；主代理的签名安装仍在进行，状态待定。
+- **已知限制**：日历导入窗口仍是今天起 30 天。若下一次 occurrence 位于窗口之外且尚未作为 Entry 导入，frontier 不能凭空生成它，需要后续窗口扩展或再次导入后才会出现。
+
 2026-10-13
 
 ## 完成圈划线修复与待办页顶部控件固定 · 0.3.1 (5) · 2026-10-18

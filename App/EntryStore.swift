@@ -97,7 +97,9 @@ final class EntryStore: ObservableObject, SyncWorkspace {
         let wasCompleted = next.first(where: { $0.id == entry.id })?.isCompleted ?? false
         if let index = next.firstIndex(where: { $0.id == entry.id }) { next[index] = entry }
         else { next.append(entry) }
-        if entry.isCompleted && !wasCompleted && !next.contains(where: { $0.previousOccurrenceID == entry.id }),
+        // Provider-backed recurring occurrences advance from their source; one-off links may still have a local routine.
+        if entry.isCompleted && !wasCompleted && entry.allowsLocalSuccessorGeneration &&
+           !next.contains(where: { $0.previousOccurrenceID == entry.id }),
            let occurrence = entry.nextOccurrence() { next.append(occurrence) }
         return commit(next)
     }
