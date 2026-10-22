@@ -244,3 +244,23 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 | --- | --- | --- |
 | `Mikanseta-Windows-x64-Setup.exe` | 11,867,688 | `d914b58269b9aa2cf2af2dbb163dd557cc40426d8c27796d0368d9745e0ae893` |
 | `Mikanseta-Windows-x64.zip` | 14,144,403 | `93ef172a5a21003ffce4299a6068fff35ee78cf52fd612ae50b8080ef9db8f7f` |
+
+## 0.4.4 (10)：完成分组与卡片状态修复（2026-10-22）
+
+复现到 `AnimatedEntryList` 的重排离场动画会保留之前缓存的 `Entry` 快照。连续完成多张卡片时，同一 ID 的新卡片已进入“今日已完成”，旧的离场卡片仍可能短暂显示未勾选和未划线。修复建立列表级 ID 快照索引，并仅让动画离场子树监听 store，再按 ID 读取最新条目；没有为每张正常卡片增加 `store.find` 或重复扫描。未修改 domain、store 数据模型、主题、布局或平台配置。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 修复前回归 | 连续完成 8 张卡片中的 7 张时，60ms 动画帧发现“快速2”同时存在完成与未完成快照，针对性测试失败。失败发生在旧离场条目，稳定后状态本身正常；正常的 220ms 文字样式插值不是根因。 |
+| 修复后回归 | 同一用例在 Android、iOS、macOS、Windows 四个 Material `TargetPlatform` 下通过：动画中同 ID 卡片均使用完成快照，稳定后每个 ID 仅一张卡片；图标、实际 `DefaultTextStyle` 删除线及恢复未完成状态一致。 |
+| 清单与外部替换 | 含 checklist 的条目完成后步骤勾选、图标与删除线一致；同 ID 云端替换后继续显示正确标题和完成状态，恢复后同步清除。 |
+| 静态检查 | Flutter 3.47.7 `flutter analyze` 通过，`No issues found!`。 |
+| 版本 | `pubspec.yaml` 为 `0.4.4+10`；源码版本常量与 store 回退标签均为 `0.4.4 (10)`，未修改锁定依赖。 |
+| 全量测试 | `flutter test` **87/87 通过**。 |
+| Android | 0.4.4+10 构建、验签通过，签名证书与原有证书一致。APK 为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Mikanseta-0.4.4+10-android.apk`，60,550,984 bytes，SHA-256 `9bb50acd5cfa2157d8751192c373797d0eb6cb46ab1207be87c33334c53d6353`。 |
+| macOS | 使用现有安装脚本和本机配置构建 0.4.4 (10)，覆盖安装后 `codesign` 验证通过；`FLTEnableImpeller=false` 保留，实际运行进程 PID 84914。 |
+| iOS 模拟器 | `Scripts/flutter.sh build ios --simulator --flavor Mikanseta --no-pub` 编译成功，耗时 102.9s；产物 `build/ios/iphonesimulator/Mikanseta.app` 为 x86_64 + arm64 通用模拟器应用，Bundle ID `com.personal.mikanseta`，版本 0.4.4 (10)。本任务未执行额外签名或安装；日志为 `LocalInstall/completion-fix-ios-simulator.log`。 |
+| iPhone | 设备当前 unavailable，未安装。 |
+| Windows | CI [39724313139](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39724313139) 已 completed success，对应修复提交 `51e6d3f2875bb64947c7a4ecf14939138b358d49`。Windows Analyze、全部单元测试、实际 `integration_test/app_test.dart`、Release 构建、Inno 安装及安装后启动/卸载验证、产物上传全部成功。下载 artifact 12402696936，归档 SHA-256 为 `6c6b92e7ec9fc43742849621c0f522b51180d37471c5e3ec72a7ddd713aee3e9`，解包后每个包的 `.sha256` 均一致。本地交付目录为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Windows/0.4.4+10/`，`Setup.exe` 为 11,869,035 bytes，portable ZIP 为 14,145,112 bytes，`build-info.json` 确认 version `0.4.4`、buildNumber `10`。 |
+
+限制：iOS 模拟器构建时因工程没有 `Debug-Mikanseta` 配置而由 Flutter 回退到通用 `Debug`，日志已如实记录，本次未修改工程配置。尚未完成 Android、iOS、macOS、Windows 真机 UI 验收；当前证据覆盖动画退出期间的旧快照问题，未在测试中复现稳定态持续错误，不能把本次修复解释为已覆盖所有可能场景。
