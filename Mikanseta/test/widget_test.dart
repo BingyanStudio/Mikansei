@@ -7,6 +7,7 @@ import 'package:mikanseta/src/cloud_sync.dart';
 import 'package:mikanseta/src/domain.dart';
 import 'package:mikanseta/src/local_folder_sync.dart';
 import 'package:mikanseta/src/store.dart';
+import 'package:mikanseta/src/theme.dart';
 
 import 'cloud_sync_test.dart' show FakeCloudBackend;
 import 'domain_test.dart' show MemoryStorage;
@@ -17,6 +18,33 @@ void main() {
     final store = EntryStore(MemoryStorage());
     await store.load();
     return store;
+  }
+
+  Future<void> pumpEntryList(
+    WidgetTester tester,
+    EntryStore store, {
+    TargetPlatform? platform,
+  }) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: platform == null
+            ? null
+            : KraftTheme.build(Brightness.light).copyWith(platform: platform),
+        home: Scaffold(
+          body: AnimatedBuilder(
+            animation: store,
+            builder: (context, _) => AnimatedEntryList(
+              entries: store.entries,
+              now: store.clock(),
+              store: store,
+              onDetails: (_) {},
+              showGroups: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
   }
 
   testWidgets(
@@ -55,6 +83,255 @@ void main() {
       expect(tester.takeException(), null);
       await store.settled;
       await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets('completion stays consistent through grouped list reordering', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    final first = Entry.create(title: '事项甲');
+    final second = Entry.create(title: '事项乙');
+    final step = StepItem(title: '核对清单');
+    final third = Entry.create(title: '事项丙').change({
+      'checklist': [step.toJson()],
+    });
+    store
+      ..save(first)
+      ..save(second)
+      ..save(third);
+    await pumpEntryList(tester, store);
+
+    void expectCardState(String title, {required bool completed}) {
+      final card = find
+          .ancestor(of: find.text(title), matching: find.byType(Card))
+          .first;
+      expect(
+        tester
+            .widget<IconButton>(
+              find
+                  .descendant(of: card, matching: find.byType(IconButton))
+                  .first,
+            )
+            .tooltip,
+        completed ? '恢复未完成' : '标记完成',
+        reason: '$title 的完成按钮状态',
+      );
+      expect(
+        find.descendant(
+          of: card,
+          matching: find.byIcon(
+            completed ? Icons.check_circle : Icons.radio_button_unchecked,
+          ),
+        ),
+        findsOneWidget,
+        reason: '$title 的完成图标',
+      );
+      final rendered = DefaultTextStyle.of(tester.element(find.text(title)))
+          .style;
+      expect(
+        rendered.decoration,
+        completed
+            ? TextDecoration.lineThrough
+            : isNot(TextDecoration.lineThrough),
+        reason: '$title 的实际渲染文字样式',
+      );
+    }
+
+    expectCardState('事项甲', completed: false);
+    final firstCard = find
+        .ancestor(of: find.text('事项甲'), matching: find.byType(Card))
+        .first;
+    await tester.tap(
+      find.descendant(of: firstCard, matching: find.byTooltip('标记完成')),
+    );
+    await tester.pump();
+    expect(find.text('今日已完成'), findsOneWidget);
+    expectCardState('事项甲', completed: true);
+    expect(find.text('事项甲'), findsOneWidget);
+    expect(find.text(step.title), findsOneWidget);
+    await tester.pumpAndSettle();
+    expectCardState('事项甲', completed: true);
+    expect(find.text('事项甲'), findsOneWidget);
+
+    final completedCard = find
+        .ancestor(of: find.text('事项甲'), matching: find.byType(Card))
+        .first;
+    await tester.tap(
+      find.descendant(of: completedCard, matching: find.byTooltip('恢复未完成')),
+    );
+    await tester.pump();
+    expect(find.text('今日已完成'), findsNothing);
+    expectCardState('事项甲', completed: false);
+    expect(find.text('事项甲'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expectCardState('事项甲', completed: false);
+    expect(find.text('事项甲'), findsOneWidget);
+    expect(tester.takeException(), null);
+    await tester.pumpWidget(const SizedBox());
+    await store.settled;
+  });
+  testWidgets(
+    'rapid grouped completions stay consistent across Material platforms',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      const platforms = [
+        TargetPlatform.android,
+        TargetPlatform.iOS,
+        TargetPlatform.macOS,
+        TargetPlatform.windows,
+      ];
+
+      for (final platform in platforms) {
+        final store = await loaded();
+        final entries = List.generate(
+          8,
+          (index) => Entry.create(title: '快速${index + 1}'),
+        );
+        for (final entry in entries) {
+          store.save(entry);
+        }
+        await pumpEntryList(tester, store, platform: platform);
+
+        for (final entry in entries.take(7)) {
+          store.toggle(entry.id);
+          await tester.pump(const Duration(milliseconds: 60));
+          final movingTiles = tester
+              .widgetList<EntryTile>(find.byType(EntryTile))
+              .where((tile) => tile.entry.title == entry.title);
+          expect(movingTiles, isNotEmpty);
+          for (final tile in movingTiles) {
+            expect(
+              tile.entry.completed,
+              true,
+              reason: '$platform ${entry.title} 的动画快照不应停留在未完成状态',
+            );
+            final tileFinder = find.byWidget(tile);
+            expect(
+              find.descendant(
+                of: tileFinder,
+                matching: find.byTooltip('恢复未完成'),
+              ),
+              findsOneWidget,
+              reason: '$platform ${entry.title} 的动画图标应更新',
+            );
+          }
+        }
+        await tester.pumpAndSettle();
+
+        for (final (index, entry) in entries.indexed) {
+          final completed = index < 7;
+          expect(
+            store.find(entry.id)!.completed,
+            completed,
+            reason: '$platform ${entry.title} 的存储状态应一致',
+          );
+          expect(
+            find.text(entry.title),
+            findsOneWidget,
+            reason: '$platform ${entry.title} 稳定后应只有一张卡片',
+          );
+          final card = find
+              .ancestor(of: find.text(entry.title), matching: find.byType(Card))
+              .first;
+          expect(
+            find.descendant(
+              of: card,
+              matching: find.byIcon(
+                completed ? Icons.check_circle : Icons.radio_button_unchecked,
+              ),
+            ),
+            findsOneWidget,
+            reason: '$platform ${entry.title} 的完成图标应一致',
+          );
+          expect(
+            DefaultTextStyle.of(tester.element(find.text(entry.title)))
+                .style
+                .decoration,
+            completed
+                ? TextDecoration.lineThrough
+                : isNot(TextDecoration.lineThrough),
+            reason: '$platform ${entry.title} 的删除线应一致',
+          );
+        }
+        expect(tester.takeException(), null);
+        await tester.pumpWidget(const SizedBox());
+        await store.settled;
+      }
+    },
+  );
+  testWidgets(
+    'checklist completion and same-id external replacement keep card state',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 1000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final store = await loaded();
+      final step = StepItem(title: '外部同步清单');
+      final entry = Entry.create(title: '外部甲').change({
+        'checklist': [step.toJson()],
+      });
+      store
+        ..save(entry)
+        ..save(Entry.create(title: '外部乙'));
+      await pumpEntryList(tester, store);
+
+      void expectState(String title, {required bool completed}) {
+        expect(find.text(title), findsOneWidget);
+        final card = find
+            .ancestor(of: find.text(title), matching: find.byType(Card))
+            .first;
+        expect(
+          find.descendant(
+            of: card,
+            matching: find.byIcon(
+              completed ? Icons.check_circle : Icons.radio_button_unchecked,
+            ),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          DefaultTextStyle.of(tester.element(find.text(title)))
+              .style
+              .decoration,
+          completed
+              ? TextDecoration.lineThrough
+              : isNot(TextDecoration.lineThrough),
+        );
+      }
+
+      store.toggle(entry.id);
+      await tester.pump(const Duration(milliseconds: 60));
+      expect(store.find(entry.id)!.completed, true);
+
+      final replacement = store.find(entry.id)!.change({'title': '外部甲已替换'});
+      expect(
+        store.applyCloudArchive(Archive(entries: [replacement]).encode()),
+        true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('外部甲'), findsNothing);
+      expectState('外部甲已替换', completed: true);
+      expect(
+        tester.widget<CheckboxListTile>(find.byType(CheckboxListTile)).value,
+        true,
+      );
+      expect(find.text('今日已完成'), findsOneWidget);
+
+      store.toggle(entry.id);
+      await tester.pumpAndSettle();
+      expectState('外部甲已替换', completed: false);
+      expect(find.text('今日已完成'), findsNothing);
+      expect(tester.takeException(), null);
+      await tester.pumpWidget(const SizedBox());
+      await store.settled;
     },
   );
   testWidgets('phone at 320 width and enlarged text has accessible controls', (

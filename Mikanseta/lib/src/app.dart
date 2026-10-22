@@ -18,7 +18,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.3 (9)';
+const appVersion = '0.4.4 (10)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -958,10 +958,14 @@ class _AnimatedEntryListState extends State<AnimatedEntryList> {
       : const Duration(milliseconds: 380);
   final listKey = GlobalKey<AnimatedListState>();
   late List<Entry> items;
+  // AnimatedList keeps its outgoing child builder alive for the transition.
+  // Index current snapshots so that child can refresh if the same ID changes.
+  final _latestEntries = <String, Entry>{};
   @override
   void initState() {
     super.initState();
     items = List.of(widget.entries);
+    _latestEntries.addEntries(items.map((entry) => MapEntry(entry.id, entry)));
   }
 
   @override
@@ -981,6 +985,9 @@ class _AnimatedEntryListState extends State<AnimatedEntryList> {
       items.insert(index, next[index]);
       listKey.currentState?.insertItem(index, duration: motion);
     }
+    _latestEntries
+      ..clear()
+      ..addEntries(items.map((entry) => MapEntry(entry.id, entry)));
   }
 
   void remove(int index, {Entry? replacement}) {
@@ -988,10 +995,20 @@ class _AnimatedEntryListState extends State<AnimatedEntryList> {
     items.removeAt(index);
     listKey.currentState?.removeItem(
       index,
-      (context, animation) => transition(removed, animation, null),
+      (context, animation) => liveTransition(removed, animation),
       duration: motion,
     );
   }
+
+  Widget liveTransition(Entry entry, Animation<double> animation) =>
+      ListenableBuilder(
+        listenable: widget.store,
+        builder: (context, _) => transition(
+          _latestEntries[entry.id] ?? widget.store.find(entry.id) ?? entry,
+          animation,
+          null,
+        ),
+      );
 
   Widget transition(
     Entry entry,
