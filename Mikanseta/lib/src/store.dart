@@ -240,6 +240,10 @@ class EntryStore extends ChangeNotifier {
     for (final event in events) {
       final key = event['key'] as String;
       if (suppressed.contains(key)) continue;
+      final routineIdentity = androidRoutineIdentity({
+        ...event,
+        'deviceID': deviceID,
+      });
       var index = next.indexWhere((entry) {
         final link = entry.data['androidCalendarLink'] as Map?;
         return link?['deviceID'] == deviceID && link?['key'] == key;
@@ -256,6 +260,29 @@ class EntryStore extends ChangeNotifier {
               e.data['androidCalendarLink'] == null &&
               e.data['androidCalendarExportToken'] == markerMatch?.group(2),
         );
+      }
+      var reattachedBySharedIdentity = false;
+      if (index < 0 && routineIdentity != null) {
+        final matches = <MapEntry<int, Entry>>[
+          for (var i = 0; i < next.length; i++)
+            if (next[i].data['routineSeriesID'] ==
+                    routineIdentity.seriesID &&
+                next[i].data['routineOccurrenceID'] ==
+                    routineIdentity.occurrenceID)
+              MapEntry(i, next[i]),
+        ];
+        matches.sort((a, b) {
+          final completion = (b.value.completed ? 1 : 0).compareTo(
+            a.value.completed ? 1 : 0,
+          );
+          if (completion != 0) return completion;
+          final updated = b.value.updatedAt.compareTo(a.value.updatedAt);
+          return updated == 0 ? a.value.id.compareTo(b.value.id) : updated;
+        });
+        if (matches.isNotEmpty) {
+          index = matches.first.key;
+          reattachedBySharedIdentity = true;
+        }
       }
       DateTime date(String field) {
         final utc = DateTime.fromMillisecondsSinceEpoch(
@@ -310,8 +337,11 @@ class EntryStore extends ChangeNotifier {
             );
       final previous =
           (old.data['androidCalendarLink'] as Map?)?['snapshot'] as Map?;
+      final preserveReattachedFields =
+          reattachedBySharedIdentity && previous == null && !confirmedEdit;
       final fields = <String, dynamic>{};
       for (final field in snapshot.keys) {
+        if (preserveReattachedFields) continue;
         if (index < 0 ||
             confirmedEdit &&
                 [
@@ -345,10 +375,12 @@ class EntryStore extends ChangeNotifier {
         'snapshot': snapshot,
       };
       fields['androidCalendarLink'] = calendarLink;
-      final routineIdentity = androidRoutineIdentity(calendarLink);
       fields['routineSeriesID'] = routineIdentity?.seriesID;
       fields['routineOccurrenceID'] = routineIdentity?.occurrenceID;
-      if (index < 0) fields['source'] = '系统日历 · ${event['calendarTitle']}';
+      if (index < 0 ||
+          reattachedBySharedIdentity && old.source.isEmpty) {
+        fields['source'] = '系统日历 · ${event['calendarTitle']}';
+      }
       // Comparing the normalized data avoids a save on every app resume.
       if (fields.entries.every(
         (f) => jsonEncode(old.data[f.key]) == jsonEncode(f.value),

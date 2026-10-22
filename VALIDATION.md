@@ -7,8 +7,8 @@
 - **可靠系列关系**：本地 routine 仅沿 `previousOccurrenceID` 血缘归组；Apple 循环日历仅在同一 `calendarID + sourceTitle + eventID` 作用域内，以非空原始 occurrence 归组。不同日历、同名事项、独立事项和非循环单次日程保持分开。日历月 / 日视图仍显示原始 future occurrence。
 - **共享身份**：新增可选 Codable `routineSeriesID` 与 `routineOccurrenceID`。旧 Android `androidCalendarLink` 在加载 / 导入时只补缺失身份，不删除或改写原事项；provider series 以原始 occurrence 参与完成去重和排序。provider / 循环日历不会再由本地 `nextOccurrence` 生成竞争后继；单次日历事件上手动设置的本地 routine 仍可生成。
 - **大输入保护**：血缘归组使用迭代 root、路径压缩和 rank；重复完成 occurrence 按“系列族 + 原始 occurrence”抑制 stale open 副本，本地血缘按 `previousOccurrenceID + recurrenceDate` 区分同一代副本与合法后继。
-- **构建检查**：最终共享核心 `swift build --disable-sandbox` 通过。无签名 macOS Release 构建 exit 0，产物为 `/private/tmp/Mikansei-Mac-verify/Build/Products/Release/Mikansei.app`，Info.plist 实测 `0.3.2 (6)`。iOS 无签名模拟器构建未完成，最终运行被交接中止；更早一次 target 构建因沙箱禁止写入 Xcode 默认 DerivedData / 模块缓存而失败，不能视为通过。
-- **测试状态**：修复前基线为 91 项执行、90 通过，唯一失败是沙箱内 `NSFileCoordinator` 无法创建临时同步目录。临时新增的 frontier 回归用例曾取得 10 个断言失败并复现问题，随后按要求移除，测试文件无差异。当前没有最终功能测试或 UI 测试通过记录，也未进行真机、个人日历、签名或安装验收；主代理的签名安装仍在进行，状态待定。
+- **原生构建与安装**：最终共享核心 `swift build --disable-sandbox` 通过。主代理使用工程已配置的 Team 完成 iPhone Debug 签名构建，主 App 与 Widget 均安装成功；`devicectl` 启动成功，已安装 App 查询确认 `com.personal.mikansei` 为 `0.3.2 (6)`。Mac 通用安装包构建与安装完成，产物为 `/Users/xuyilin/Desktop/Projects/Mikansei-macOS.app`，版本为 `0.3.2 (6)`。签名主 App 与 Widget 的 `codesign --verify --deep --strict` 均通过；首次检查在沙箱内因 `CSSMERR_TP_NOT_TRUSTED` 无法建立信任链，宿主环境重试通过。Mac App 关闭后重新打开成功；首次重开与退出重叠返回 `-600`，重试后正常打开。
+- **测试状态**：修复前基线为 91 项执行、90 通过，唯一失败是沙箱内 `NSFileCoordinator` 无法创建临时同步目录。临时新增的 frontier 回归用例曾取得 10 个断言失败并复现问题，随后按要求移除，测试文件无差异。当前没有最终功能测试或 UI 测试通过记录；本轮没有使用真实个人日历验证导入、列表 frontier、完成推进或撤销完成等交互，因此不将构建、安装和启动成功表述为设备端功能验收。
 - **已知限制**：日历导入窗口仍是今天起 30 天。若下一次 occurrence 位于窗口之外且尚未作为 Entry 导入，frontier 不能凭空生成它，需要后续窗口扩展或再次导入后才会出现。
 
 2026-10-13
