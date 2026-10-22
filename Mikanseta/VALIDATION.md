@@ -274,7 +274,7 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 - `TaskBoard.open/visible/focus` 及依赖它们的常态、相关待办和系统摘要，按家族只返回一个活动项；历史仍返回全部已完成条目。独立事项不按标题、相同 `repeatRule` 或相同时间合并。
 - 家族来源只使用显式 `previousOccurrenceID` 血缘或可靠日历身份。本地血缘先选择没有未完成前驱的 rootmost 候选；循环链没有根时回退到稳定排序。provider occurrence 用原始 occurrence 时间排序，用户移动显示开始时间不会改变系列顺序。
 - 同名同父、同原始 occurrence 的离线重复后继只抑制 sibling，不删除底层记录。完成其中一项后，同一 sibling 不再出现；真实下一代即使被编辑到父项同一日期仍会显示。
-- 共享 `routineSeriesID` 别名优先继承 provider 的原始 occurrence；只有 provider 桥接详情缺失时才退回显示 recurrence 日期。
+- 共享 `routineSeriesID` 别名优先继承 provider 的原始 occurrence，其次使用 `routineOccurrenceID`；两者都缺失时才退回显示 recurrence 日期。
 - 日历的未来展开继续读取原 `entries`，不应用待办 frontier；日 / 周 / 月 / 列表预测仍可显示 30 天窗口中的来源实例。
 
 跨备份系列协议使用既有 `androidCalendarLink`，并新增两个可选顶层字符串：
@@ -298,12 +298,18 @@ Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_i
 
 共享 alias 的 occurrence 顺序是：provider 原始 occurrence → `routineOccurrenceID` → 显示 recurrence 日期。`routineSeriesID` 是 provider series marker：它参与 frontier 和“常态”展示，阻止 `nextOccurrence` 及 store 完成 transition 再合成本地后代；不写入伪造的本地 `repeatRule`，不改动计时、Checklist、完成状态或用户字段。
 
+导入查找在 bridge key/token 未命中时，会按 `routineSeriesID` 与 `routineOccurrenceID` 的同时精确匹配恢复同一 provider occurrence；不使用标题或显示时间。命中多个历史副本时优先已完成项，再按更新时间和 ID 稳定选择，其他重复历史全部保留。失去 `androidCalendarLink` 的实际 fallback 会始终重新附着当前 link、snapshot 和共享身份；旧 snapshot 缺失且未确认外部编辑时，不覆盖任何来源 snapshot 字段，包括标题、备注、地点、`plannedStart`、`plannedEnd` 和 `plannedAllDay`。已有用户展示字段、完成状态、计时与 Checklist 因此保持不变。
+
 | 验证 | 实际结果 |
 | --- | --- |
-| Flutter 静态分析 | 最终 `flutter analyze` 通过，`No issues found! (ran in 22.5s)`。受限沙箱在 Dart CPU 探测阶段报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，因此使用主机环境执行只读分析。 |
-| 自动化测试 | 按本轮明确限制未新增、未运行测试。先前尝试在沙箱启动测试时仅发生上述 VM 崩溃，没有测试断言结果可报告。 |
-| Android Release | 源码冻结后构建通过，耗时 138.7 秒。APK 为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Mikanseta-0.4.5+11-android.apk`；Flutter 输出 60.6 MB，实际约 57.8 MiB。`apksigner verify` 通过，签名证书与 0.4.4 上一版一致；`aapt` 确认包名 `com.personal.mikanseta`、versionCode `11`、versionName `0.4.5`。SHA-256 为 `e524e7fd1f2d26b36b5817c9bb26fcec73032af95b0a6c616e05c29fdd73ec34`，随附校验文件一致。 |
-| macOS / iPhone | 构建仍在进行，最终结果待补录。 |
+| 源码冻结 | 主代理审阅后推送为 `d3d958d12c328a49a5c7facab1eacab7e52e73f8`；本记录仅追加打包结果，不再改实现。 |
+| Flutter 静态分析 | 最终 `flutter analyze` 通过，`No issues found! (ran in 3.8s)`。受限沙箱在 Dart CPU 探测阶段报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，因此使用主机环境执行只读分析。 |
+| 自动化测试 | 本机按本轮限制未新增、未运行测试；先前尝试在沙箱启动测试时仅发生上述 VM 崩溃，没有本地测试断言结果。Windows 最终源码 CI 的自动 Analyze、数据 / 界面测试与实际 Windows 应用集成结果见下方，不能表述为本机测试。 |
+| Android Release | `d3d958d` 最终源码重建通过，耗时 62.2 秒。APK 为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Mikanseta-0.4.5+11-android.apk`，大小 60,583,756 bytes；`apksigner verify` 通过，证书与 0.4.4 上一版一致；`aapt` 确认 `com.personal.mikanseta`、versionCode `11`、versionName `0.4.5`。SHA-256 为 `e7e2bb424db74d24521b43dd382ee28613e371035d605018e2e34e54ddebd1b6`，随附 `.sha256` 文件一致。 |
+| 原生 Mikansei 0.3.2 | Mac 与 iPhone 已交付并完成对应验证。 |
+| macOS | `d3d958d` 的 0.4.5 (11) 最终包安装完成，`codesign --verify --deep --strict` 通过，安装脚本启动成功。 |
+| iPhone | `d3d958d` 的无签名构建在 80.1 秒后成功；设备专属 Xcode 构建因设备断开而超时，main 的通用 iOS 配置签名构建退出码为 0，严格深度签名校验通过。用户重新连接并解锁后，`devicectl` 安装精确的最终 `Mikanseta.app` 并启动成功（本地时间 14:40:50），完成 0.4.5 (11) 更新并保留数据。 |
+| Windows | 最终源码 CI run `39732284200` 对应 head `d3d958d12c328a49a5c7facab1eacab7e52e73f8`，completed success。官方 jobs 工具确认 Analyze、数据 / 界面测试、实际 Windows 应用集成、Release 打包、Inno installer、安装后启动、卸载和 artifact 上传全部成功。artifact `12406021563` 的 SHA-256 为 `edb2be4b1cc9e78e536a0d076a14ee5e8d099500dfa8bfa840457a6d2960bc5e`，下载归档的本地 SHA-256 一致，解包后每个 `.sha256` 与对应包一致。交付目录为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Windows/0.4.5+11/`；`Setup.exe` 为 11,878,285 bytes，portable ZIP 为 14,160,465 bytes。`build-info.json` 确认 version `0.4.5`、buildNumber `11`、sourceCommit `d3d958d12c328a49a5c7facab1eacab7e52e73f8`。 |
 | 版本 | `pubspec.yaml`、源码版本常量和 store 回退标签均为 `0.4.5 (11)`。 |
 
-限制：原生备份若只保留 `routineSeriesID` 而丢弃 occurrence 桥接细节，仍可保持系列归组，但原始 occurrence 顺序会退回当前 recurrence 时间；这样不产生假完成或删数据，但移动过发生日期的入口可能改变该回退排序。历史条目和未选中来源的显式清理行为保持原样。
+限制：原生备份若同时丢弃 provider occurrence 与 `routineOccurrenceID`、只保留 `routineSeriesID`，仍可保持系列归组，但 occurrence 顺序会退回当前 recurrence 时间；这样不产生假完成或删数据，但移动过发生日期的入口可能改变回退排序。历史条目和未选中来源的显式清理行为保持原样。本轮构建、签名、安装和 CI 自动化结果不代表已重新完成全部人工设备 UI 验收，也未使用私有日历做端到端验收。
