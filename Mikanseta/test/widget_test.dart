@@ -616,6 +616,55 @@ void main() {
     await store.settled;
   });
 
+  testWidgets('notes open a full page editor with unsaved-change guard', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    await tester.pumpWidget(MikansetaApp(store: store));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('笔记'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('添加事项'));
+    await tester.pumpAndSettle();
+    // 全页编辑器：不再是浮窗 Dialog。
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byKey(const ValueKey('note-title')), findsOneWidget);
+    await tester.enterText(find.byKey(const ValueKey('note-title')), '读书笔记');
+    await tester.enterText(find.byKey(const ValueKey('note-body')), '先拆成小步骤');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('note-save')));
+    await tester.pumpAndSettle();
+    expect(find.text('读书笔记'), findsOneWidget);
+    await store.settled;
+
+    // 打开已有笔记：直接进入全页；未保存修改时退出会确认。
+    await tester.tap(find.text('读书笔记'));
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.byKey(const ValueKey('note-body')), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const ValueKey('note-body')),
+      '先拆成小步骤，再开始第一步',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('关闭'));
+    await tester.pumpAndSettle();
+    expect(find.text('放弃未保存的修改？'), findsOneWidget);
+    await tester.tap(find.text('继续编辑'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('note-save')));
+    await tester.pumpAndSettle();
+    expect(find.text('读书笔记'), findsOneWidget);
+    expect(store.entries.single.body, '先拆成小步骤，再开始第一步');
+    expect(tester.takeException(), null);
+    await store.settled;
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets('settings connects a shared folder for local sync', (
     tester,
   ) async {

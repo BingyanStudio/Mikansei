@@ -130,3 +130,16 @@
 图标使用普通 PNG 和 Info.plist 图标声明，避免本机缺少模拟器运行时导致 Asset Catalog 编译失败；App 不依赖资源编译服务。
 
 首版仍需在实际 iPhone 上验证文字布局、通知权限、通知点击、课后预填、routine、多次催办、备份文件选择器和后台 / 锁屏通知投递。HUSToday 实际 ICS 导出格式还没有样例，尚未做专用兼容验证。
+
+## 0.3.3 (7)：笔记全页编辑（iPhone）与右栏内联编辑（Mac）（2026-10-24）
+
+- **iPhone**：新增 `App/NoteEditorView.swift`，笔记以 `fullScreenCover` 全屏编辑（关闭/完成顶栏、大标题、正文直写、清单项增删勾选、删除笔记二次确认）；`RootView` 按 kind 分流，任务/日程/作业仍走原 sheet；笔记 tab 工具栏 “+” 修正为新建笔记（原为待办）。工程由 `Scripts/generate_project.py` 重新生成以纳入新文件，保留签名设置。
+- **Mac**：`MacEntryDetail` 对笔记改为右栏直接编辑（`MacNoteDetail`）：大标题/分类/正文内联，⌘S 或切换选中自动提交；笔记不再弹 650×720 sheet；右键“编辑”定位到详情栏；⌘N 在笔记页直接创建“无标题笔记”并选中。
+- 版本：主 App 与小组件 0.3.2 (6) → **0.3.3 (7)**（iOS 与 Mac 工程分别更新；顺带修正 UITests 版本断言遗留的 0.3.1 (5)）。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 核心测试 | `swift test` **91/91 通过**。 |
+| iPhone UI 测试 | 新增 `testNoteOpensFullScreenEditor`（demo 笔记打开全页、存在完成/关闭、无 sheet 取消）；连同 `testFolderSyncSettingsAndVersionAreVisible`（断言 0.3.3 (7)）与 `testCreateHomeworkAndCompleteItsChecklist` 三项全部通过。 |
+| 构建与安装 | iOS Debug 模拟器构建通过；Mac `install_mac.py` 构建并安装 `Mikansei-macOS.app` **0.3.3 (7)**。 |
+| iPhone 真机 | 设备未连接，待安装。 |

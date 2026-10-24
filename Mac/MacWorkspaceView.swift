@@ -66,7 +66,11 @@ struct MacWorkspaceView: View {
                                     if entry.startedAt != nil { Image(systemName: "timer").foregroundStyle(.green) }
                                 }.padding(.vertical, 5).tag(entry.id)
                                 .contextMenu {
-                                    Button("编辑") { editing = entry }
+                                    if entry.kind == .note {
+                                        Button("编辑") { selection = entry.id }
+                                    } else {
+                                        Button("编辑") { editing = entry }
+                                    }
                                     if entry.isTask { Button(entry.isCompleted ? "重新打开" : "完成") { store.toggle(entry.id) } }
                                     Button("删除", role: .destructive) { store.delete(entry.id) }
                                 }
@@ -81,7 +85,12 @@ struct MacWorkspaceView: View {
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
         } detail: {
             if let entry = store.entries.first(where: { $0.id == selection }) {
-                MacEntryDetail(entry: entry) { editing = entry }
+                if entry.kind == .note {
+                    // Notes edit inline in the detail pane, Apple-Notes style.
+                    MacNoteDetail(entry: entry).id(entry.id).environmentObject(store)
+                } else {
+                    MacEntryDetail(entry: entry) { editing = entry }
+                }
             } else {
                 ContentUnavailableView("选一件事，开始做", systemImage: "checklist", description: Text("清单在左侧，详情在这里。"))
             }
@@ -119,6 +128,13 @@ struct MacWorkspaceView: View {
         if page == .courses { editingCourse = Course(); return }
         var entry = Entry(kind: page == .notes ? .note : page == .schedule ? .schedule : page == .homework ? .homework : .task)
         if page == .schedule { entry.plannedStart = scheduleDate; entry.plannedEnd = scheduleDate.addingTimeInterval(1800) }
+        // A new note goes straight into the inline detail editor.
+        if entry.kind == .note {
+            entry.title = "无标题笔记"
+            store.save(entry)
+            selection = entry.id
+            return
+        }
         editing = entry
     }
     private func handleReminder() {
@@ -194,5 +210,71 @@ struct MacEntryDetail: View {
                 Spacer()
             }.padding(30).frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+}
+
+/// Apple-Notes style inline editor: the selected note is edited directly in
+/// the detail pane. ⌘S or switching selection commits the draft.
+struct MacNoteDetail: View {
+    @EnvironmentObject private var store: MacWorkspaceStore
+    let entry: Entry
+    @State private var title: String
+    @State private var bodyText: String
+    @State private var category: String
+
+    init(entry: Entry) {
+        self.entry = entry
+        _title = State(initialValue: entry.title)
+        _bodyText = State(initialValue: entry.body)
+        _category = State(initialValue: entry.category)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(entry.updatedAt, format: .dateTime.year().month().day().hour().minute())
+                    .font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("保存") { commit() }
+                    .keyboardShortcut("s", modifiers: .command)
+                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }.padding(.horizontal, 30).padding(.top, 16).padding(.bottom, 8)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("标题", text: $title, axis: .vertical)
+                        .font(.system(.title2, design: .default).weight(.bold))
+                        .textFieldStyle(.plain)
+                    TextField("分类（学习、生活、社团…）", text: $category)
+                        .font(.footnote).foregroundStyle(.secondary).textFieldStyle(.plain)
+                    TextEditor(text: $bodyText)
+                        .font(.body)
+                        .frame(minHeight: 280)
+                        .scrollContentBackground(.hidden)
+                    ForEach(entry.checklist) { step in
+                        Button {
+                            var current = store.entries.first { $0.id == entry.id } ?? entry
+                            current.toggleStep(step.id); store.save(current)
+                        } label: {
+                            Label(step.title, systemImage: step.isDone ? "checkmark.square.fill" : "square").strikethrough(step.isDone)
+                        }.buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 30).padding(.bottom, 30)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .onDisappear { commit() }
+    }
+
+    private func commit() {
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed != entry.title || bodyText != entry.body
+            || category.trimmingCharacters(in: .whitespacesAndNewlines) != entry.category else { return }
+        var next = entry
+        next.title = trimmed
+        next.body = bodyText
+        next.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        _ = store.save(next)
     }
 }

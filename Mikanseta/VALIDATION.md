@@ -313,3 +313,15 @@ Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_i
 | 版本 | `pubspec.yaml`、源码版本常量和 store 回退标签均为 `0.4.5 (11)`。 |
 
 限制：原生备份若同时丢弃 provider occurrence 与 `routineOccurrenceID`、只保留 `routineSeriesID`，仍可保持系列归组，但 occurrence 顺序会退回当前 recurrence 时间；这样不产生假完成或删数据，但移动过发生日期的入口可能改变回退排序。历史条目和未选中来源的显式清理行为保持原样。本轮构建、签名、安装和 CI 自动化结果不代表已重新完成全部人工设备 UI 验收，也未使用私有日历做端到端验收。
+
+## 0.4.6 (12)：笔记全页编辑（苹果备忘录式）（2026-10-24）
+
+笔记不再使用浮窗 Dialog：新增 `lib/src/note_editor_page.dart` 全屏页面（`fullscreenDialog` 路由），大标题 + 正文无边框直写、分类行、行内清单项（增删/勾选）、已有笔记可删除（二次确认）；未保存退出统一弹“放弃未保存的修改？”。入口分流：笔记 tab 新建、笔记卡片点击、`mikanseta://new?kind=note` 走全页；任务/日程/作业仍用原 Dialog 编辑器，所有既有键位与测试不受影响。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查与测试 | `analyze` 通过；`flutter test` **88/88 通过**，新增“notes open a full page editor with unsaved-change guard”覆盖新建→全页→保存→重开→未保存确认→保存生效。 |
+| macOS | 0.4.6 (12) Release 构建并安装启动。 |
+| Android | 签名 APK `Mikanseta-0.4.6+12-android.apk`（60.7 MB，SHA-256 `a24ec510646e968ec9c4dc616b4a57921f52d34d8f2c972f71e244c2b2a2ab56`）。 |
+| iPhone | 设备未连接，待安装。 |
+| Windows | 本机无法编译；随本次提交推送由 `mikanseta-windows.yml` CI 验证。 |

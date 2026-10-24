@@ -23,6 +23,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appearance") private var appearance = 0
     @State private var editing: EditingSession?
+    @State private var noteEditing: EditingSession?
     @State private var settings = false
     @State private var messageImport = false
     @State private var tab = AppTab.tasks
@@ -62,15 +63,19 @@ struct RootView: View {
             }
         }
         .overlay {
-            if editing == nil && !settings && !messageImport, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
+            if editing == nil && noteEditing == nil && !settings && !messageImport, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
         }
         .sheet(item: $editing, onDismiss: applyPendingRoute) { session in EntryEditor(entry: session.entry, isNew: session.isNew) }
+        // Notes edit on a full Apple-Notes style page instead of a sheet.
+        .fullScreenCover(item: $noteEditing, onDismiss: applyPendingRoute) { session in
+            NoteEditorView(entry: session.entry, isNew: session.isNew)
+        }
         .sheet(isPresented: $settings, onDismiss: applyPendingRoute) { NavigationStack { SettingsView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { settings = false } } } } }
         .sheet(isPresented: $messageImport, onDismiss: applyPendingRoute) { MessageImportView() }
         .onOpenURL { url in
             guard let route = AppRoute(url: url) else { return }
             // Preserve an existing unsaved draft; the widget destination opens after its sheet closes.
-            if editing != nil || settings || messageImport { pendingRoute = route }
+            if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = route }
             else { open(route) }
         }
         .alert("操作未完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
@@ -81,11 +86,11 @@ struct RootView: View {
                 store.refreshNotifications()
                 if store.syncReady { store.retrySave() }
                 deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
-                if editing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
+                if editing == nil && noteEditing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
             }
         }
         .task {
-            if editing == nil { await calendarSync.sync(store: store, requestAccess: true) }
+            if editing == nil && noteEditing == nil { await calendarSync.sync(store: store, requestAccess: true) }
             deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
             if store.syncReady { store.retrySave() }
         }
@@ -103,7 +108,7 @@ struct RootView: View {
         }
         .onReceive(notifications.$openedEntryID) { id in
             if let id, let entry = store.entries.first(where: { $0.id == id }) {
-                if editing != nil || settings || messageImport { pendingRoute = .entry(id) } else { edit(entry) }
+                if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = .entry(id) } else { edit(entry) }
             }
             if id != nil { notifications.openedEntryID = nil }
         }
@@ -124,13 +129,19 @@ struct RootView: View {
             Button("从消息添加", systemImage: "text.badge.plus") { messageImport = true }.disabled(store.readOnly)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button { add(tab == .today ? .schedule : .task) } label: {
+            Button { add(tab == .today ? .schedule : tab == .notes ? .note : .task) } label: {
                 Image(systemName: "plus").font(.title3.weight(.medium)).frame(width: 36, height: 36)
             }.accessibilityLabel("新建事项").disabled(store.readOnly)
         }
     }
-    private func edit(_ entry: Entry) { editing = EditingSession(entry: entry, isNew: false) }
-    private func add(_ kind: EntryKind) { editing = EditingSession(entry: Entry(kind: kind), isNew: true) }
+    private func edit(_ entry: Entry) {
+        if entry.kind == .note { noteEditing = EditingSession(entry: entry, isNew: false) }
+        else { editing = EditingSession(entry: entry, isNew: false) }
+    }
+    private func add(_ kind: EntryKind) {
+        if kind == .note { noteEditing = EditingSession(entry: Entry(kind: kind), isNew: true) }
+        else { editing = EditingSession(entry: Entry(kind: kind), isNew: true) }
+    }
     private func addOnDate(_ date: Date, execution: Bool) {
         var entry = Entry(kind: execution ? .schedule : .task)
         if execution {

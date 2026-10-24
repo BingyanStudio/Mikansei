@@ -10,6 +10,7 @@ import 'domain.dart';
 import 'store.dart';
 import 'cloud_sync.dart';
 import 'local_folder_sync.dart';
+import 'note_editor_page.dart';
 import 'segmented_strip.dart';
 import 'theme.dart';
 import 'editor.dart';
@@ -18,7 +19,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.5 (11)';
+const appVersion = '0.4.6 (12)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -265,6 +266,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     DateTime? end,
   }) async {
     if (store.readOnly || store.loading || editing) return;
+    // Notes open a full Apple-Notes style page instead of the dialog editor;
+    // every other kind keeps the dialog.
+    final isNote = entry?.kind == EntryKind.note || kind == EntryKind.note;
+    if (isNote) {
+      editing = true;
+      try {
+        await Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (context) => NoteEditorPage(
+              store: store,
+              entry: entry,
+              isNew: entry == null,
+            ),
+          ),
+        );
+      } finally {
+        editing = false;
+        if (mounted) syncCalendar();
+      }
+      return;
+    }
     editing = true;
     try {
       await showDialog<void>(
@@ -283,14 +306,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     }
   }
 
-  void details(Entry entry) => showDialog<void>(
-    context: context,
-    builder: (context) => EntryDetails(
-      store: store,
-      id: entry.id,
-      onEdit: () => edit(entry: store.find(entry.id)),
-    ),
-  );
+  void details(Entry entry) {
+    if (entry.kind == EntryKind.note) {
+      edit(entry: store.find(entry.id));
+      return;
+    }
+    showDialog<void>(
+      context: context,
+      builder: (context) => EntryDetails(
+        store: store,
+        id: entry.id,
+        onEdit: () => edit(entry: store.find(entry.id)),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
@@ -1460,8 +1490,7 @@ class EntryDetails extends StatelessWidget {
                       ),
                     ],
                     if (entry.source.isNotEmpty) detail('来源', entry.source),
-                    if (entry.isRoutine)
-                      detail('循环', entry.routineLabel),
+                    if (entry.isRoutine) detail('循环', entry.routineLabel),
                     if (entry.isTask)
                       detail(
                         '累计专注',

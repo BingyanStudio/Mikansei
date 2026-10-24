@@ -2,6 +2,22 @@ import XCTest
 
 final class MikanseiUITests: XCTestCase {
     @MainActor
+    func testNoteOpensFullScreenEditor() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--demo"]
+        app.launch()
+        app.tabBars.buttons["笔记"].tap()
+        let note = app.staticTexts["一个好用的学习方法"]
+        XCTAssertTrue(note.waitForExistence(timeout: 5))
+        note.tap()
+        // 全页笔记编辑器：有“完成”，且不再是表单 sheet 的“取消/保存”。
+        XCTAssertTrue(app.buttons["完成"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["保存"].exists)
+        XCTAssertTrue(app.buttons["关闭"].exists)
+        app.buttons["关闭"].tap()
+        XCTAssertTrue(note.waitForExistence(timeout: 5))
+    }
+    @MainActor
     func testFolderSyncSettingsAndVersionAreVisible() {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
@@ -15,7 +31,7 @@ final class MikanseiUITests: XCTestCase {
         let version = app.descendants(matching: .any).matching(identifier: "app-version").firstMatch
         for _ in 0..<12 { if version.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(version.exists)
-        XCTAssertEqual(version.value as? String, "0.3.1 (5)")
+        XCTAssertEqual(version.value as? String, "0.3.3 (7)")
     }
     @MainActor
     func testCalendarMonthNavigationDayTimelineAndViewPreference() {

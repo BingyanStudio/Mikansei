@@ -568,7 +568,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Mikanseta.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 7JMRL8X34C;
 				INFOPLIST_FILE = Widgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -577,7 +577,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.2;
+				MARKETING_VERSION = 0.4.6;
 				MIKANSETA_SHARED_KEYCHAIN_SUFFIX = com.personal.mikanseta.shared;
 				PRODUCT_BUNDLE_IDENTIFIER = com.personal.mikanseta.Widgets;
 				PRODUCT_NAME = MikansetaWidgets;
@@ -884,7 +884,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Mikanseta.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 7JMRL8X34C;
 				INFOPLIST_FILE = Widgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -893,7 +893,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.2;
+				MARKETING_VERSION = 0.4.6;
 				MIKANSETA_SHARED_KEYCHAIN_SUFFIX = com.personal.mikanseta.shared;
 				PRODUCT_BUNDLE_IDENTIFIER = com.personal.mikanseta.Widgets;
 				PRODUCT_NAME = MikansetaWidgets;
@@ -911,7 +911,7 @@
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Runner/Mikanseta.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 12;
 				DEVELOPMENT_TEAM = 7JMRL8X34C;
 				INFOPLIST_FILE = Widgets/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -920,7 +920,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 0.4.2;
+				MARKETING_VERSION = 0.4.6;
 				MIKANSETA_SHARED_KEYCHAIN_SUFFIX = com.personal.mikanseta.shared;
 				PRODUCT_BUNDLE_IDENTIFIER = com.personal.mikanseta.Widgets;
 				PRODUCT_NAME = MikansetaWidgets;
