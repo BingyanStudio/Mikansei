@@ -24,6 +24,11 @@ public struct WidgetSnapshot: Codable {
         }
         return entries.filter { $0.elapsedSeconds > 0 }.max(by: { $0.updatedAt < $1.updatedAt })
     }
+    /// 最近的规划时段：开始时间在未来 60 分钟内的最早未完成任务，供锁屏倒计时使用。
+    public func nextPlannedBlock(at date: Date = Date()) -> Entry? {
+        tasks.filter { !$0.isCompleted && $0.plannedStart.map { $0 > date && $0 <= date.addingTimeInterval(3600) } == true }
+            .min { ($0.plannedStart ?? .distantFuture) < ($1.plannedStart ?? .distantFuture) }?.entry
+    }
 
     public struct TaskSummary: Codable {
         public let id: UUID

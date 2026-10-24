@@ -434,4 +434,96 @@ void main() {
       );
     });
   });
+  test('sortOrder ranks first and entries without one sink to the bottom', () {
+    final urgent = task('明日紧急', 2, now.add(const Duration(days: 1)));
+    final manual0 = task('手动第一', 0, null).change({'sortOrder': 0}, now: now);
+    final manual1 = task('手动第二', 0, null).change({'sortOrder': 1}, now: now);
+    expect(
+      [urgent, manual1, manual0]..sort(entryOrder),
+      [manual0, manual1, urgent],
+    );
+    expect(
+      TaskBoard([urgent, manual1, manual0], now).visible.map((e) => e.title),
+      ['手动第一', '手动第二', '明日紧急'],
+    );
+  });
+  test(
+    'plannedDays put a task into the unfinished focus segment for today',
+    () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final planned = task('计划今天', 0, now.add(const Duration(days: 3)));
+      final later = task('三天后再说', 0, now.add(const Duration(days: 3)));
+      store.save(planned);
+      store.save(later);
+      await store.settled;
+      // Two moments on the same day deduplicate into one date-only key.
+      store.setPlannedDays(planned.id, [
+        now.add(const Duration(minutes: 5)),
+        now,
+      ]);
+      await store.settled;
+      expect(store.find(planned.id)!.plannedDays, [dayOf(now)]);
+      expect(store.find(planned.id)!.onDay(now), false);
+      expect(
+        TaskBoard(store.entries, now).focus.map((e) => e.title),
+        ['计划今天'],
+      );
+      final routine = task('每日例程', 0, now.add(const Duration(days: 3))).change({
+        'repeatRule': 'daily',
+        'plannedDays': [dayKey(now)],
+      }, now: now);
+      expect(TaskBoard([routine], now).focus, isEmpty);
+    },
+  );
+  test('setPlannedTime keeps kind task and survives an archive roundtrip',
+      () async {
+    final storage = MemoryStorage();
+    final store = EntryStore(storage, clock: () => now);
+    await store.load();
+    final entry = task('定时作业', 1, null);
+    store.save(entry);
+    await store.settled;
+    store.setPlannedTime(entry.id, now, now.add(const Duration(minutes: 30)));
+    await store.settled;
+    final stored = store.find(entry.id)!;
+    expect(stored.kind, EntryKind.task);
+    expect(stored.start, now);
+    expect(stored.end, now.add(const Duration(minutes: 30)));
+    expect(
+      () => store.setPlannedTime(
+        entry.id,
+        now.add(const Duration(minutes: 30)),
+        now,
+      ),
+      throwsFormatException,
+    );
+    final decoded = Archive.decode(storage.content!).entries.single;
+    expect(decoded.kind, EntryKind.task);
+    expect(decoded.data, stored.data);
+  });
+  test('reorder writes consecutive sortOrder that drives the board', () async {
+    final storage = MemoryStorage();
+    final store = EntryStore(storage, clock: () => now);
+    await store.load();
+    final one = task('一号', 0, null);
+    final two = task('二号', 0, null);
+    final three = task('三号', 0, null);
+    store.save(one);
+    store.save(two);
+    store.save(three);
+    await store.settled;
+    final writesBefore = storage.writes.length;
+    store.reorder([three.id, one.id, two.id]);
+    await store.settled;
+    expect(store.find(three.id)!.sortOrder, 0);
+    expect(store.find(one.id)!.sortOrder, 1);
+    expect(store.find(two.id)!.sortOrder, 2);
+    expect(storage.writes.length, writesBefore + 1);
+    expect(
+      TaskBoard(store.entries, now).visible.map((e) => e.title),
+      ['三号', '一号', '二号'],
+    );
+  });
 }

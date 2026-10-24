@@ -113,6 +113,36 @@ final class EntryStore: ObservableObject, SyncWorkspace {
         entry.toggleStep(stepID)
         _ = save(entry)
     }
+    /// 规划的执行日期（按天）；空数组表示清除。kind 不变。
+    @discardableResult
+    func setPlannedDays(_ id: UUID, _ days: [Date]) -> Bool {
+        guard var entry = entries.first(where: { $0.id == id }), entry.isTask else { return false }
+        entry.plannedDays = days.isEmpty ? nil : days
+        return save(entry) // save 走 normalized()，负责去重、取整天序并提交。
+    }
+    /// 规划的执行时段；kind 不变，显式时间会取消全天。
+    @discardableResult
+    func setPlannedTime(_ id: UUID, start: Date, end: Date) -> Bool {
+        guard var entry = entries.first(where: { $0.id == id }), entry.isTask, end > start else { return false }
+        entry.plannedStart = start
+        entry.plannedEnd = end
+        entry.plannedAllDay = false
+        return save(entry)
+    }
+    /// 拖动排序：按给定顺序写 sortOrder 0..n，单次 commit。
+    @discardableResult
+    func reorder(_ ids: [UUID]) -> Bool {
+        var next = entries
+        var order = 0
+        for id in ids {
+            guard let index = next.firstIndex(where: { $0.id == id }) else { continue }
+            next[index].sortOrder = order
+            next[index].updatedAt = Date()
+            order += 1
+        }
+        guard next != entries else { return true }
+        return commit(next)
+    }
     @discardableResult
     func delete(_ id: UUID) -> Bool {
         var sync = calendarSync

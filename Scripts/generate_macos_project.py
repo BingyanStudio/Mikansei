@@ -1,17 +1,25 @@
 #!/usr/bin/env python3
 """Generate a native macOS target without changing the iPhone signing settings."""
 from pathlib import Path
-import hashlib, json
+import hashlib, json, subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "MikanseiMac.xcodeproj"
 PROJECT.mkdir(exist_ok=True)
+previous_objects = {}
+if (PROJECT / "project.pbxproj").exists():
+    # Keep the version and build settings edited outside the script when adding source files.
+    previous_objects = json.loads(subprocess.check_output([
+        "plutil", "-convert", "json", "-o", "-", str(PROJECT / "project.pbxproj")
+    ]))["objects"]
 objects = []
 def uid(name): return hashlib.sha1(("mac:" + name).encode()).hexdigest()[:24].upper()
 def quote(value): return json.dumps(str(value), ensure_ascii=False)
 def obj(name, body): objects.append(f"{uid(name)} = {{ {body} }};"); return uid(name)
 def ids(names): return "(" + ",".join(uid(x) for x in names) + ",)" if names else "()"
-sources = sorted(ROOT.glob("Mac/*.swift")) + sorted(ROOT.glob("Sync/*.swift")) + sorted(ROOT.glob("Sources/MikanseiCore/*.swift"))
+# The planning view is shared with the iPhone app target and self-contained, so the Mac
+# target compiles it too instead of duplicating the UI.
+sources = sorted(ROOT.glob("Mac/*.swift")) + sorted(ROOT.glob("Sync/*.swift")) + sorted(ROOT.glob("Sources/MikanseiCore/*.swift")) + [ROOT / "App" / "PlanningView.swift"]
 resources = sorted(ROOT.glob("Mac/Resources/*.icns"))
 tests = sorted(ROOT.glob("MacUITests/*.swift"))
 for path in sources + resources + tests:
@@ -40,8 +48,10 @@ settings = {
 }
 for name in ["Debug", "Release"]:
     values = dict(settings, SWIFT_OPTIMIZATION_LEVEL="-Onone" if name == "Debug" else "-O")
+    values.update(previous_objects.get(uid(name), {}).get("buildSettings", {}))
     obj(name, "isa = XCBuildConfiguration; name = " + name + "; buildSettings = { " + " ".join(k + " = " + quote(v) + ";" for k,v in values.items()) + " };")
     test_values = {"SDKROOT": "macosx", "MACOSX_DEPLOYMENT_TARGET": "14.0", "SWIFT_VERSION": "5.0", "PRODUCT_NAME": "MikanseiMacUITests", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei.macOS.uitests", "GENERATE_INFOPLIST_FILE": "YES", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_STYLE": "Manual", "TEST_TARGET_NAME": "MikanseiMac"}
+    test_values.update(previous_objects.get(uid("tests-" + name), {}).get("buildSettings", {}))
     obj("tests-" + name, "isa = XCBuildConfiguration; name = " + name + "; buildSettings = { " + " ".join(k + " = " + quote(v) + ";" for k,v in test_values.items()) + " };")
 obj("configurations", f"isa = XCConfigurationList; buildConfigurations = {ids(['Debug','Release'])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")
 obj("tests-configurations", f"isa = XCConfigurationList; buildConfigurations = {ids(['tests-Debug','tests-Release'])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")

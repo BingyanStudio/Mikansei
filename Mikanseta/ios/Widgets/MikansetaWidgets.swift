@@ -37,6 +37,10 @@ struct ChecklistProvider: TimelineProvider {
             guard !task.isCompleted, let due = task.dueDate, due >= now, due < nextDay else { return nil }
             return due.addingTimeInterval(1)
         } ?? []
+        // 下一规划块开始时也刷新，锁屏倒计时归零后立即切换内容。
+        if let block = snapshot?.nextPlannedBlock(at: now), let start = block.plannedStart {
+            dates.append(start)
+        }
         let entries = Set(dates).sorted().map { ChecklistTimelineEntry(date: $0, snapshot: snapshot) }
         completion(Timeline(entries: entries, policy: .after(nextDay.addingTimeInterval(60))))
     }
@@ -213,16 +217,32 @@ struct TodayProgressWidgetView: View {
     }
 }
 
+/// 正在计时：任务未完成且计时已开始（运行中），此时保持现有计时排版。
+private func isTimerRunning(_ task: Entry?) -> Bool {
+    guard let task else { return false }
+    return !task.isCompleted && task.startedAt != nil
+}
+
+/// 点击落点跟随展示内容：计时中打开该事项，空闲时优先打开规划块。
+private func focusRoute(for entry: ChecklistTimelineEntry) -> URL {
+    guard let snapshot = entry.snapshot else { return AppRoute.tasks.url }
+    let task = snapshot.focusedTask(at: entry.date)
+    if let task, isTimerRunning(task) { return AppRoute.entry(task.id).url }
+    if let block = snapshot.nextPlannedBlock(at: entry.date) { return AppRoute.entry(block.id).url }
+    if let task { return AppRoute.entry(task.id).url }
+    return AppRoute.tasks.url
+}
+
 struct FocusTimerWidget: Widget {
     let kind = "Mikanseta.FocusTimer"
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ChecklistProvider()) { entry in
             FocusTimerWidgetView(entry: entry)
                 .containerBackground(Color(uiColor: .systemBackground), for: .widget)
-                .widgetURL(entry.snapshot?.focusedTask(at: entry.date).map { AppRoute.entry($0.id).url } ?? AppRoute.tasks.url)
+                .widgetURL(focusRoute(for: entry))
         }
         .configurationDisplayName("正在做 · 计时")
-        .description("显示当前事项与累计用时。点暂停或继续，会打开 App 并同步计时状态。")
+        .description("显示当前事项与累计用时，空闲时显示下一规划块的倒计时。点暂停或继续，会打开 App 并同步计时状态。")
         .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
     }
 }
@@ -230,9 +250,44 @@ struct FocusTimerWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: ChecklistTimelineEntry
     private var task: Entry? { entry.snapshot?.focusedTask(at: entry.date) }
+    /// 无运行计时时展示的下一个规划块；开始时刻由时间线条目接管刷新。
+    private var plannedBlock: Entry? {
+        isTimerRunning(task) ? nil : entry.snapshot?.nextPlannedBlock(at: entry.date)
+    }
     var body: some View {
         Group {
-            if let task {
+            if let block = plannedBlock {
+                if family == .accessoryRectangular {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("\(block.title) · 距开始").font(.headline).lineLimit(1)
+                        PlannedCountdown(block: block, date: entry.date).font(.title3.weight(.semibold))
+                    }
+                } else if family == .systemMedium {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .top, spacing: 16) {
+                            Text("\(block.title) · 距开始").font(.headline).lineLimit(2)
+                            Spacer(minLength: 0)
+                            PlannedCountdown(block: block, date: entry.date)
+                                .font(.system(size: 32, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6)
+                        }
+                        Spacer(minLength: 0)
+                        HStack {
+                            Spacer(minLength: 0)
+                            Link("查看事项", destination: AppRoute.entry(block.id).url)
+                                .font(.caption.weight(.semibold)).foregroundStyle(.primary)
+                        }
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("\(block.title) · 距开始").font(.subheadline.weight(.semibold)).lineLimit(1)
+                        PlannedCountdown(block: block, date: entry.date)
+                            .font(.system(size: 30, weight: .semibold, design: .rounded)).minimumScaleFactor(0.6)
+                        Spacer(minLength: 0)
+                        Link("查看事项", destination: AppRoute.entry(block.id).url)
+                            .font(.caption.bold()).foregroundStyle(widgetAccent)
+                    }
+                }
+            } else if let task {
                 if family == .accessoryRectangular {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("\(status(task)) · \(task.title)").font(.headline).lineLimit(1)
@@ -291,6 +346,16 @@ struct FocusTimerWidgetView: View {
                 Link("查看事项", destination: AppRoute.entry(task.id).url).font(.caption.weight(.semibold)).foregroundStyle(.primary)
             }
         }
+    }
+}
+
+/// 下一规划块的开始倒计时；数字排版对齐 FocusClock（等宽、单行）。
+struct PlannedCountdown: View {
+    let block: Entry
+    let date: Date
+    var body: some View {
+        Text(timerInterval: date...(block.plannedStart ?? date), countsDown: true)
+            .monospacedDigit().lineLimit(1)
     }
 }
 

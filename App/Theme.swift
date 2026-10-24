@@ -120,13 +120,37 @@ struct SectionLabel: View {
     }
 }
 
+/// 卡片底色：正在做（已开始未完成）的整块变成浅绿并加圆角描边，普通状态用卡片色。
+/// 独立成视图是为了让 List 拖动排序的 listRowBackground 也能复用同一套外观。
+struct EntryCardBackground: View {
+    var isDoing = false
+    var body: some View {
+        RoundedRectangle(cornerRadius: 18)
+            .fill(isDoing ? Theme.accent.opacity(0.14) : Theme.card)
+            .overlay {
+                if isDoing { RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.accent, lineWidth: 1.5) }
+            }
+    }
+}
+
 struct EntryCard: View {
     @EnvironmentObject private var store: EntryStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let entry: Entry
     let edit: () -> Void
     var now: Date = Date()
+    /// false 时省略长按菜单：拖动排序行用长按起拖，两者手势冲突。
+    var showsContextMenu = true
+    private var isDoing: Bool { entry.startedAt != nil && !entry.isCompleted }
     var body: some View {
+        let card = content.padding(16).background(EntryCardBackground(isDoing: isDoing))
+        if showsContextMenu {
+            card.contextMenu { Button("编辑", systemImage: "pencil", action: edit) }
+        } else {
+            card
+        }
+    }
+    private var content: some View {
         HStack(alignment: .top, spacing: 12) {
             if entry.isTask {
                 Button(action: complete) {
@@ -218,8 +242,6 @@ struct EntryCard: View {
                 }
             }.padding(.top, entry.isTask ? 8 : 0)
         }
-        .padding(16).background(Theme.card, in: RoundedRectangle(cornerRadius: 18))
-        .contextMenu { Button("编辑", systemImage: "pencil", action: edit) }
     }
     private func complete() {
         UISelectionFeedbackGenerator().selectionChanged()

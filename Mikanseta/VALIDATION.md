@@ -325,3 +325,23 @@ Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_i
 | Android | 签名 APK `Mikanseta-0.4.6+12-android.apk`（60.7 MB，SHA-256 `a24ec510646e968ec9c4dc616b4a57921f52d34d8f2c972f71e244c2b2a2ab56`）。 |
 | iPhone | 设备未连接，待安装。 |
 | Windows | 本机无法编译；随本次提交推送由 `mikanseta-windows.yml` CI 验证。 |
+
+## 0.5.0 (13)：规划、拖动排序、锁屏番茄钟与对比色（2026-10-24）
+
+本轮由 6 个 GLM-5.3-Flash 子任务（动态工作流）实现，主对话验收与交付：
+
+- **数据模型**：条目新增 `sortOrder`（手动排序，空值垫底）与 `plannedDays`（日程规划日期）；`TaskBoard` 把 plannedDays 含当天的未完成任务视同「今天要做」；store 新增 `setPlannedDays` / `setPlannedTime`（任务安排时段但类型不变）/ `reorder`。小时规划直接写任务的 plannedStart/End，同步到系统日历走既有通道。
+- **规划页**：今日页新增「规划」入口（全屏页）：日程规划=候选横条 + 月历涂色（点选/连续涂抹、月切换，routine 显示自动规则）；小时规划=左栏今日待办长按拖入 24 小时时间轴（15 分钟对齐、触觉反馈），任务块带「待办」徽标。
+- **拖动排序**：今日/我的清单列表改为 ReorderableListView（分组标题不可拖），组内长按拖动写 sortOrder；AnimatedList 插入/删除动画因此移除（与拖动重排互斥，注释说明）。
+- **锁屏番茄钟**（iOS）：规划时段开始时刻本地通知「到点了」（点开直达 mikansei://focus 深链开始专注）；FocusTimerWidget 无运行计时时显示下一规划块「距开始」倒计时（timerInterval 走秒），时间线在块开始时刻刷新。
+- **正在做变色**：EntryTile 与正在做卡 startedAt 时整块 primaryContainer 底 + onPrimaryContainer 文字 + 描边（原生端 EntryCard 同步浅绿底+描边）。
+- **对比色重做**：卡片更亮暖白 + 极浅描边、导航选中态加深、浅色 error 换暖红、超时 DDL 变红色胶囊、手机添加按钮改 primary 填充。
+- 原生 iPhone 列表排序未用 List+onMove：iOS 26 模拟器上该组合会使内容尺寸翻倍并冻结滚动（二分排查后确认），改用 LazyVStack + drag&drop 实现同功能；Mac 仍用原生 List+onMove。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 工作流门控 | `flutter analyze` 通过；全量 `flutter test` 通过（含新增 planning_page 3 项、domain 4 项、拖动重排等）；`swift test` **96/96**（新增 5 项：排序、plannedDays 今日、Codable 往返、规划块通知、nextPlannedBlock）。 |
+| 修复记录 | ① 波3 子任务两次挂死：无参 pumpAndSettle 遇 1 秒周期 Timer 永不收敛 + store.settled 等 1ms 假计时器无帧可泵——已修测试写法并在工作流注入规则；② Mikanseta macOS 构建失败：Course.swift 引用了不在共享编译目标里的 AppRoute，改为内联 `mikansei://focus/...` 深链后 swift test 96/96 与 macOS 构建均通过。 |
+| 模拟器实拍 | 390×844 种入示例：今日页新配色（亮卡+描边、超时红胶囊、正在做变色）与规划页两模式（涂色月历、小时拖拽轴）均按预期渲染。 |
+| 构建/安装 | macOS 0.5.0 (13) 安装启动；Android 签名 APK `Mikanseta-0.5.0+13-android.apk`（61.2 MB，SHA-256 `dc9859a4…311b30c`）；原生 Mac 0.4.0 (8) 安装。iPhone 两 App 待设备连接。Windows 由推送触发 CI 验证。 |
+| 既有问题（非本轮） | UITests 的 testScheduleDurationRoutineDatesAndReminderCanBeEdited 在干净 HEAD 上即失败、testRapidCompletionAndReopenDoesNotLoseState 随机失败——均与本次改动无关，未处理。 |

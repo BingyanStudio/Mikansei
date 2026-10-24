@@ -213,13 +213,21 @@ struct TodayProgressWidgetView: View {
     }
 }
 
+/// 点开与显示一致：运行中的计时优先，其次即将开始的规划时段，再次暂停中的事项。
+private func focusTimerRoute(snapshot: WidgetSnapshot?, at date: Date) -> URL {
+    let focused = snapshot?.focusedTask(at: date)
+    if let focused, focused.startedAt != nil { return AppRoute.entry(focused.id).url }
+    if let next = snapshot?.nextPlannedBlock(at: date) { return AppRoute.entry(next.id).url }
+    return focused.map { AppRoute.entry($0.id).url } ?? AppRoute.tasks.url
+}
+
 struct FocusTimerWidget: Widget {
     let kind = "Mikansei.FocusTimer"
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ChecklistProvider()) { entry in
             FocusTimerWidgetView(entry: entry)
                 .containerBackground(Color(uiColor: .systemBackground), for: .widget)
-                .widgetURL(entry.snapshot?.focusedTask(at: entry.date).map { AppRoute.entry($0.id).url } ?? AppRoute.tasks.url)
+                .widgetURL(focusTimerRoute(snapshot: entry.snapshot, at: entry.date))
         }
         .configurationDisplayName("正在做 · 计时")
         .description("显示当前事项与累计用时。点暂停或继续，会打开 App 并同步计时状态。")
@@ -230,13 +238,25 @@ struct FocusTimerWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: ChecklistTimelineEntry
     private var task: Entry? { entry.snapshot?.focusedTask(at: entry.date) }
+    // 无运行计时且 60 分钟内有规划时段时，锁屏改为显示距该时段开始的倒计时。
+    private var plannedBlock: Entry? {
+        task?.startedAt == nil ? entry.snapshot?.nextPlannedBlock(at: entry.date) : nil
+    }
     var body: some View {
         Group {
             if let task {
                 if family == .accessoryRectangular {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("\(status(task)) · \(task.title)").font(.headline).lineLimit(1)
-                        FocusClock(entry: task).font(.title3.weight(.semibold))
+                    if let planned = plannedBlock, let start = planned.plannedStart {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("\(planned.title) · 距开始").font(.headline).lineLimit(1)
+                            Text(timerInterval: entry.date...start, countsDown: true, showsHours: true)
+                                .font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1)
+                        }
+                    } else {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("\(status(task)) · \(task.title)").font(.headline).lineLimit(1)
+                            FocusClock(entry: task).font(.title3.weight(.semibold))
+                        }
                     }
                 } else if family == .systemMedium {
                     VStack(alignment: .leading, spacing: 10) {

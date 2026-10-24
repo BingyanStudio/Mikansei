@@ -112,6 +112,12 @@ struct RootView: View {
             }
             if id != nil { notifications.openedEntryID = nil }
         }
+        .onReceive(notifications.$openedRoute) { route in
+            if let route {
+                if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = route } else { open(route) }
+            }
+            if route != nil { notifications.openedRoute = nil }
+        }
         .onReceive(notifications.$openedCourseID) { id in
             if let id, let course = store.courses.first(where: { $0.id == id }) {
                 editing = EditingSession(entry: course.homeworkDraft(), isNew: true)
@@ -186,15 +192,18 @@ struct TodayView: View {
     let addOnDate: (Date, Bool) -> Void
     @Binding var page: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showPlanning = false
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let board = TaskBoard(entries: store.entries, now: context.date)
             VStack(spacing: 0) {
                 VStack(spacing: 12) {
-                    if page != 2 { HStack {
+                    if page != 2 { HStack(spacing: 14) {
                         Text(context.date, format: .dateTime.month(.wide).day().weekday(.wide))
                             .font(.subheadline).foregroundStyle(.secondary)
                         Spacer()
+                        Button { showPlanning = true } label: { Label("规划", systemImage: "calendar.badge.clock") }
+                            .font(.subheadline).accessibilityIdentifier("planning-open")
                         NavigationLink("课表与登记") { CoursesView() }.font(.subheadline)
                     } }
                     ChoiceStrip(label: "日程视图", choices: [0, 1, 2], selection: $page,
@@ -202,35 +211,63 @@ struct TodayView: View {
                 }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
                 if page == 2 {
                     CalendarScheduleView(entries: store.entries, now: context.date, edit: edit, add: addOnDate)
-                } else {
+                } else if page == 1 {
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 16) {
-                            if page == 0 { focus(board, now: context.date) }
-                            else { agenda(board, now: context.date) }
+                            agenda(board, now: context.date)
                         }.padding(.horizontal, 20).padding(.bottom, 16)
-                            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: board.focus.map(\.id))
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: board.open.map(\.id))
                     }
+                } else {
+                    focusList(board, now: context.date)
                 }
             }.background(Theme.background).navigationTitle("日程")
                 .navigationBarTitleDisplayMode(page == 2 ? .inline : .large)
+                .sheet(isPresented: $showPlanning) {
+                    PlanningView(entries: store.entries, now: context.date, edit: edit,
+                                 setPlannedDays: { store.setPlannedDays($0, $1) },
+                                 setPlannedTime: { store.setPlannedTime($0, start: $1, end: $2) })
+                }
         }
     }
-    @ViewBuilder private func focus(_ board: TaskBoard, now: Date) -> some View {
-        if !board.overdue.isEmpty { group("已超时", entries: board.overdue, color: .red, now: now) }
-        if !board.today.isEmpty { group("今天要做", entries: board.today, color: Theme.accent, now: now) }
-        if board.focus.isEmpty {
-            EmptyCard(symbol: "sun.max", title: "今天可以从容一点", message: "给今天安排一件小事，或继续你的无日期清单。", actionTitle: "添加待办") { add(.task) }
+    /// 今日聚焦：分组滚动列表；长按卡片拖到同组另一张卡上即组内排序（写 sortOrder）。
+    private func focusList(_ board: TaskBoard, now: Date) -> some View {
+        let groups: [(title: String, entries: [Entry], color: Color, movable: Bool)] = [
+            ("已超时", board.overdue, .red, true),
+            ("今天要做", board.today, Theme.accent, true),
+            ("随时可做", board.unplannedOrPast, .secondary, true),
+            ("今日已完成", board.finishedToday, Theme.accent, false)
+        ]
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                if board.focus.isEmpty {
+                    EmptyCard(symbol: "sun.max", title: "今天可以从容一点", message: "给今天安排一件小事，或继续你的无日期清单。", actionTitle: "添加待办") { add(.task) }
+                        .padding(.horizontal, 20).padding(.vertical, 8)
+                } else {
+                    ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
+                        SectionLabel(title: group.title, count: group.entries.count, color: group.color)
+                            .padding(.horizontal, 20)
+                        ForEach(group.entries) { entry in
+                            EntryDragRow(entry: entry, group: group.entries, movable: group.movable,
+                                         onDrop: reorderWithin,
+                                         content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now, showsContextMenu: false) })
+                                .padding(.horizontal, 20).padding(.vertical, 8)
+                        }
+                    }
+                }
+            }.padding(.top, 4).padding(.bottom, 16)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: board.focus.map(\.id))
         }
-        if !board.unplannedOrPast.isEmpty { group("随时可做", entries: board.unplannedOrPast, now: now) }
-        if !board.finishedToday.isEmpty { group("今日已完成", entries: board.finishedToday, color: Theme.accent, now: now) }
     }
-    private func group(_ title: String, entries: [Entry], color: Color = .secondary, now: Date) -> some View {
-        Group {
-            SectionLabel(title: title, count: entries.count, color: color)
-            ForEach(entries) { entry in
-                EntryCard(entry: entry, edit: { edit(entry) }, now: now)
-            }
-        }
+    /// 拖拽落点：把拖拽卡移到目标卡的位置（限同一分组），按组内新顺序写 sortOrder。
+    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry]) -> Bool {
+        guard dragged.id != target.id,
+              let from = group.firstIndex(where: { $0.id == dragged.id }),
+              let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
+        var ids = group.map(\.id)
+        ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
+        store.reorder(ids)
+        return true
     }
     @ViewBuilder private func agenda(_ board: TaskBoard, now: Date) -> some View {
         let dated = board.open.flatMap { entry -> [AgendaOccurrence] in
@@ -272,18 +309,6 @@ private enum TaskFilter: String, CaseIterable, Identifiable {
     }
 }
 
-/// One flat list with stable identities so a card keeps its view while it moves between groups.
-private enum TaskRow: Identifiable {
-    case section(String, Int, Color)
-    case entry(Entry)
-    var id: String {
-        switch self {
-        case .section(let title, _, _): return "section-\(title)"
-        case .entry(let entry): return "entry-\(entry.id.uuidString)"
-        }
-    }
-}
-
 struct TasksView: View {
     @EnvironmentObject private var store: EntryStore
     @Environment(\.scenePhase) private var scenePhase
@@ -302,15 +327,23 @@ struct TasksView: View {
             filter.includes($0) && $0.matches(query) && (category.isEmpty || $0.category == category)
         }
     }
+    /// 分组只作用于当前清单；历史记录是平铺列表，不参与排序。
+    private var groups: [(title: String, entries: [Entry], color: Color, movable: Bool)] {
+        [
+            ("已超时", filtered.filter { $0.isOverdue(at: now) }, .red, true),
+            ("正在做", filtered.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }, Theme.accent, true),
+            ("待完成", filtered.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }, .primary, true),
+            ("今日已完成", filtered.filter(\.isCompleted), Theme.accent, false)
+        ]
+    }
     var body: some View {
         let visibleEntries = filtered
-        let rows = taskRows(visibleEntries)
         // Fixed header like the 日程 tab: pull-down moves only the list, so the
         // two screens animate consistently.
         return VStack(spacing: 0) {
             VStack(spacing: 12) {
                 ChoiceStrip(label: "事项类型", choices: TaskFilter.allCases, selection: $filter, title: { $0.rawValue })
-                HStack {
+                HStack(spacing: 14) {
                     Picker("状态", selection: $showCompleted) { Text("当前清单").tag(false); Text("历史记录").tag(true) }
                         .pickerStyle(.menu).clearOptionText().fontWeight(.semibold)
                         .accessibilityIdentifier("task-status-filter")
@@ -322,23 +355,10 @@ struct TasksView: View {
                 }.font(.subheadline)
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 16) {
-                    SectionLabel(title: showCompleted ? "历史记录" : "我的清单", count: showCompleted ? visibleEntries.count : visibleEntries.filter { !$0.isCompleted }.count, color: Theme.accent)
-                    if visibleEntries.isEmpty {
-                        EmptyCard(symbol: showCompleted ? "checkmark.seal" : "checklist", title: query.isEmpty ? "清单里还没有事项" : "没有找到相关事项",
-                                  message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
-                                  actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
-                                  action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
-                    } else {
-                        ForEach(rows) { row in
-                            switch row {
-                            case .section(let title, let count, let color): SectionLabel(title: title, count: count, color: color)
-                            case .entry(let entry): EntryCard(entry: entry, edit: { edit(entry) }, now: now)
-                            }
-                        }
-                    }
-                }.padding(.horizontal, 20).padding(.top, 4).padding(.bottom, 16)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: rows.map(\.id))
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    listBody(visibleEntries)
+                }.padding(.top, 4).padding(.bottom, 16)
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visibleEntries.map(\.id))
             }
         }.background(Theme.background).navigationTitle("待办")
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
@@ -346,20 +366,73 @@ struct TasksView: View {
             .onAppear { now = Date() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { now = Date() } }
     }
-    private func taskRows(_ entries: [Entry]) -> [TaskRow] {
-        guard !showCompleted else { return entries.map(TaskRow.entry) }
-        let groups: [(String, [Entry], Color)] = [
-            ("已超时", entries.filter { $0.isOverdue(at: now) }, .red),
-            ("正在做", entries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt != nil }, Theme.accent),
-            ("待完成", entries.filter { !$0.isCompleted && !$0.isOverdue(at: now) && $0.startedAt == nil }, .primary),
-            ("今日已完成", entries.filter(\.isCompleted), Theme.accent)
-        ]
-        var rows: [TaskRow] = []
-        for (title, group, color) in groups where !group.isEmpty {
-            rows.append(.section(title, group.count, color))
-            rows.append(contentsOf: group.map(TaskRow.entry))
+    @ViewBuilder private func listBody(_ visibleEntries: [Entry]) -> some View {
+        if visibleEntries.isEmpty {
+            EmptyCard(symbol: showCompleted ? "checkmark.seal" : "checklist", title: query.isEmpty ? "清单里还没有事项" : "没有找到相关事项",
+                      message: showCompleted ? "今天完成的事项先留在清单末尾，次日归入这里。" : "先记下来即可。不必设置时间，也可以只填截止日期，再逐项勾选。",
+                      actionTitle: showCompleted ? nil : "添加\(filter == .homework ? "作业" : filter == .schedules ? "日程" : "待办")",
+                      action: { add(filter == .homework ? .homework : filter == .schedules ? .schedule : .task) })
+                .padding(.horizontal, 20).padding(.vertical, 8)
+        } else if showCompleted {
+            SectionLabel(title: "历史记录", count: visibleEntries.count, color: Theme.accent).padding(.horizontal, 20)
+            ForEach(visibleEntries) { entry in
+                EntryDragRow(entry: entry, group: [], movable: false, onDrop: reorderWithin,
+                             content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now) })
+                    .padding(.horizontal, 20).padding(.vertical, 8)
+            }
+        } else {
+            ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
+                SectionLabel(title: group.title, count: group.entries.count, color: group.color).padding(.horizontal, 20)
+                ForEach(group.entries) { entry in
+                    EntryDragRow(entry: entry, group: group.entries, movable: group.movable,
+                                 onDrop: reorderWithin,
+                                 content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now, showsContextMenu: false) })
+                        .padding(.horizontal, 20).padding(.vertical, 8)
+                }
+            }
         }
-        return rows
+    }
+    /// 拖拽落点：把拖拽卡移到目标卡的位置（限同一分组），按组内新顺序写 sortOrder。
+    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry]) -> Bool {
+        guard dragged.id != target.id,
+              let from = group.firstIndex(where: { $0.id == dragged.id }),
+              let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
+        var ids = group.map(\.id)
+        ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
+        store.reorder(ids)
+        return true
+    }
+}
+
+/// 拖动排序行：长按卡片拖到同组另一张卡上，落点卡让位并按组内新顺序写 sortOrder。
+/// （List.onMove 在 iOS 26 模拟器上会把内容尺寸翻倍并冻结滚动，这里用拖放实现组内排序。）
+struct EntryDragRow<Content: View>: View {
+    let entry: Entry
+    let group: [Entry]
+    let movable: Bool
+    /// 返回是否完成了移动，作为 drop 接收结果。
+    let onDrop: (Entry, Entry, [Entry]) -> Bool
+    @ViewBuilder var content: () -> Content
+    @State private var targeted = false
+    var body: some View {
+        let card = content()
+            .overlay {
+                if targeted {
+                    RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.accent, lineWidth: 2)
+                        .allowsHitTesting(false)
+                }
+            }
+        Group {
+            if movable {
+                card.draggable(entry)
+                    .dropDestination(for: Entry.self) { payload, _ in
+                        guard let dragged = payload.first else { return false }
+                        return onDrop(dragged, entry, group)
+                    } isTargeted: { targeted = $0 }
+            } else {
+                card
+            }
+        }
     }
 }
 

@@ -143,7 +143,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.4.6 (12)';
+  String displayVersion = '0.5.0 (13)';
   String? error;
   String? serviceError;
 
@@ -548,6 +548,41 @@ class EntryStore extends ChangeNotifier {
   void toggleStep(String id, String step) {
     final entry = find(id);
     if (entry != null) save(entry.toggleStep(step, clock()));
+  }
+
+  /// Planning fields: plannedDays holds date-only keys ('yyyy-MM-dd'),
+  /// deduplicated and ascending.
+  void setPlannedDays(String id, List<DateTime> days) {
+    final entry = find(id);
+    if (entry == null) return;
+    final keys = days.map((d) => dayKey(dayOf(d))).toSet().toList()..sort();
+    save(entry.change({'plannedDays': keys}, now: clock()));
+  }
+
+  /// Planned time window for tasks. The entry kind stays untouched; the
+  /// end-after-start check is delegated to validateEntry via save().
+  void setPlannedTime(String id, DateTime start, DateTime end) {
+    final entry = find(id);
+    if (entry == null || !entry.isTask) return;
+    save(entry.change({
+      'plannedStart': isoDate(start),
+      'plannedEnd': isoDate(end),
+    }, now: clock()));
+  }
+
+  /// Drag ordering: assign 0..n sortOrder to the given entries in the given
+  /// order with a single commit.
+  void reorder(List<String> orderedIds) {
+    final next = entries.toList();
+    var order = 0;
+    for (final id in orderedIds) {
+      final index = next.indexWhere(
+        (e) => e.id.toUpperCase() == id.toUpperCase(),
+      );
+      if (index < 0) continue;
+      next[index] = next[index].change({'sortOrder': order++}, now: clock());
+    }
+    _commit(_archive.withEntries(next));
   }
 
   void delete(String id) {

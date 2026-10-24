@@ -148,7 +148,9 @@ void main() {
     await tester.tap(
       find.descendant(of: firstCard, matching: find.byTooltip('标记完成')),
     );
-    await tester.pump();
+    // 卡片不再经 AnimatedList 换新，划线随 AnimatedDefaultTextStyle 渐变，
+    // 稳定后断言与旧的即时换新等效。
+    await tester.pumpAndSettle();
     expect(find.text('今日已完成'), findsOneWidget);
     expectCardState('事项甲', completed: true);
     expect(find.text('事项甲'), findsOneWidget);
@@ -163,13 +165,130 @@ void main() {
     await tester.tap(
       find.descendant(of: completedCard, matching: find.byTooltip('恢复未完成')),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.text('今日已完成'), findsNothing);
     expectCardState('事项甲', completed: false);
     expect(find.text('事项甲'), findsOneWidget);
     await tester.pumpAndSettle();
     expectCardState('事项甲', completed: false);
     expect(find.text('事项甲'), findsOneWidget);
+    expect(tester.takeException(), null);
+    await tester.pumpWidget(const SizedBox());
+    await store.settled;
+  });
+  testWidgets('long-press drag reorders entries and stores the new order', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = await loaded();
+    for (final title in ['事项甲', '事项乙', '事项丙']) {
+      store.save(Entry.create(title: title));
+    }
+    // 与今日页一致：条目列表按 entryOrder（含 sortOrder）实时推导，主题用
+    // KraftTheme，拖动排序开启。
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: KraftTheme.build(Brightness.light),
+        home: Scaffold(
+          body: AnimatedBuilder(
+            animation: store,
+            builder: (context, _) => AnimatedEntryList(
+              entries: TaskBoard(store.entries, store.clock()).focus,
+              now: store.clock(),
+              store: store,
+              onDetails: (_) {},
+              showGroups: true,
+              reorderable: true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    List<String> displayed() => tester
+        .widgetList<EntryTile>(find.byType(EntryTile))
+        .map((tile) => tile.entry.title)
+        .toList();
+
+    // 掉落后的落盘写入用 1ms 假计时器推进，必须持续 pump 才会完成；无界
+    // await store.settled 在无帧可泵时会把测试挂死。
+    Future<void> drainWrites() async {
+      for (var i = 0; i < 20 && store.saving; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      await store.settled;
+    }
+
+    final before = displayed();
+    expect(before.toSet().length, 3, reason: '三条事项都应渲染出来');
+
+    // 真实手势冒烟：长按 700ms（> kLongPressTimeout）进入拖动，先小幅
+    // 移动再下拉越过大半张卡片后松手。落点判定窗口受标题行与换位动画
+    // 影响，这里只断言重排发生且 store.reorder 对组内全体连续写入
+    // sortOrder，不固定落位。
+    final from = tester.getCenter(find.text(before[0]));
+    final pitch = tester
+        .getSize(
+          find
+              .ancestor(of: find.text(before[1]), matching: find.byType(Card))
+              .first,
+        )
+        .height;
+    final gesture = await tester.startGesture(from);
+    await tester.pump(const Duration(milliseconds: 700));
+    await gesture.moveBy(const Offset(0, 20));
+    await tester.pump();
+    await gesture.moveBy(Offset(0, pitch * 0.9 - 20));
+    await tester.pump();
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await gesture.up();
+    // 松手后代理回落动画（250ms）结束才触发 onReorderItem，先泵过它。
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await drainWrites();
+    expect(tester.takeException(), null);
+    expect(displayed().toSet(), before.toSet(), reason: '拖动只换位，不改条目集合');
+    expect(
+      {
+        for (final tile in tester.widgetList<EntryTile>(
+          find.byType(EntryTile),
+        ))
+          store.find(tile.entry.id)!.sortOrder,
+      },
+      {0, 1, 2},
+      reason: '长按拖动应触发 store.reorder，组内 sortOrder 连续写入',
+    );
+
+    // 确定性断言：直接调用 ReorderableListView 的 onReorderItem，把显示在
+    // 首位的事项移到组内末尾。行表结构是行 0 分组标题、行 1..3 条目，
+    // 因此 (1, 3) 即“首位移到末位”，可绕开手势落点的判定窗口。
+    final list = tester.widget<ReorderableListView>(
+      find.byType(ReorderableListView),
+    );
+    final after = displayed();
+    list.onReorderItem!(1, 3);
+    await tester.pump();
+    await drainWrites();
+    final finalOrder = displayed();
+    expect(finalOrder.last, after.first, reason: '首位事项应落到组内末尾');
+    expect(finalOrder.take(2).toList(), after.sublist(1), reason: '其余两条次序保持');
+    expect(
+      [
+        for (final tile in tester.widgetList<EntryTile>(
+          find.byType(EntryTile),
+        ))
+          store.find(tile.entry.id)!.sortOrder,
+      ],
+      [0, 1, 2],
+      reason: 'sortOrder 应按显示顺序连续写入',
+    );
     expect(tester.takeException(), null);
     await tester.pumpWidget(const SizedBox());
     await store.settled;

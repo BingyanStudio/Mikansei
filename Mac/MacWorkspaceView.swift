@@ -23,6 +23,7 @@ struct MacWorkspaceView: View {
     @State private var scheduleDate = Date()
     @State private var importCourses = false
     @State private var importBackup = false
+    @State private var showPlanning = false
     @StateObject private var calendarImport = MacCalendarImport()
     var body: some View {
         NavigationSplitView {
@@ -75,6 +76,13 @@ struct MacWorkspaceView: View {
                                     Button("删除", role: .destructive) { store.delete(entry.id) }
                                 }
                             }
+                            // 今日页整列可拖动排序（macOS List 原生拖拽），其余页面关闭；
+                            // onMove 里按新顺序写 sortOrder。
+                            .onMove(perform: page == .today ? { source, destination in
+                                var ids = rows.map(\.id)
+                                ids.move(fromOffsets: source, toOffset: min(max(destination, 0), ids.count))
+                                store.reorder(ids)
+                            } : nil)
                         }
                         .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.entries)
                     }
@@ -97,6 +105,7 @@ struct MacWorkspaceView: View {
         }
         .toolbar {
             ToolbarItemGroup {
+                Button("规划", systemImage: "calendar.badge.clock") { showPlanning = true }.disabled(store.readOnly)
                 Button("新建", systemImage: "plus") { newEntry() }.disabled(store.readOnly)
                 Button("同步", systemImage: "arrow.triangle.2.circlepath") { sync.request(store) }.disabled(sync.folder == nil || sync.isSyncing)
                 Menu("导入", systemImage: "square.and.arrow.down") {
@@ -106,6 +115,18 @@ struct MacWorkspaceView: View {
             }
         }
         .preferredColorScheme(appearance == 1 ? .light : appearance == 2 ? .dark : nil)
+        .sheet(isPresented: $showPlanning) {
+            // Mac 复用同一规划视图；不做拖拽，小时规划换成时间字段快捷编辑。
+            PlanningView(entries: store.entries, now: Date(),
+                         edit: { entry in
+                             // 规划页先收起，等动画结束再弹编辑器（同一视图两个 sheet 不能同时展示）。
+                             showPlanning = false
+                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { editing = entry }
+                         },
+                         setPlannedDays: { store.setPlannedDays($0, $1) },
+                         setPlannedTime: { store.setPlannedTime($0, start: $1, end: $2) },
+                         supportsDrag: false)
+        }
         .sheet(item: $editing) { entry in MacEntryEditor(entry: entry).environmentObject(store) }
         .sheet(item: $editingCourse) { course in MacCourseEditor(course: course).environmentObject(store) }
         .fileImporter(isPresented: $importCourses, allowedContentTypes: [.commaSeparatedText, .calendarEvent, .plainText]) { result in

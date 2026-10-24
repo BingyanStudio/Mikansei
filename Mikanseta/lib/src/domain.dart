@@ -23,6 +23,8 @@ DateTime dayOf(DateTime value) {
 }
 
 bool sameDay(DateTime a, DateTime b) => dayOf(a) == dayOf(b);
+/// Date-only key ('yyyy-MM-dd') for planning fields such as plannedDays.
+String dayKey(DateTime day) => day.toIso8601String().substring(0, 10);
 String clockLabel(DateTime value) {
   final local = value.toLocal();
   return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
@@ -140,6 +142,10 @@ class Entry {
   bool get isTask => kind != EntryKind.note;
   bool get allDay => data['plannedAllDay'] as bool? ?? false;
   int? get estimate => data['estimatedMinutes'] as int?;
+  int? get sortOrder => data['sortOrder'] as int?;
+  List<DateTime> get plannedDays => (data['plannedDays'] as List? ?? [])
+      .map((d) => dayOf(DateTime.parse(d as String)))
+      .toList();
   String get repeatRule => data['repeatRule'] as String? ?? 'never';
   DateTime? date(String key) =>
       data[key] == null ? null : DateTime.parse(data[key] as String).toLocal();
@@ -347,6 +353,15 @@ class Entry {
 }
 
 int entryOrder(Entry a, Entry b) {
+  final aOrder = a.sortOrder;
+  final bOrder = b.sortOrder;
+  if (aOrder != null && bOrder != null) {
+    final result = aOrder.compareTo(bOrder);
+    if (result != 0) return result;
+  } else if (aOrder != bOrder) {
+    // A null sortOrder ranks last so manual ordering keeps its block on top.
+    return aOrder == null ? 1 : -1;
+  }
   var result = b.priority.compareTo(a.priority);
   if (result != 0) return result;
   result = (a.attention ?? DateTime(9999)).compareTo(
@@ -680,6 +695,9 @@ class TaskBoard {
       (e) =>
           !e.overdue(now) &&
           (e.onDay(now) ||
+              // Planned days mark a one-off task as "today"; routines with a
+              // repeat rule must not be re-counted through this field.
+              e.repeatRule == 'never' && e.plannedDays.contains(dayOf(now)) ||
               e.attention == null ||
               e.attention!.isBefore(dayOf(now))),
     ),

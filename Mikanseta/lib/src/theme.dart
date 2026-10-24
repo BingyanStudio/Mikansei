@@ -29,8 +29,11 @@ class KraftTheme {
           : const Color(0xFFEDE0CD),
       surfaceContainerLow: dark
           ? const Color(0xFF2E251E)
-          : const Color(0xFFFFF8ED),
+          : const Color(0xFFFFFDF8),
       outline: dark ? const Color(0xFF9A826A) : const Color(0xFF9B7D5C),
+      // 浅色用更醒目的暖红；深色配浅暖红与深红棕文字，保持可读对比。
+      error: dark ? const Color(0xFFFFB4A5) : const Color(0xFFB3402F),
+      onError: dark ? const Color(0xFF5C1A0F) : const Color(0xFFFFF8EE),
     );
     return ThemeData(
       useMaterial3: true,
@@ -62,7 +65,7 @@ class KraftTheme {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         height: 64,
-        indicatorColor: scheme.primary.withValues(alpha: .12),
+        indicatorColor: scheme.primary.withValues(alpha: .22),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
         ),
@@ -90,7 +93,11 @@ class KraftTheme {
         color: scheme.surfaceContainerLow,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          // 极浅描边让亮卡片与纸面分离。
+          side: BorderSide(color: scheme.outline.withValues(alpha: .12)),
+        ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerLow,

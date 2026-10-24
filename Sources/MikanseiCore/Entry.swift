@@ -124,6 +124,10 @@ public struct Entry: Identifiable, Codable, Equatable {
     public var startedAt: Date? = nil
     public var elapsedSeconds: TimeInterval = 0
     public var calendarEvent: CalendarEventLink? = nil
+    /// 手动排序值，越小越靠前；nil 表示未排序，参与排序时视为最大。
+    public var sortOrder: Int? = nil
+    /// 规划的执行日期（按天），与 plannedStart 区间并列参与“今天要做”判定。
+    public var plannedDays: [Date]? = nil
 
     public init(id: UUID = UUID(), title: String = "", body: String = "",
                 kind: EntryKind = .task, category: String = "",
@@ -247,6 +251,7 @@ public struct Entry: Identifiable, Codable, Equatable {
         result.repeatIntervalMonths = max(1, min(12, repeatIntervalMonths))
         result.repeatWeekdays = Array(Set(repeatWeekdays.filter { (1...7).contains($0) })).sorted()
         result.repeatDates = Array(Set(repeatDates.map { Calendar.current.startOfDay(for: $0) })).sorted()
+        result.plannedDays = plannedDays.map { Array(Set($0.map { Calendar.current.startOfDay(for: $0) })).sorted() }
         result.checklist = checklist.compactMap { step in
             let title = step.title.trimmingCharacters(in: .whitespacesAndNewlines)
             return title.isEmpty ? nil : ChecklistItem(id: step.id, title: title, isDone: step.isDone)
@@ -254,6 +259,7 @@ public struct Entry: Identifiable, Codable, Equatable {
         if kind == .note {
             result.dueDate = nil
             result.plannedStart = nil; result.plannedEnd = nil; result.plannedAllDay = false
+            result.plannedDays = nil
             result.reminder = nil
             result.isCompleted = false
             result.completedAt = nil
@@ -301,7 +307,7 @@ public struct Entry: Identifiable, Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, title, body, kind, category, priority, checklist, dueDate, reminder,
              isCompleted, completedAt, createdAt, updatedAt, platform, location,
-             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, routineSeriesID, routineOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes
+             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, routineSeriesID, routineOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes, sortOrder, plannedDays
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -345,6 +351,8 @@ public struct Entry: Identifiable, Codable, Equatable {
         plannedStart = try c.decodeIfPresent(Date.self, forKey: .plannedStart)
         plannedEnd = try c.decodeIfPresent(Date.self, forKey: .plannedEnd)
         plannedAllDay = try c.decodeIfPresent(Bool.self, forKey: .plannedAllDay) ?? false
+        sortOrder = try c.decodeIfPresent(Int.self, forKey: .sortOrder)
+        plannedDays = try c.decodeIfPresent([Date].self, forKey: .plannedDays)
         reminderDelivery = try c.decodeIfPresent(ReminderDelivery.self, forKey: .reminderDelivery) ?? .popup
         reminderAnchor = try c.decodeIfPresent(ReminderAnchor.self, forKey: .reminderAnchor) ?? .deadline
         reminderSound = try c.decodeIfPresent(ReminderSound.self, forKey: .reminderSound) ?? .system
@@ -510,7 +518,8 @@ public struct TaskBoard {
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: day)!
         return open.filter { entry in
             !entry.isOverdue(at: now) && (entry.dueDate.map { calendar.isDate($0, inSameDayAs: now) } == true ||
-                (entry.plannedStart.map { $0 < tomorrow } == true && entry.plannedEnd.map { $0 > day } == true))
+                (entry.plannedStart.map { $0 < tomorrow } == true && entry.plannedEnd.map { $0 > day } == true) ||
+                entry.plannedDays?.contains { calendar.isDate($0, inSameDayAs: now) } == true)
         }
     }
     public var upcoming: [Entry] {
@@ -692,6 +701,8 @@ public struct TaskBoard {
     }
 
     public static func order(_ lhs: Entry, _ rhs: Entry) -> Bool {
+        // 手动排序优先；未设置的被视为最大，仍按原规则比较。
+        if lhs.sortOrder ?? Int.max != rhs.sortOrder ?? Int.max { return (lhs.sortOrder ?? Int.max) < (rhs.sortOrder ?? Int.max) }
         if lhs.priority != rhs.priority { return lhs.priority.rawValue > rhs.priority.rawValue }
         if lhs.attentionDate != rhs.attentionDate { return (lhs.attentionDate ?? .distantFuture) < (rhs.attentionDate ?? .distantFuture) }
         if lhs.createdAt != rhs.createdAt { return lhs.createdAt < rhs.createdAt }

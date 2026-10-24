@@ -65,6 +65,8 @@ public struct PlannedNotification: Identifiable, Equatable, Codable {
     public var delivery: ReminderDelivery = .popup
     public var sound: ReminderSound = .system
     public var snoozeMinutes = 5
+    /// 点开通知时直达的深链（如专注计时），nil 表示沿用条目详情的默认行为。
+    public var openURL: String? = nil
     public func isStillEnabled(entries: [Entry], courses: [Course]) -> Bool {
         let owners = entries.filter { $0.id == entryID }
         let courseOwners = courses.filter { $0.id == courseID }
@@ -75,6 +77,7 @@ public struct PlannedNotification: Identifiable, Equatable, Codable {
 public enum NotificationPlan {
     public static func pending(entries: [Entry], courses: [Course], now: Date = Date(), limit: Int = 60, calendar: Calendar = .current) -> [PlannedNotification] {
         var events: [PlannedNotification] = []
+        var reminderMoments: [UUID: Set<Date>] = [:]
         let successors = Entry.successorDates(in: entries)
         for entry in entries {
             guard entry.isTask, !entry.isCompleted, entry.reminder != nil, let due = entry.reminderReferenceDate else { continue }
@@ -98,6 +101,7 @@ public enum NotificationPlan {
                 dates += (1...12).map { due.addingTimeInterval(Double($0 * 7200)) }
             }
             }
+            reminderMoments[entry.id] = Set(dates)
             for date in dates where date > now {
                 let overdue = entry.repeatRule == .never && entry.dueDate != nil && entry.reminderAnchor == .deadline && date > due
                 let minutes = entry.estimatedMinutes.map { " · 约 \($0) 分钟" } ?? ""
@@ -106,6 +110,18 @@ public enum NotificationPlan {
                     title: overdue ? "尚未完成：\(entry.title)" : entry.title,
                     body: "\(entry.repeatRule != .never ? "例行事项 · " + entry.repeatLabel : overdue ? "已过截止时间" : "\(entry.reminderAnchor == .execution || entry.dueDate == nil ? "安排" : "截止") \(due.formatted(.dateTime.month().day().hour().minute()))")\(minutes)\(details.isEmpty ? "" : "\n" + details)", entryID: entry.id, courseID: nil, delivery: entry.reminderDelivery, sound: entry.reminderSound, snoozeMinutes: entry.snoozeMinutes))
             }
+        }
+        // 规划时段开始提醒：未完成的任务/作业若今天安排了执行时段，在开始时刻轻推一次，点开直达专注计时。
+        for entry in entries {
+            guard entry.isTask, entry.kind != .schedule, !entry.isCompleted,
+                  let start = entry.plannedStart, start > now, calendar.isDate(start, inSameDayAs: now),
+                  reminderMoments[entry.id]?.contains(start) != true else { continue }
+            events.append(PlannedNotification(id: "entry.start.\(entry.id).\(Int(start.timeIntervalSince1970))", date: start,
+                title: "到点了：\(entry.title)", body: "规划时段开始，回来专注吧", entryID: entry.id, courseID: nil,
+                // 定位是轻推而非闹钟，统一用弹窗；铃声与稍后时长沿用事项自身的设置。
+                delivery: .popup, sound: entry.reminderSound, snoozeMinutes: entry.snoozeMinutes,
+                // AppRoute 不在所有共享编译目标里（如 Mikanseta macOS），这里直接内联深链。
+                openURL: "mikansei://focus/\(entry.id.uuidString)?action=start"))
         }
         for course in courses {
             for date in course.occurrences(after: now, calendar: calendar) {

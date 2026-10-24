@@ -1,6 +1,17 @@
 import XCTest
 
 final class MikanseiUITests: XCTestCase {
+    /// 滚动到可见后等行位置稳定再点：List 分组变动/惯性滚动会让快照坐标失效。
+    private func tapWhenSettled(_ element: XCUIElement) {
+        var last = element.frame
+        for _ in 0..<10 {
+            Thread.sleep(forTimeInterval: 0.2)
+            let current = element.frame
+            if current == last { break }
+            last = current
+        }
+        element.tap()
+    }
     @MainActor
     func testNoteOpensFullScreenEditor() {
         let app = XCUIApplication()
@@ -31,7 +42,7 @@ final class MikanseiUITests: XCTestCase {
         let version = app.descendants(matching: .any).matching(identifier: "app-version").firstMatch
         for _ in 0..<12 { if version.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(version.exists)
-        XCTAssertEqual(version.value as? String, "0.3.3 (7)")
+        XCTAssertEqual(version.value as? String, "0.4.0 (8)")
     }
     @MainActor
     func testCalendarMonthNavigationDayTimelineAndViewPreference() {
@@ -202,8 +213,15 @@ final class MikanseiUITests: XCTestCase {
         let start = app.buttons["开始计时：\(title)"]
         for _ in 0..<8 { if start.isHittable { break }; app.swipeUp() }
         XCTAssertTrue(start.isHittable)
-        start.tap()
+        tapWhenSettled(start)
         let pause = app.buttons["暂停计时：\(title)"]
+        // 开始后卡片移入上方的「正在做」分组；List 会回收屏幕外的行，
+        // 往回滚动并在每次滑动后留出瞬间让惰性行完成装载。
+        for _ in 0..<8 {
+            if pause.exists { break }
+            app.swipeDown()
+            Thread.sleep(forTimeInterval: 0.4)
+        }
         XCTAssertTrue(pause.waitForExistence(timeout: 5))
         XCTAssertFalse(start.exists, "开始后不应残留显示「开始做」的旧卡片")
         XCTAssertEqual(app.staticTexts.matching(identifier: "focus-clock").count, 1)
@@ -274,6 +292,43 @@ final class MikanseiUITests: XCTestCase {
         XCTAssertEqual(app.textFields["schedule-duration"].value as? String, "45")
     }
 
+    /// 规划入口：日程模式涂两天并保存；不做拖拽自动化，只验证保存后条目仍在清单。
+    @MainActor
+    func testPlanningSheetPaintsDaysAndKeepsEntry() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--ui-testing", "--demo"]
+        app.launch()
+        app.tabBars.buttons["日程"].tap()
+        // 视图偏好会跨启动持久化（如上次停留在日历页），先回到今日聚焦再找规划入口。
+        let focusView = app.buttons["schedule-view-0"]
+        XCTAssertTrue(focusView.waitForExistence(timeout: 5))
+        focusView.tap()
+        let open = app.buttons["planning-open"]
+        XCTAssertTrue(open.waitForExistence(timeout: 5))
+        open.tap()
+        let daysMode = app.buttons["planning-mode-0"]
+        XCTAssertTrue(daysMode.waitForExistence(timeout: 5))
+        XCTAssertTrue(daysMode.isSelected, "默认进入日程规划模式")
+        let chips = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "planning-entry-"))
+        XCTAssertTrue(chips.firstMatch.waitForExistence(timeout: 5))
+        let chip = chips.firstMatch
+        let title = chip.label
+        chip.tap()
+        let cells = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "planning-day-"))
+        XCTAssertTrue(cells.firstMatch.waitForExistence(timeout: 5))
+        let first = cells.element(boundBy: 9)
+        let second = cells.element(boundBy: 11)
+        first.tap()
+        XCTAssertTrue(first.isSelected, "点按第一天后应选中")
+        second.tap()
+        XCTAssertTrue(second.isSelected, "点按第二天后应选中")
+        let save = app.buttons["planning-save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        save.tap()
+        app.buttons["planning-close"].tap()
+        XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 5), "保存规划后条目应仍在清单中")
+    }
+
     @MainActor
     func testRapidCompletionAndReopenDoesNotLoseState() {
         let app = XCUIApplication()
@@ -283,9 +338,16 @@ final class MikanseiUITests: XCTestCase {
             let complete = app.buttons["完成：" + title]
             for _ in 0..<8 { if complete.isHittable { break }; app.swipeUp() }
             XCTAssertTrue(complete.isHittable)
-            complete.tap()
+            tapWhenSettled(complete)
         }
         let reopened = app.buttons["重新打开：买一盏阅读灯"]
+        // 完成后条目落到清单末尾的「今日已完成」；List 会回收屏幕外的行，
+        // 滚到底部并在每次滑动后留出瞬间让惰性行完成装载。
+        for _ in 0..<8 {
+            if reopened.exists { break }
+            app.swipeUp()
+            Thread.sleep(forTimeInterval: 0.4)
+        }
         XCTAssertTrue(reopened.waitForExistence(timeout: 5))
         reopened.tap()
         XCTAssertTrue(app.buttons["完成：买一盏阅读灯"].waitForExistence(timeout: 5))

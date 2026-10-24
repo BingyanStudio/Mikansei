@@ -11,6 +11,7 @@ import 'store.dart';
 import 'cloud_sync.dart';
 import 'local_folder_sync.dart';
 import 'note_editor_page.dart';
+import 'planning_page.dart';
 import 'segmented_strip.dart';
 import 'theme.dart';
 import 'editor.dart';
@@ -19,7 +20,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.4.6 (12)';
+const appVersion = '0.5.0 (13)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -321,6 +322,22 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> openPlanning() async {
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (context) => PlanningPage(
+          store: store,
+          onDetails: details,
+          onEdit: (entry) {
+            final current = store.find(entry.id);
+            if (current != null) edit(entry: current);
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: store,
@@ -384,6 +401,12 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     ],
                   ),
                   actions: [
+                    if (page == 0)
+                      IconButton(
+                        tooltip: '规划',
+                        onPressed: store.readOnly ? null : openPlanning,
+                        icon: const Icon(Icons.event_note_outlined),
+                      ),
                     if (page != 4)
                       Padding(
                         padding: const EdgeInsets.only(right: 14),
@@ -402,7 +425,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   label: const Text('添加事项'),
                                 ),
                               )
-                            : IconButton.filledTonal(
+                            : IconButton.filled(
                                 tooltip: '添加事项',
                                 style: IconButton.styleFrom(
                                   shape: RoundedRectangleBorder(
@@ -593,7 +616,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
           const SizedBox(height: 14),
           if (store.running case final Entry running) ...[
+            // 正在计时的卡片整块用 primaryContainer 突出，描边压住浅底。
             Card(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+                side: BorderSide(color: Theme.of(context).colorScheme.outline),
+              ),
               child: InkWell(
                 borderRadius: BorderRadius.circular(18),
                 onTap: () => details(running),
@@ -605,13 +634,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primaryContainer,
+                          color: Theme.of(context).colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.timelapse,
                           size: 20,
-                          color: Theme.of(context).colorScheme.primary,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -623,18 +652,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               '正在做 · ${running.title}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               durationLabel(running.focusSeconds(now)),
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontFeatures: [FontFeature.tabularFigures()],
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
                               ),
                             ),
                           ],
@@ -704,6 +739,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             onDetails: details,
             store: store,
             showGroups: page != 3 && filter != '历史',
+            // 拖动排序只在今日与我的清单开放；只读档案不能改动。
+            reorderable: !store.readOnly && (page == 0 || page == 1),
           ),
       ],
     );
@@ -964,7 +1001,12 @@ class SearchIntent extends Intent {
   const SearchIntent();
 }
 
-class AnimatedEntryList extends StatefulWidget {
+/// 清单主体。分组标题行与条目行交错成一张行表：标题行没有拖拽监听，条目行
+/// 长按拖动后按同组内的新次序调 store.reorder（sortOrder API）。
+/// 之前这里用 AnimatedList 做插入/离场动画，但那些动画与拖动重排互斥，且
+/// 离场快照会在完成动画期间展示过期内容（0.4.4 的问题）；改用
+/// ReorderableListView 后条目始终直接渲染当前数据，快照问题随之消失。
+class AnimatedEntryList extends StatelessWidget {
   const AnimatedEntryList({
     super.key,
     required this.entries,
@@ -972,160 +1014,148 @@ class AnimatedEntryList extends StatefulWidget {
     required this.store,
     required this.onDetails,
     required this.showGroups,
+    this.reorderable = false,
   });
   final List<Entry> entries;
   final DateTime now;
   final EntryStore store;
   final ValueChanged<Entry> onDetails;
   final bool showGroups;
-  @override
-  State<AnimatedEntryList> createState() => _AnimatedEntryListState();
-}
 
-class _AnimatedEntryListState extends State<AnimatedEntryList> {
-  Duration get motion => MediaQuery.disableAnimationsOf(context)
-      ? Duration.zero
-      : const Duration(milliseconds: 380);
-  final listKey = GlobalKey<AnimatedListState>();
-  late List<Entry> items;
-  // AnimatedList keeps its outgoing child builder alive for the transition.
-  // Index current snapshots so that child can refresh if the same ID changes.
-  final _latestEntries = <String, Entry>{};
-  @override
-  void initState() {
-    super.initState();
-    items = List.of(widget.entries);
-    _latestEntries.addEntries(items.map((entry) => MapEntry(entry.id, entry)));
-  }
+  /// 只在今日与我的清单开启长按拖动排序，其余页面保持纯列表。
+  final bool reorderable;
 
-  @override
-  void didUpdateWidget(AnimatedEntryList old) {
-    super.didUpdateWidget(old);
-    final next = widget.entries;
-    for (var index = items.length - 1; index >= 0; index--) {
-      if (!next.any((e) => e.id == items[index].id)) remove(index);
-    }
-    for (var index = 0; index < next.length; index++) {
-      if (index < items.length && items[index].id == next[index].id) {
-        items[index] = next[index];
-        continue;
-      }
-      final oldIndex = items.indexWhere((e) => e.id == next[index].id);
-      if (oldIndex >= 0) remove(oldIndex, replacement: next[index]);
-      items.insert(index, next[index]);
-      listKey.currentState?.insertItem(index, duration: motion);
-    }
-    _latestEntries
-      ..clear()
-      ..addEntries(items.map((entry) => MapEntry(entry.id, entry)));
-  }
-
-  void remove(int index, {Entry? replacement}) {
-    final removed = replacement ?? items[index];
-    items.removeAt(index);
-    listKey.currentState?.removeItem(
-      index,
-      (context, animation) => liveTransition(removed, animation),
-      duration: motion,
-    );
-  }
-
-  Widget liveTransition(Entry entry, Animation<double> animation) =>
-      ListenableBuilder(
-        listenable: widget.store,
-        builder: (context, _) => transition(
-          _latestEntries[entry.id] ?? widget.store.find(entry.id) ?? entry,
-          animation,
-          null,
-        ),
-      );
-
-  Widget transition(
-    Entry entry,
-    Animation<double> animation,
-    String? heading,
-  ) => SizeTransition(
-    sizeFactor: CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeInOutCubic,
-    ),
-    child: FadeTransition(
-      opacity: animation,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (heading != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(3, 14, 0, 10),
-              child: Row(
-                children: [
-                  Text(
-                    heading,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontSize: 13,
-                      letterSpacing: .3,
-                      color: heading == '已超时'
-                          ? Theme.of(context).colorScheme.error
-                          : Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${items.where((e) => group(e) == heading).length}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: EntryTile(
-              entry: entry,
-              now: widget.now,
-              store: widget.store,
-              onDetails: () => widget.onDetails(entry),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
   String group(Entry e) => e.completed
       ? '今日已完成'
-      : e.overdue(widget.now)
+      : e.overdue(now)
       ? '已超时'
       : '未完成';
   @override
-  Widget build(BuildContext context) => AnimatedList(
-    key: listKey,
-    initialItemCount: items.length,
-    shrinkWrap: true,
-    physics: const NeverScrollableScrollPhysics(),
-    itemBuilder: (context, index, animation) {
-      final e = items[index];
-      final heading =
-          widget.showGroups &&
-              (index == 0 || group(items[index - 1]) != group(e))
-          ? group(e)
-          : null;
-      return transition(e, animation, heading);
-    },
-  );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final rows = <_ListRow>[
+      for (var index = 0; index < entries.length; index++) ...[
+        if (showGroups &&
+            (index == 0 ||
+                group(entries[index - 1]) != group(entries[index])))
+          // boundary 记下标题前那条条目的 id：同一分组标签可能出现两次
+          // （条目顺序不保证分组连续时），key 必须唯一。
+          _ListRow.heading(
+            group(entries[index]),
+            index == 0 ? 'start' : entries[index - 1].id,
+          ),
+        _ListRow.entry(entries[index]),
+      ],
+    ];
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: EdgeInsets.zero,
+      buildDefaultDragHandles: false,
+      itemCount: rows.length,
+      onReorderItem: (oldIndex, newIndex) => _reorder(rows, oldIndex, newIndex),
+      proxyDecorator: (child, index, animation) => Material(
+        color: Colors.transparent,
+        elevation: 4,
+        borderRadius: BorderRadius.circular(18),
+        child: child,
+      ),
+      itemBuilder: (context, index) {
+        final row = rows[index];
+        final entry = row.entry;
+        if (entry != null) {
+          return ReorderableDelayedDragStartListener(
+            key: ValueKey(entry.id),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: EntryTile(
+                entry: entry,
+                now: now,
+                store: store,
+                onDetails: () => onDetails(entry),
+              ),
+            ),
+          );
+        }
+        final heading = row.heading!;
+        final alert = heading == '已超时';
+        return KeyedSubtree(
+          key: ValueKey('heading-$heading-${row.boundary}'),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(3, 14, 0, 10),
+            child: Row(
+              children: [
+                Text(
+                  heading,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontSize: 13,
+                    letterSpacing: .3,
+                    color: alert ? scheme.error : scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: alert ? scheme.error : scheme.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${entries.where((e) => group(e) == heading).length}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: alert ? scheme.onError : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// onReorderItem 的落点按“先移除条目再插入”计。这里数出落点之前有几个
+  /// 同组条目：标题行不计入，落点跨过分组标题时自然夹回本组开头或结尾，
+  /// 条目始终留在自己的分组内，按组内新次序写入 sortOrder。
+  void _reorder(List<_ListRow> rows, int oldIndex, int newIndex) {
+    final dragged = rows[oldIndex].entry;
+    if (dragged == null) return;
+    final without = List.of(rows)..removeAt(oldIndex);
+    var after = 0;
+    for (var i = 0; i < newIndex && i < without.length; i++) {
+      final row = without[i].entry;
+      if (row != null && group(row) == group(dragged)) after++;
+    }
+    // after 统计的是“移除被拖条目后”落点之前的同组数量，构造新次序时
+    // 也要先把被拖条目从成员里摘出来，避免同一个编号写两次 sortOrder。
+    final others = [
+      for (final e in entries)
+        if (group(e) == group(dragged) && e.id != dragged.id) e.id,
+    ];
+    store.reorder([
+      ...others.sublist(0, after),
+      dragged.id,
+      ...others.sublist(after),
+    ]);
+  }
+}
+
+class _ListRow {
+  const _ListRow.heading(this.heading, this.boundary) : entry = null;
+  const _ListRow.entry(this.entry) : heading = null, boundary = null;
+  final String? heading;
+
+  /// 标题行 key 的边界记号（前一条条目 id 或 'start'），保证唯一。
+  final String? boundary;
+  final Entry? entry;
 }
 
 class EntryTile extends StatelessWidget {
@@ -1144,7 +1174,14 @@ class EntryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final overdue = entry.overdue(now);
-    final metaColor = overdue ? scheme.error : scheme.onSurfaceVariant;
+    // 正在计时的条目整块用 primaryContainer 突出，深浅色都取自 scheme 角色。
+    final running = entry.startedAt != null;
+    final textColor = running ? scheme.onPrimaryContainer : scheme.onSurface;
+    final metaColor = running
+        ? scheme.onPrimaryContainer
+        : overdue
+        ? scheme.error
+        : scheme.onSurfaceVariant;
     final when = entry.kind == EntryKind.schedule && entry.start != null
         ? '${dateLabel(entry.start!, time: !entry.allDay)}${entry.allDay ? ' 全天' : '–${clockLabel(entry.end!)}'}'
         : entry.due != null
@@ -1164,7 +1201,30 @@ class EntryTile extends StatelessWidget {
         Text(text, style: TextStyle(fontSize: 12, color: color)),
       ],
     );
+    // 已超时的 DDL 段用 error 填充小胶囊，比裸文字更醒目。
+    Widget ddlPill(String text) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: scheme.error,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.schedule, size: 12.5, color: scheme.onError),
+          const SizedBox(width: 3),
+          Text(text, style: TextStyle(fontSize: 12, color: scheme.onError)),
+        ],
+      ),
+    );
     return Card(
+      color: running ? scheme.primaryContainer : null,
+      shape: running
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: BorderSide(color: scheme.outline),
+            )
+          : null,
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onDetails,
@@ -1218,7 +1278,7 @@ class EntryTile extends StatelessWidget {
                         decoration: entry.completed
                             ? TextDecoration.lineThrough
                             : null,
-                        color: scheme.onSurface,
+                        color: textColor,
                       ),
                       child: Text(
                         entry.title,
@@ -1248,7 +1308,10 @@ class EntryTile extends StatelessWidget {
                             priorities[entry.priority],
                             entry.priority == 2 ? scheme.error : scheme.primary,
                           ),
-                        if (entry.isTask) meta(Icons.schedule, when, metaColor),
+                        if (entry.isTask)
+                          overdue
+                              ? ddlPill(when)
+                              : meta(Icons.schedule, when, metaColor),
                       ],
                     ),
                     if (tags.isNotEmpty)

@@ -143,3 +143,9 @@
 | iPhone UI 测试 | 新增 `testNoteOpensFullScreenEditor`（demo 笔记打开全页、存在完成/关闭、无 sheet 取消）；连同 `testFolderSyncSettingsAndVersionAreVisible`（断言 0.3.3 (7)）与 `testCreateHomeworkAndCompleteItsChecklist` 三项全部通过。 |
 | 构建与安装 | iOS Debug 模拟器构建通过；Mac `install_mac.py` 构建并安装 `Mikansei-macOS.app` **0.3.3 (7)**。 |
 | iPhone 真机 | 设备未连接，待安装。 |
+
+## 0.4.0 (8)：规划、拖动排序与番茄钟联动（2026-10-24）
+
+与 Mikanseta 0.5.0 同轮（动态工作流子任务实现）：Entry 新增 sortOrder/plannedDays（Codable 往返有单测）；TaskBoard.order 先比 sortOrder、today 并入 plannedDays；通知计划为今天规划时段的任务在开始时刻发「到点了」弹窗提醒（openURL=mikansei://focus/<id>?action=start，修复过一次跨目标编译：AppRoute 引用改为内联字符串以兼容 Mikanseta macOS 共享编译）；FocusTimerWidget 锁屏在无运行计时时显示下一规划块倒计时（60 分钟窗口）；iPhone 新增 App/PlanningView.swift（日程涂色 + 小时拖拽；列表排序因 iOS 26 List+onMove 冻结滚动改用 LazyVStack+drag&drop）；今日聚焦/待办组内长按拖动排序（Mac 用 List+onMove）；正在做 EntryCard 整块变色。版本 0.3.3 (7) → 0.4.0 (8)（App+Widgets+Mac）。
+
+验证：`swift test` 96/96（新增 5 项）；iOS Debug 模拟器构建、iOS UI 两例（新规划涂色用例 + 版本）与相关 6 例 UI 回归通过；Mac Debug 构建通过；原生 Mac 0.4.0 (8) 已安装。iPhone 真机安装待连接。Mac 规划 sheet 与拖动仅编译验证。

@@ -21,6 +21,8 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
     @Published var openedEntryID: UUID?
     @Published var openedCourseID: UUID?
     @Published var completedEntryID: UUID?
+    /// 通知自带的深链（如规划时段开始的专注计时），由 RootView 消费。
+    @Published var openedRoute: AppRoute?
     private let center = UNUserNotificationCenter.current()
     private var latest: [Entry] = []
     private var latestCourses: [Course] = []
@@ -94,7 +96,9 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
             return request.content.userInfo["snoozed"] as? Bool != true || !isActive(ForegroundReminder(request), entries: entries, courses: courses)
         }.map(\.identifier))
         // Completed/deleted items should also disappear from Notification Center.
-        let activeIDs = entries.filter { !$0.isCompleted && $0.reminderDelivery == .popup && $0.reminder != nil }.map { prefix + "entry." + $0.id.uuidString + "." } + courses.filter { $0.reminderEnabled && $0.reminderDelivery == .popup }.map { prefix + "course." + $0.id.uuidString + "." }
+        let activeIDs = entries.filter { !$0.isCompleted && $0.reminderDelivery == .popup && $0.reminder != nil }.map { prefix + "entry." + $0.id.uuidString + "." }
+            + entries.filter { !$0.isCompleted && $0.reminderDelivery == .popup }.map { prefix + "entry.start." + $0.id.uuidString + "." }
+            + courses.filter { $0.reminderEnabled && $0.reminderDelivery == .popup }.map { prefix + "course." + $0.id.uuidString + "." }
         let delivered = await center.deliveredNotifications()
         center.removeDeliveredNotifications(withIdentifiers: delivered.map { $0.request.identifier }.filter {
             let identifier = $0
@@ -120,6 +124,7 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
             if let data = try? JSONEncoder().encode(event) { content.userInfo["plannedEvent"] = data }
             if let id = event.entryID { content.userInfo["entryID"] = id.uuidString; content.categoryIdentifier = "task" }
             if let id = event.courseID { content.userInfo["courseID"] = id.uuidString; content.categoryIdentifier = "course" }
+            if let route = event.openURL { content.userInfo["openURL"] = route }
             let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: event.date)
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
             do {
@@ -172,7 +177,12 @@ final class NotificationManager: NSObject, ObservableObject, UNUserNotificationC
         if let raw = info["entryID"] as? String, let id = UUID(uuidString: raw) {
             let complete = response.actionIdentifier == "complete"
             await MainActor.run {
-                if complete { self.completedEntryID = id } else { self.openedEntryID = id }
+                if complete { self.completedEntryID = id }
+                // 规划时段开始的通知点开后直达专注计时，其余仍打开条目详情。
+                else if let raw = info["openURL"] as? String, let url = URL(string: raw), let route = AppRoute(url: url) {
+                    self.openedRoute = route
+                }
+                else { self.openedEntryID = id }
             }
         } else if let raw = info["courseID"] as? String, let id = UUID(uuidString: raw) {
             await MainActor.run { self.openedCourseID = id }
