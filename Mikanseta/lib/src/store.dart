@@ -56,11 +56,44 @@ class NativeStorage implements ArchiveStorage {
       await invokeMethod<bool>('exportArchive', content) ?? false;
 }
 
+/// 首次安装时内置的使用说明正文（Markdown），原样进入笔记并可在编辑页预览。
+const String guideMikanseta = '''
+# 欢迎使用 Mikanseta
+
+这是一个学生向的待办与日程工具，牛皮浅棕主题。
+
+## 快速上手
+- 点右上角 **＋** 新建事项：待办、作业、日程、笔记四种类型
+- 点左侧圆圈完成事项；完成态会划线并进入「今日已完成」
+- 点卡片上的 ▶ 开始专注计时，同一时间只计一件事
+
+## 规划
+- 「今日」页点 **规划**：
+  - **日程规划**：在月历上涂色，决定"哪几天做"（常态 Routine 会自动规划）
+  - **小时规划**：把左侧待办拖进时间轴，决定"今天哪个时段做"，类型仍是待办，可同步系统日历
+- 列表里**长按拖动**卡片可调整顺序
+
+## 同步与备份
+- 设置 → 账户同步：登录同一账号，多设备实时同步
+- 设置 → 本机同步：与原版 Mikansei 共享文件夹互通
+- 设置 → 数据：导入 / 导出 JSON 备份
+
+## 笔记
+- 笔记是全页编辑，像备忘录一样；正文支持 **Markdown**，点右上角眼睛图标可切换预览
+''';
+
 class EntryStore extends ChangeNotifier {
   EntryStore(this.storage, {DateTime Function()? clock})
     : clock = clock ?? DateTime.now;
   final ArchiveStorage storage;
   final DateTime Function() clock;
+
+  /// 内置的「使用说明」笔记：note 类型、分类「帮助」，正文即 guideMikanseta。
+  static Entry builtInGuideNote(DateTime now) =>
+      Entry.create(title: '使用说明', kind: EntryKind.note, now: now).change({
+        'category': '帮助',
+        'body': guideMikanseta,
+      }, now: now);
   Archive _archive = Archive(entries: []);
   List<Course> get courses => (_archive.metadata['courses'] as List? ?? [])
       .map((c) => Course(Map<String, dynamic>.from(c as Map)))
@@ -143,7 +176,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.5.0 (13)';
+  String displayVersion = '0.5.1 (14)';
   String? error;
   String? serviceError;
 
@@ -465,6 +498,7 @@ class EntryStore extends ChangeNotifier {
       }
     }
     var backfilled = false;
+    var seeded = false;
     try {
       final content = await storage.read();
       if (content != null) {
@@ -472,6 +506,11 @@ class EntryStore extends ChangeNotifier {
         final normalized = _withRoutineIdentityFields(_archive);
         backfilled = normalized.encode() != _archive.encode();
         _archive = normalized;
+      } else if (storage is NativeStorage) {
+        // 只有真机首次安装（档案文件还不存在）才播种内置说明；MemoryStorage
+        // （全部单测）与已有档案文件的设备都不播种。
+        _archive = _archive.withEntries([builtInGuideNote(clock())]);
+        seeded = true;
       }
     } catch (exception) {
       readOnly = true;
@@ -481,7 +520,7 @@ class EntryStore extends ChangeNotifier {
     loading = false;
     notifyListeners();
     if (!readOnly) {
-      if (backfilled) {
+      if (seeded || backfilled) {
         _commit(_archive);
       } else {
         onLocalWrite?.call();

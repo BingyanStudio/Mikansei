@@ -24,6 +24,8 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
             FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("MikanseiMac")
         let repository = EntryRepository(fileURL: base.appendingPathComponent("entries.json"))
         writer = EntryArchiveWriter(repository: repository)
+        // 首次安装（档案文件原本不存在）时内置一份使用说明笔记；testing 保持空档案，绝不播种。
+        let seedGuide = !testing && !FileManager.default.fileExists(atPath: repository.fileURL.path)
         do {
             let saved = testing ? EntryArchive(entries: []) : try repository.loadArchive()
             entries = saved.entries; courses = saved.courses; calendarSettings = saved.calendarSync
@@ -31,6 +33,7 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
             if testing && ProcessInfo.processInfo.arguments.contains("--demo") {
                 entries = [Entry(title: "整理今日作业", kind: .homework, priority: .urgent, dueDate: Date().addingTimeInterval(3600)), Entry(title: "给家里打电话"), Entry(title: "学习笔记", body: "用侧栏浏览，在详情中编辑。", kind: .note)]
             }
+            if seedGuide { entries = [Entry.builtInGuideNote()] }
             replica.capture(entries: entries, courses: courses, suppressed: calendarSettings.suppressed)
         } catch { readOnly = true; self.error = "无法读取原数据，请保留 App：\(error.localizedDescription)" }
         persist()

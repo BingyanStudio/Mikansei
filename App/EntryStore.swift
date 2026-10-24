@@ -34,7 +34,11 @@ final class EntryStore: ObservableObject, SyncWorkspace {
                 ProcessInfo.processInfo.arguments.contains("--calendar-view-demo") ? Self.calendarViewExamples() :
                 ProcessInfo.processInfo.arguments.contains("--demo") ? Self.examples() : []
         } else {
-            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync; replica = archive.replica ?? WorkspaceReplica() }
+            // 首次安装（档案文件原本不存在）时内置一份使用说明笔记；testing 走上面的分支，绝不播种。
+            let seedGuide = !FileManager.default.fileExists(atPath: repository.fileURL.path)
+            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync; replica = archive.replica ?? WorkspaceReplica()
+                if seedGuide { entries = [Entry.builtInGuideNote()]; _ = commit(entries) }
+            }
             catch {
                 readOnly = true
                 self.error = "无法读取本地数据，原文件已保留。请勿卸载 App，以免丢失数据。\n\(error.localizedDescription)"

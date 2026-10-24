@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'domain.dart';
 import 'store.dart';
@@ -33,6 +34,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   bool saving = false;
   String? error;
   bool dirty = false;
+  bool preview = false;
 
   @override
   void initState() {
@@ -207,6 +209,12 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               onPressed: saving ? null : _delete,
               icon: const Icon(Icons.delete_outline),
             ),
+          // 预览只读 body 控制器，不改动内容，dirty 判定不受影响。
+          IconButton(
+            tooltip: preview ? '编辑' : '预览',
+            onPressed: () => setState(() => preview = !preview),
+            icon: Icon(preview ? Icons.visibility_off : Icons.visibility),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 14),
             child: FilledButton.tonal(
@@ -265,22 +273,30 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               ],
             ),
           ),
-          TextField(
-            key: const ValueKey('note-body'),
-            controller: body,
-            keyboardType: TextInputType.multiline,
-            minLines: 8,
-            maxLines: null,
-            style: Theme.of(context).textTheme.bodyLarge,
-            decoration: InputDecoration(
-              hintText: '开始记录',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              filled: false,
-              hintStyle: Theme.of(context).textTheme.bodyLarge,
+          if (preview)
+            // 页面本身是 ListView 滚动视图；用 MarkdownBody 避免嵌套竖向
+            // 滚动体，标题、清单与加粗随页面滚动一起可见。
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: MarkdownBody(data: body.text),
+            )
+          else
+            TextField(
+              key: const ValueKey('note-body'),
+              controller: body,
+              keyboardType: TextInputType.multiline,
+              minLines: 8,
+              maxLines: null,
+              style: Theme.of(context).textTheme.bodyLarge,
+              decoration: InputDecoration(
+                hintText: '开始记录',
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
+                hintStyle: Theme.of(context).textTheme.bodyLarge,
+              ),
             ),
-          ),
           const SizedBox(height: 8),
           for (var i = 0; i < stepControllers.length; i++)
             Row(

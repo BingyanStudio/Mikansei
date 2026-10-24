@@ -345,3 +345,18 @@ Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_i
 | 模拟器实拍 | 390×844 种入示例：今日页新配色（亮卡+描边、超时红胶囊、正在做变色）与规划页两模式（涂色月历、小时拖拽轴）均按预期渲染。 |
 | 构建/安装 | macOS 0.5.0 (13) 安装启动；Android 签名 APK `Mikanseta-0.5.0+13-android.apk`（61.2 MB，SHA-256 `dc9859a4…311b30c`）；原生 Mac 0.4.0 (8) 安装。iPhone 两 App 待设备连接。Windows 由推送触发 CI 验证。 |
 | 既有问题（非本轮） | UITests 的 testScheduleDurationRoutineDatesAndReminderCanBeEdited 在干净 HEAD 上即失败、testRapidCompletionAndReopenDoesNotLoseState 随机失败——均与本次改动无关，未处理。 |
+
+## 0.5.1 (14)：首装内置「使用说明」笔记与 Markdown 预览（2026-10-24）
+
+由 GLM-5.3-Flash 子任务实现、主对话验收：
+
+- **首装播种**：`EntryStore.load()` 在 content==null（无档案文件）且 storage 为 NativeStorage 时，播种「使用说明」笔记（分类「帮助」，正文为 Markdown 使用指南：快速上手/规划/同步备份/笔记预览）。MemoryStorage（全部单测）与已有档案设备不会播种。
+- **Markdown 预览**：新增 flutter_markdown 0.7.7+1（pub 标记 discontinued，但与 Flutter 3.47.7/Dart 3.13.5 兼容，任务允许）；笔记编辑页右上角 visibility 图标切换「预览/编辑」，预览用 MarkdownBody 渲染（标题/清单/加粗），切换不丢未保存内容（dirty 判定不变）。
+- 版本 0.5.0+13 → **0.5.1+14**（pubspec、appVersion、displayVersion、iOS 小组件三个配置）。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查与测试 | analyze 通过；新增 test/built_in_guide_test.dart 3 项（内置笔记构造、MemoryStorage 不播种、预览切换保留正文）与全量回归通过。 |
+| 模拟器首装端到端 | 卸载重装 Mikanseta → 启动后容器 entries.json 含「使用说明」笔记（kind=note、分类帮助、正文 # 欢迎…）；集成测试驱动打开笔记并切预览，实拍确认渲染。 |
+| 构建安装 | macOS 0.5.1 (14) 构建安装启动；Android APK `Mikanseta-0.5.1+14-android.apk`（SHA-256 `8a082ed9…d81e9d9`）。iPhone 待连接；Windows 由推送 CI 验证。 |
+| 集成修正 | 原生端初始标题「欢迎使用 Mikansei/指南」与 Mikanseta 不一致，主对话统一为「使用说明/帮助」并同步单测断言；swift test 99/99 通过。 |

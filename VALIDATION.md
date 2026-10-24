@@ -149,3 +149,9 @@
 与 Mikanseta 0.5.0 同轮（动态工作流子任务实现）：Entry 新增 sortOrder/plannedDays（Codable 往返有单测）；TaskBoard.order 先比 sortOrder、today 并入 plannedDays；通知计划为今天规划时段的任务在开始时刻发「到点了」弹窗提醒（openURL=mikansei://focus/<id>?action=start，修复过一次跨目标编译：AppRoute 引用改为内联字符串以兼容 Mikanseta macOS 共享编译）；FocusTimerWidget 锁屏在无运行计时时显示下一规划块倒计时（60 分钟窗口）；iPhone 新增 App/PlanningView.swift（日程涂色 + 小时拖拽；列表排序因 iOS 26 List+onMove 冻结滚动改用 LazyVStack+drag&drop）；今日聚焦/待办组内长按拖动排序（Mac 用 List+onMove）；正在做 EntryCard 整块变色。版本 0.3.3 (7) → 0.4.0 (8)（App+Widgets+Mac）。
 
 验证：`swift test` 96/96（新增 5 项）；iOS Debug 模拟器构建、iOS UI 两例（新规划涂色用例 + 版本）与相关 6 例 UI 回归通过；Mac Debug 构建通过；原生 Mac 0.4.0 (8) 已安装。iPhone 真机安装待连接。Mac 规划 sheet 与拖动仅编译验证。
+
+## 0.4.1 (9)：首装内置「使用说明」笔记与 Markdown 预览（2026-10-24）
+
+MikanseiCore 新增 `Entry.builtInGuideNote(now:)`（BuiltInGuide.swift，Markdown 使用指南）与 `NoteMarkdown` 行级解析（#/##/-/段落 + AttributedString 行内加粗）；iOS `EntryStore` 与 Mac `MacWorkspaceStore` 在「档案文件不存在 && !testing」时播种该笔记并落盘；`NoteEditorView` 顶栏 eye/eye.slash 切换预览（预览态行级渲染，不丢未保存内容）；版本 0.4.0 (8) → **0.4.1 (9)**（两 pbxproj 6 处 + UITests 断言）。主对话统一两端标题/分类为「使用说明/帮助」。
+
+验证：`swift test` **99/99**（新增 NoteGuideTests 3 项）；iOS Debug 模拟器构建与版本 UI 用例通过；Mac Debug 构建通过；模拟器卸载重装端到端确认播种（容器 entries.json 含使用说明笔记）；原生 Mac 0.4.1 (9) 已安装。iPhone 真机待连接；预览渲染未在真机实拍。

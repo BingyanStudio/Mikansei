@@ -13,6 +13,7 @@ struct NoteEditorView: View {
     @State private var category: String
     @State private var checklist: [ChecklistItem]
     @State private var newStep = ""
+    @State private var isPreviewing = false
     @FocusState private var titleFocused: Bool
     @State private var confirmDelete = false
     @FocusState private var bodyFocused: Bool
@@ -38,6 +39,13 @@ struct NoteEditorView: View {
                         Image(systemName: "trash")
                     }.accessibilityLabel("删除笔记")
                 }
+                Button {
+                    // 切换只改展示形态，bodyText 等草稿状态不动，未保存内容不丢。
+                    isPreviewing.toggle()
+                    titleFocused = false; bodyFocused = false
+                } label: {
+                    Image(systemName: isPreviewing ? "eye.slash" : "eye")
+                }.accessibilityLabel(isPreviewing ? "编辑" : "预览")
                 Button("完成") { save() }.fontWeight(.semibold).disabled(!canSave)
             }
             .font(.body)
@@ -56,11 +64,15 @@ struct NoteEditorView: View {
                         Text(draft.updatedAt, format: .dateTime.month().day())
                             .font(.footnote).foregroundStyle(.secondary)
                     }
-                    TextField("开始记录", text: $bodyText, axis: .vertical)
-                        .font(.body)
-                        .lineLimit(4...30)
-                        .focused($bodyFocused)
-                        .padding(.top, 2)
+                    if isPreviewing {
+                        markdownPreview
+                    } else {
+                        TextField("开始记录", text: $bodyText, axis: .vertical)
+                            .font(.body)
+                            .lineLimit(4...30)
+                            .focused($bodyFocused)
+                            .padding(.top, 2)
+                    }
                     checklistSection
                 }
                 .padding(.horizontal, 20)
@@ -86,6 +98,31 @@ struct NoteEditorView: View {
             Button("取消", role: .cancel) {}
         } message: {
             Text("删除后通过同步与备份仍可能保留副本。")
+        }
+    }
+
+    /// 预览态正文：NoteMarkdown 行级解析 + AttributedString 行内格式。
+    private var markdownPreview: some View {
+        let lines = NoteMarkdown.lines(bodyText)
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(lines.indices, id: \.self) { index in
+                markdownLine(lines[index])
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    @ViewBuilder private func markdownLine(_ line: NoteMarkdown.Line) -> some View {
+        switch line.kind {
+        case .heading1:
+            Text(NoteMarkdown.inline(line.text))
+                .font(.system(.title, design: .default).weight(.bold))
+        case .heading2:
+            Text(NoteMarkdown.inline(line.text)).font(.title3.weight(.semibold))
+        case .bullet:
+            Text("•  ") + Text(NoteMarkdown.inline(line.text))
+        case .paragraph:
+            if line.text.isEmpty { Text(" ") } else { Text(NoteMarkdown.inline(line.text)) }
         }
     }
 
