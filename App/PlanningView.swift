@@ -248,7 +248,7 @@ private struct HourDropTimeline: View {
         guard let entry = payload.first,
               let start = CalendarTimelineLayout.start(on: date, minuteOffset: minuteOffset, calendar: calendar) else { return false }
         #if canImport(UIKit)
-        UISelectionFeedbackGenerator().selectionChanged()
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
         drop(entry, start)
         return true
@@ -485,9 +485,19 @@ private struct PlanningMonthPicker: View {
         }
         switch painting! {
         case .add:
-            if !dates.contains(where: { calendar.isDate($0, inSameDayAs: day) }) { dates.append(day); dates.sort() }
+            if !dates.contains(where: { calendar.isDate($0, inSameDayAs: day) }) {
+                #if canImport(UIKit)
+                UISelectionFeedbackGenerator().selectionChanged()
+                #endif
+                dates.append(day); dates.sort()
+            }
         case .remove:
-            dates.removeAll { calendar.isDate($0, inSameDayAs: day) }
+            if dates.contains(where: { calendar.isDate($0, inSameDayAs: day) }) {
+                #if canImport(UIKit)
+                UISelectionFeedbackGenerator().selectionChanged()
+                #endif
+                dates.removeAll { calendar.isDate($0, inSameDayAs: day) }
+            }
         }
     }
     private func move(_ direction: Int) {

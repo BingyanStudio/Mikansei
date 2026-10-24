@@ -266,6 +266,7 @@ struct TodayView: View {
               let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
         var ids = group.map(\.id)
         ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         store.reorder(ids)
         return true
     }
@@ -399,6 +400,7 @@ struct TasksView: View {
               let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
         var ids = group.map(\.id)
         ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         store.reorder(ids)
         return true
     }

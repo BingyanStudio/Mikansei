@@ -20,7 +20,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.5.1 (14)';
+const appVersion = '0.5.2 (15)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -1128,6 +1128,8 @@ class AnimatedEntryList extends StatelessWidget {
   void _reorder(List<_ListRow> rows, int oldIndex, int newIndex) {
     final dragged = rows[oldIndex].entry;
     if (dragged == null) return;
+    // 拖动落定才有的确认感，与规划页拖入时间轴一致。
+    HapticFeedback.mediumImpact();
     final without = List.of(rows)..removeAt(oldIndex);
     var after = 0;
     for (var i = 0; i < newIndex && i < without.length; i++) {
@@ -1243,7 +1245,10 @@ class EntryTile extends StatelessWidget {
                   ),
                   onPressed: store.readOnly
                       ? null
-                      : () => store.toggle(entry.id),
+                      : () {
+                          HapticFeedback.mediumImpact();
+                          store.toggle(entry.id);
+                        },
                   icon: Icon(
                     entry.completed
                         ? Icons.check_circle
@@ -1345,7 +1350,10 @@ class EntryTile extends StatelessWidget {
                   ),
                   onPressed: store.readOnly
                       ? null
-                      : () => store.focus(entry.id),
+                      : () {
+                          HapticFeedback.lightImpact();
+                          store.focus(entry.id);
+                        },
                   icon: Icon(
                     entry.startedAt == null
                         ? Icons.play_arrow_rounded
@@ -1423,7 +1431,10 @@ class _InlineChecklist extends StatelessWidget {
                 ),
                 onChanged: store.readOnly
                     ? null
-                    : (_) => store.toggleStep(entry.id, step.id),
+                    : (_) {
+                        HapticFeedback.selectionClick();
+                        store.toggleStep(entry.id, step.id);
+                      },
               ),
             ),
         if (steps.length > 3)

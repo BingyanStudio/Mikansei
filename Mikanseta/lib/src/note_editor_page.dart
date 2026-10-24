@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'domain.dart';
@@ -145,6 +146,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       if (widget.store.saveFailed) {
         throw StateError('笔记暂未写入磁盘，请重试保存。');
       }
+      HapticFeedback.lightImpact();
       if (mounted) Navigator.pop(context);
     } catch (exception) {
       if (mounted) {

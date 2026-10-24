@@ -155,3 +155,9 @@
 MikanseiCore 新增 `Entry.builtInGuideNote(now:)`（BuiltInGuide.swift，Markdown 使用指南）与 `NoteMarkdown` 行级解析（#/##/-/段落 + AttributedString 行内加粗）；iOS `EntryStore` 与 Mac `MacWorkspaceStore` 在「档案文件不存在 && !testing」时播种该笔记并落盘；`NoteEditorView` 顶栏 eye/eye.slash 切换预览（预览态行级渲染，不丢未保存内容）；版本 0.4.0 (8) → **0.4.1 (9)**（两 pbxproj 6 处 + UITests 断言）。主对话统一两端标题/分类为「使用说明/帮助」。
 
 验证：`swift test` **99/99**（新增 NoteGuideTests 3 项）；iOS Debug 模拟器构建与版本 UI 用例通过；Mac Debug 构建通过；模拟器卸载重装端到端确认播种（容器 entries.json 含使用说明笔记）；原生 Mac 0.4.1 (9) 已安装。iPhone 真机待连接；预览渲染未在真机实拍。
+
+## 0.4.2 (10)：关键交互触觉反馈（2026-10-25）
+
+iPhone 六处接入：Checklist 勾选（selection）、计时开始/暂停（light）、规划涂色（selection，仅状态实际变化时）、规划拖入时间轴落定（medium，统一原 selection）、列表拖动排序落定（medium）、笔记保存成功（notification .success）；Mac 无触觉硬件未改行为（PlanningView 触觉沿用 #if canImport(UIKit) 保护）。版本 0.4.1 (9) → 0.4.2 (10)（两 pbxproj 6 处 + UITests 断言）。
+
+验证：swift test 99/99；iPhone 模拟器 Debug 构建与版本 UI 用例通过；0.4.2 (10) 经 devicectl 轮询直装手机；原生 Mac 0.4.2 (10) 安装。真机触感需用户实感确认。

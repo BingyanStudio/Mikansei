@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Capsule segmented control matching the native Mikansei picker: a soft
 /// rounded container with the selected segment filled in the accent color.
@@ -56,7 +57,10 @@ class SegmentedStrip<T> extends StatelessWidget {
       borderRadius: BorderRadius.circular(11),
       child: InkWell(
         borderRadius: BorderRadius.circular(11),
-        onTap: () => onChanged(choice),
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onChanged(choice);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Text(

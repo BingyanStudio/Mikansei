@@ -210,7 +210,7 @@ struct EntryCard: View {
                         Text("\(entry.completedSteps)/\(entry.checklist.count) 项").font(.caption).foregroundStyle(.secondary)
                     }.accessibilityElement(children: .combine)
                     ForEach(entry.checklist.prefix(3)) { step in
-                        Button { withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { store.toggleStep(entryID: entry.id, stepID: step.id) } } label: {
+                        Button { UISelectionFeedbackGenerator().selectionChanged(); withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { store.toggleStep(entryID: entry.id, stepID: step.id) } } label: {
                             HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: step.isDone ? "checkmark.square.fill" : "square")
                                     .foregroundStyle(step.isDone ? Theme.accent : .primary)
@@ -227,7 +227,7 @@ struct EntryCard: View {
                 if entry.isTask && !entry.isCompleted {
                     HStack(spacing: 12) {
                         // Start/pause updates in place: animating the live clock insertion can strand the old label.
-                        Button { store.start(entry.id) } label: {
+                        Button { UIImpactFeedbackGenerator(style: .light).impactOccurred(); store.start(entry.id) } label: {
                             Label(entry.startedAt == nil ? (entry.elapsedSeconds > 0 ? "继续做" : "开始做") : "暂停", systemImage: entry.startedAt == nil ? "play.fill" : "pause")
                                 .font(.caption.weight(.semibold)).padding(.vertical, 4)
                         }.buttonStyle(.bordered).disabled(store.readOnly)

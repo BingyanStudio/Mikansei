@@ -107,7 +107,11 @@ class _PlanningPageState extends State<PlanningPage> {
     // 按下时记录本次涂抹是补涂还是擦除，滑动途中保持同一方向。
     if (start) paintMode = !draft.contains(key);
     if (paintMode == null) return;
-    setState(() => paintMode! ? draft.add(key) : draft.remove(key));
+    // 滑动途中同一格会收到多次回调，只有格子状态真的翻转时才刷新并给一次触觉。
+    if (paintMode! ? draft.add(key) : draft.remove(key)) {
+      setState(() {});
+      HapticFeedback.selectionClick();
+    }
   }
 
   void acceptDrop(DragTargetDetails<Entry> details) {
@@ -118,7 +122,8 @@ class _PlanningPageState extends State<PlanningPage> {
             .clamp(0, 24 * 60 - 30)
             .toInt();
     final start = DateTime(day.year, day.month, day.day, 0, minute);
-    HapticFeedback.selectionClick();
+    // 拖动落定，与列表重排同用 mediumImpact。
+    HapticFeedback.mediumImpact();
     widget.store.setPlannedTime(
       details.data.id,
       start,

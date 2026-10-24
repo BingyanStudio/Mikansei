@@ -360,3 +360,14 @@ Android `Instances` 增加 `rdate` 投影，并把 RRULE、RDATE 或 `original_i
 | 模拟器首装端到端 | 卸载重装 Mikanseta → 启动后容器 entries.json 含「使用说明」笔记（kind=note、分类帮助、正文 # 欢迎…）；集成测试驱动打开笔记并切预览，实拍确认渲染。 |
 | 构建安装 | macOS 0.5.1 (14) 构建安装启动；Android APK `Mikanseta-0.5.1+14-android.apk`（SHA-256 `8a082ed9…d81e9d9`）。iPhone 待连接；Windows 由推送 CI 验证。 |
 | 集成修正 | 原生端初始标题「欢迎使用 Mikansei/指南」与 Mikanseta 不一致，主对话统一为「使用说明/帮助」并同步单测断言；swift test 99/99 通过。 |
+
+## 0.5.2 (15)：关键交互触觉反馈（2026-10-25）
+
+由 GLM-5.3-Flash 子任务实现、主对话验收。统一风格：选中/切换=selectionClick，完成/落定=mediumImpact，开始/暂停与保存成功=lightImpact（macOS/Windows 上自动无操作）。接入点：完成圈、计时开始/暂停、行内 Checklist 勾选、列表拖动重排落定、SegmentedStrip 分段、规划页涂色与拖入时间轴（统一原有零散调用）、笔记保存成功。版本 0.5.1+14 → 0.5.2+15。
+
+| 验证 | 实际结果 |
+| --- | --- |
+| 静态检查与测试 | analyze 通过；工作流门控 Dart 全量与 swift test（99/99）通过；子任务指定三测试文件 45 项通过。 |
+| iPhone | 0.5.2 (15) 构建签名后经 devicectl 轮询直装成功（Supabase 连接值注入核验）。真机触感需用户实感确认。 |
+| macOS / Android | macOS 0.5.2 安装启动；Android APK `Mikanseta-0.5.2+15-android.apk`（SHA-256 `a4022c62…9d2396b`）。 |
+| 范围说明 | 详情面板内重复的完成/计时按钮与"正在做"横幅暂停未加（任务清单外）；真机震动属主观体验，无法自动化验证。 |

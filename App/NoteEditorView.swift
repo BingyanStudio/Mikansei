@@ -177,6 +177,7 @@ struct NoteEditorView: View {
         next.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
         next.checklist = checklist.filter { !$0.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard store.save(next) else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
         dismiss()
     }
 }
