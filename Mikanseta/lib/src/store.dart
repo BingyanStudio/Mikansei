@@ -80,6 +80,11 @@ const String guideMikanseta = '''
 
 ## 笔记
 - 笔记是全页编辑，像备忘录一样；正文支持 **Markdown**，点右上角眼睛图标可切换预览
+
+## 介绍
+- **Mikanseta** 是 Mikansei 的独立 Flutter 测试版，牛皮浅棕主题，清单操作放在首位：手机用底部导航，电脑用侧边导航与键盘快捷键（**⌘/Ctrl + N** 添加、**⌘/Ctrl + F** 搜索）
+- 系统功能需要对应权限：iPhone 实时活动需 iOS 17、原生闹钟需 iOS 26；Mac 用系统通知；安卓的锁屏展示是常驻通知
+- 迁移进度、功能边界与最新动态都在「设置」页内查看
 ''';
 
 class EntryStore extends ChangeNotifier {
