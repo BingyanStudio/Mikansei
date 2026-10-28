@@ -39,16 +39,30 @@ sync_files = sorted(ROOT.glob("Sync/*.swift"))
 widget_files = sorted(ROOT.glob("Widgets/*.swift")) + core_files + shared_files
 app_files = sorted(ROOT.glob("App/*.swift")) + core_files + shared_files + sync_files
 test_files = sorted(ROOT.glob("UITests/*.swift"))
-icon_files = sorted(ROOT.glob("App/Resources/*.png")) + sorted(ROOT.glob("App/Resources/*.wav"))
+icon_files = sorted(
+    path for path in ROOT.glob("App/Resources/*.png")
+    if not path.name.startswith("AppIcon")
+) + sorted(ROOT.glob("App/Resources/*.wav"))
+asset_catalog = ROOT / "App/Assets.xcassets"
+app_privacy_manifest = ROOT / "App/PrivacyInfo.xcprivacy"
+widget_privacy_manifest = ROOT / "Widgets/PrivacyInfo.xcprivacy"
+app_resource_files = icon_files + [asset_catalog, app_privacy_manifest]
+widget_resource_files = [widget_privacy_manifest]
 for path in sorted(set(app_files + test_files + widget_files)):
     rel = path.relative_to(ROOT).as_posix()
     obj("ref:" + rel, f"isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {quote(rel)}; sourceTree = SOURCE_ROOT;")
     obj("build:" + rel, f"isa = PBXBuildFile; fileRef = {uid('ref:' + rel)};")
     if path in widget_files:
         obj("widget-build:" + rel, f"isa = PBXBuildFile; fileRef = {uid('ref:' + rel)};")
-for path in icon_files:
+for path in app_resource_files + widget_resource_files:
     rel = path.relative_to(ROOT).as_posix()
-    obj("ref:" + rel, f"isa = PBXFileReference; lastKnownFileType = {"audio.wav" if path.suffix == ".wav" else "image.png"}; path = {quote(rel)}; sourceTree = SOURCE_ROOT;")
+    file_type = {
+        ".wav": "audio.wav",
+        ".png": "image.png",
+        ".xcassets": "folder.assetcatalog",
+        ".xcprivacy": "text.xml",
+    }[path.suffix]
+    obj("ref:" + rel, f"isa = PBXFileReference; lastKnownFileType = {quote(file_type)}; path = {quote(rel)}; sourceTree = SOURCE_ROOT;")
     obj("build:" + rel, f"isa = PBXBuildFile; fileRef = {uid('ref:' + rel)};")
 obj("plist-ref", "isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App/Info.plist; sourceTree = SOURCE_ROOT;")
 obj("widgets-plist-ref", "isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Widgets/Info.plist; sourceTree = SOURCE_ROOT;")
@@ -58,11 +72,11 @@ obj("product-tests", 'isa = PBXFileReference; explicitFileType = wrapper.cfbundl
 obj("product-widgets", 'isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MikanseiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR;')
 obj("embed-widgets-build", f"isa = PBXBuildFile; fileRef = {uid('product-widgets')}; settings = {{ ATTRIBUTES = (RemoveHeadersOnCopy,); }};")
 obj("embed-widgets", f"isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = \"\"; dstSubfolderSpec = 13; files = {ids(['embed-widgets-build'])}; name = \"Embed App Extensions\"; runOnlyForDeploymentPostprocessing = 0;")
-obj("resources-group", f"isa = PBXGroup; name = Resources; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in icon_files])}; sourceTree = \"<group>\";")
+obj("resources-group", f"isa = PBXGroup; name = Resources; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in app_resource_files])}; sourceTree = \"<group>\";")
 obj("app-group", f"isa = PBXGroup; name = App; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in app_files if p.parent.name == 'App'] + ['plist-ref', 'resources-group'])}; sourceTree = \"<group>\";")
 obj("core-group", f"isa = PBXGroup; name = Core; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in app_files if p.parent.name == 'MikanseiCore'])}; sourceTree = \"<group>\";")
 obj("test-group", f"isa = PBXGroup; name = UITests; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in test_files])}; sourceTree = \"<group>\";")
-obj("widgets-group", f"isa = PBXGroup; name = Widgets; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in widget_files if p.parent.name == 'Widgets'] + ['widgets-plist-ref'])}; sourceTree = \"<group>\";")
+obj("widgets-group", f"isa = PBXGroup; name = Widgets; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in widget_files if p.parent.name == 'Widgets'] + ['widgets-plist-ref', 'ref:' + widget_privacy_manifest.relative_to(ROOT).as_posix()])}; sourceTree = \"<group>\";")
 obj("shared-group", f"isa = PBXGroup; name = Shared; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in shared_files] + ['entitlements-ref'])}; sourceTree = \"<group>\";")
 obj("sync-group", f"isa = PBXGroup; name = Sync; children = {ids(['ref:' + p.relative_to(ROOT).as_posix() for p in sync_files])}; sourceTree = \"<group>\";")
 obj("products-group", f"isa = PBXGroup; name = Products; children = {ids(['product-app', 'product-widgets', 'product-tests'])}; sourceTree = \"<group>\";")
@@ -71,7 +85,8 @@ for name, files in [("app", app_files), ("tests", test_files), ("widgets", widge
     build_prefix = "widget-build:" if name == "widgets" else "build:"
     obj(name + "-sources", f"isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = {ids([build_prefix + p.relative_to(ROOT).as_posix() for p in files])}; runOnlyForDeploymentPostprocessing = 0;")
     obj(name + "-frameworks", "isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;")
-    resources = ids(['build:' + p.relative_to(ROOT).as_posix() for p in icon_files]) if name == "app" else "()"
+    resource_files = app_resource_files if name == "app" else widget_resource_files if name == "widgets" else []
+    resources = ids(['build:' + p.relative_to(ROOT).as_posix() for p in resource_files]) if resource_files else "()"
     obj(name + "-resources", f"isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = {resources}; runOnlyForDeploymentPostprocessing = 0;")
 
 obj("test-proxy", f"isa = PBXContainerItemProxy; containerPortal = {uid('project')}; proxyType = 1; remoteGlobalIDString = {uid('target-app')}; remoteInfo = Mikansei;")
@@ -121,7 +136,11 @@ for scope, settings in [("project", common), ("app", app_settings), ("tests", te
                 values.update({"SWIFT_ACTIVE_COMPILATION_CONDITIONS": "DEBUG", "ENABLE_TESTABILITY": "YES", "ONLY_ACTIVE_ARCH": "YES"})
         values.update(previous_objects.get(uid(scope + "-" + configuration), {}).get("buildSettings", {}))
         if scope == "app":
-            values.update({"CODE_SIGN_ENTITLEMENTS": "Shared/Mikansei.entitlements", "MIKANSEI_SHARED_KEYCHAIN_SUFFIX": "$(PRODUCT_BUNDLE_IDENTIFIER).shared"})
+            values.update({
+                "CODE_SIGN_ENTITLEMENTS": "Shared/Mikansei.entitlements",
+                "MIKANSEI_SHARED_KEYCHAIN_SUFFIX": "$(PRODUCT_BUNDLE_IDENTIFIER).shared",
+                "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
+            })
         if scope == "widgets":
             host = dict(app_settings)
             host.update(previous_objects.get(uid("app-" + configuration), {}).get("buildSettings", {}))

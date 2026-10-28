@@ -1,0 +1,3 @@
+嗨，我把 Mikansei 原生 iOS TestFlight 交接资料整理好了。解压后先看包根目录的 README，再看 `Materials/APP_STORE_CONNECT_FIELDS.md`；产品介绍、测试说明和中英文审核备注都已备好。
+
+接下来只需你用自己的 Apple Developer / App Store Connect 账号完成发布者侧操作：按 README 的 BUILD_GUIDE 使用你的 Team ID 生成发布工程，并从 `PREPARED_APP.json` 复制主 App 和 Widgets 的 Bundle ID；再填写 Apple 分配的 App Store Connect 记录 ID 和你本人的真实审核联系人，最后用自己的团队签名、提交 TestFlight 并完成审核流程。若生成的 Bundle ID 有冲突，请使用构建助手的自定义选项，不要直接改原工程。这个资料包没有附 IPA，也没有声称已经签名或上传。

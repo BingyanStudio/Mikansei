@@ -1,0 +1,5 @@
+Mikansei is a native iOS app for tasks, schedules, and notes. Create tasks, set due dates, add checklist steps, and take notes. Optional integrations include Apple Calendar, Home Screen and Lock Screen widgets, Live Activities, and reminders.
+
+Your items are stored on your device by default. You can choose an iCloud Drive folder for cross-device sync. No sign-in is required. Calendar, notification, alarm, and Live Activity permissions are optional; declining them does not block local checklists or notes.
+
+This is the first external TestFlight beta of the native Mikansei iOS app. Please report issues through TestFlight feedback or email kikuchiheinr@qq.com with your device model, iOS version, and reproduction steps. Remove personal information from screenshots or descriptions before sending.

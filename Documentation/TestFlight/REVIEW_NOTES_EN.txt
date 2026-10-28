@@ -1,0 +1,20 @@
+Mikansei is a native SwiftUI task, schedule, and notes app for iPhone and iPad. The app has no sign-in, account creation, test account, or app-operated backend. Task and note data is stored on-device by default. Optional iCloud Drive folder sync starts only after the user selects a folder.
+
+The app UI is in Simplified Chinese. Useful labels:
+- 待办 = Tasks; 日程 = Schedule; 笔记 = Notes; 我的 = Settings.
+- 保存 = Save; 完成 = Done; 添加 = Add; 立即同步 = Sync Now.
+
+Review path:
+1. On first launch, the app may request calendar read access because automatic calendar sync is enabled by default. Calendar sources are initially unselected. You may decline this prompt; local tasks and notes remain usable. The app may also show a built-in “使用说明” (User Guide) note on first install.
+2. Create a task: on the “待办” tab, tap + at the upper right. Keep the type set to “待办,” enter a title in “要做什么？,” and tap “保存.”
+3. Add checklist steps: tap the task card to edit it. Scroll to “Checklist · 逐项勾选,” enter a step in “添加一个小步骤,” tap “添加,” then “保存.” Back on the card, tap a checklist row to toggle its checkbox. Tap the circle to the left of the task title to mark the whole task complete; tap again to reopen it.
+4. Add a note: tap the bottom “笔记” tab and tap + at the upper right. The full-screen note editor opens directly; enter a title and body, then tap “完成.”
+5. Export a backup: tap the gear at the upper left to open “我的.” Under “数据与备份,” tap “导出 JSON 备份” and choose a destination in the iOS file picker. Import is optional and merges a selected JSON backup.
+6. Calendar import is optional. To inspect it, open “日历自动导入” under Settings, grant calendar access if desired, select a calendar source, and tap “立即同步.” Only selected sources are imported. If access is declined, skip this integration and continue the local review.
+7. Widgets are optional. Open Mikansei once, then add a Mikansei widget from the Home Screen edit mode. Available choices include “今日清单,” “快速添加,” “今日进度,” and “正在做 · 计时.” Lock Screen widget availability depends on the widget and device.
+8. Live Activity is optional. Tap + to create a task, tap “今天” (Today) in the editor, and save it so there is an unfinished task due today. If you decline a notification permission prompt while saving, tap “先保存事项” (Save Item Anyway) in the app prompt. Enable “自动显示今日 DDL” in Settings under “锁屏与灵动岛 · 实时活动.” Allow Live Activities if prompted. Check the Lock Screen and, on a supported iPhone, Dynamic Island.
+9. Privacy and support links are in Settings under “隐私与支持.” Open “隐私政策,” “使用帮助与支持,” or “邮件联系开发者.”
+
+Notifications, calendar access, AlarmKit alarms, and Live Activities are optional system permissions. Denying any of them does not block local task, checklist, or note review. AlarmKit alarms require iOS 26 or later; the app's minimum supported OS is iOS 17. Calendar access is used only for the selected calendar sources. No login credentials are required or available.
+
+Please use the prepared Beta App Review contact details from the publishing account. Feedback email: kikuchiheinr@qq.com.

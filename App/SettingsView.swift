@@ -121,6 +121,19 @@ struct SettingsView: View {
             } header: { Text("数据与备份") } footer: {
                 Text("数据先保存在本机；选择 iCloud Drive 文件夹后与其他设备合并。卸载 App 会删除本地数据，请定期备份到“文件”。导入采用合并方式，相同编号保留最近修改的版本。")
             }
+            Section("隐私与支持") {
+                Link(destination: URL(string: "https://github.com/KikuchiHeinrich/Mikansei/blob/experimental/sync/Documentation/TestFlight/PRIVACY_POLICY.md")!) {
+                    Label("隐私政策", systemImage: "hand.raised")
+                }
+                Link(destination: URL(string: "https://github.com/KikuchiHeinrich/Mikansei/blob/experimental/sync/Documentation/TestFlight/SUPPORT.md")!) {
+                    Label("使用帮助与支持", systemImage: "questionmark.circle")
+                }
+                Link(destination: URL(string: "mailto:kikuchiheinr@qq.com")!) {
+                    Label("邮件联系开发者", systemImage: "envelope")
+                }
+                Text("隐私政策说明 Mikansei 如何处理你的数据；遇到问题时可查看支持说明或联系开发者。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section {
                 LabeledContent("版本", value: "\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—") (\(Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"))")
                     .accessibilityElement(children: .ignore).accessibilityLabel("版本")

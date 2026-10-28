@@ -1,0 +1,16 @@
+Please test these flows in the first full external beta of native Mikansei. Skip optional integrations as needed.
+
+1. Task completion: open “待办” (Tasks), tap + at upper right, enter a title, and tap “保存” (Save). Tap the circle beside the task to complete or reopen it.
+2. Checklist: open the task, add a step under “Checklist · 逐项勾选,” tap “添加” (Add) and “保存” (Save), then toggle the step on its card.
+3. Notes: open the bottom “笔记” (Notes) tab and tap + to open the full-screen editor. Add a title and body, tap “完成” (Done), then try the eye button for preview.
+4. JSON backup: tap the upper-left gear, then “导出 JSON 备份” (Export JSON Backup) under “数据与备份” (Data and Backup). Save in Files. Test import only with a copy; import merges data.
+5. Calendar (optional): iOS may request calendar access on first launch; decline and continue if you prefer. To test import, open “日历自动导入” (Automatic Calendar Import) in Settings, allow access, select a test calendar, and tap “立即同步” (Sync Now). Only selected calendars are imported.
+6. Widgets (optional): open the app once, then add a Mikansei “今日清单,” “快速添加,” “今日进度,” or “正在做 · 计时” widget from Home Screen edit mode. Check its tasks and app links. Lock Screen widgets depend on device support.
+7. Live Activity (optional): create a task due today by tapping +, then “今天” (Today), and save. If you decline the notification prompt, choose “先保存事项” (Save Item Anyway). In Settings enable “自动显示今日 DDL” under “锁屏与灵动岛 · 实时活动.” Allow Live Activities if prompted; check the Lock Screen and Dynamic Island on a supported iPhone.
+8. Message parsing (optional): tap “从消息添加,” paste a fictional or redacted sample, tap “提取建议,” review it, then tap “核对并编辑事项.” Parsing is on-device and needs no messaging-app login.
+9. Course ICS (optional): from Schedule open “课表与登记” → “导入 ICS / CSV 课表.” Review the preview and tap “确认导入,” or cancel to avoid saving test courses.
+10. iCloud Drive sync (optional): in Settings, find “iCloud Drive · 跨设备同步,” select a test folder, and tap “立即同步.” Select the same folder on another device using the same Apple ID to check merging.
+11. Notifications and alarms (optional): save a task due “今天” to try notification permission. To test alarms, create a schedule and choose “闹钟提醒” under “提醒形式.” If declined, choose “先保存事项.” Alarms require iOS 26 or later.
+12. Privacy and support (optional): in Settings under “隐私与支持,” open “隐私政策,” “使用帮助与支持,” or “邮件联系开发者.”
+
+These integrations are optional; declining permissions does not block local tasks or notes. Report your device, iOS version, reproduction steps, and result. Redact screenshots. Feedback: kikuchiheinr@qq.com.
