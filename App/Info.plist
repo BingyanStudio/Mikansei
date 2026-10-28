@@ -49,9 +49,28 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Mikansei</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mikansei</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>MikanseiSharedKeychainGroup</key>
+	<string>$(AppIdentifierPrefix)$(MIKANSEI_SHARED_KEYCHAIN_SUFFIX)</string>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>为你选择的事项和下课登记安排系统闹钟，按铃声提醒，并支持稍后提醒。</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>读取选定日历，将日程同步为待办；在你选择安排或编辑日历并确认保存后，写入对应日程。Checklist、截止日期与完成状态保存在 Mikansei。</string>
+	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
@@ -73,24 +92,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>Mikansei</string>
-			<key>CFBundleURLSchemes</key>
-			<array>
-				<string>mikansei</string>
-			</array>
-		</dict>
-	</array>
-	<key>MikanseiSharedKeychainGroup</key>
-	<string>$(AppIdentifierPrefix)$(MIKANSEI_SHARED_KEYCHAIN_SUFFIX)</string>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>读取选定日历，将日程同步为待办；在你选择安排或编辑日历并确认保存后，写入对应日程。Checklist、截止日期与完成状态保存在 Mikansei。</string>
-	<key>NSAlarmKitUsageDescription</key>
-	<string>为你选择的事项和下课登记安排系统闹钟，按铃声提醒，并支持稍后提醒。</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 </dict>
 </plist>

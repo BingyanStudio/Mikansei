@@ -1,190 +1,810 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
+	classes = {
+	};
 	objectVersion = 56;
 	objects = {
-		8133315A88BDC801B0B347C2 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/CalendarPlanEditor.swift"; sourceTree = SOURCE_ROOT; };
-		FA8EE1BB46B2780FFEE29876 = { isa = PBXBuildFile; fileRef = 8133315A88BDC801B0B347C2; };
-		87698B15A51502547E56D21A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/CalendarScheduleView.swift"; sourceTree = SOURCE_ROOT; };
-		44A9777C82921F467105EEC0 = { isa = PBXBuildFile; fileRef = 87698B15A51502547E56D21A; };
-		70613647BDFEFFECE0ED65EE = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/CalendarSyncManager.swift"; sourceTree = SOURCE_ROOT; };
-		D2AA6B471EF34DC42140533C = { isa = PBXBuildFile; fileRef = 70613647BDFEFFECE0ED65EE; };
-		67B61FA83A1CC4D1A96DFA3C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/CalendarSyncView.swift"; sourceTree = SOURCE_ROOT; };
-		FAF7C6C64FF5D6AF0A558FF3 = { isa = PBXBuildFile; fileRef = 67B61FA83A1CC4D1A96DFA3C; };
-		F6403AB1D221F130099CE41E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/CoursesView.swift"; sourceTree = SOURCE_ROOT; };
-		5F4D1CD505CEEFA4A5388E6D = { isa = PBXBuildFile; fileRef = F6403AB1D221F130099CE41E; };
-		F6DAECF327BAC73E2B8632F9 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/DeadlineActivityManager.swift"; sourceTree = SOURCE_ROOT; };
-		EF113836C9D25DAAD58E6632 = { isa = PBXBuildFile; fileRef = F6DAECF327BAC73E2B8632F9; };
-		F620CD28A1DDF89ED5F39C39 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/EntryEditor.swift"; sourceTree = SOURCE_ROOT; };
-		7ED200A96026C06A12BEDCE0 = { isa = PBXBuildFile; fileRef = F620CD28A1DDF89ED5F39C39; };
-		4779EF48347CA525143A2B54 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/EntryStore.swift"; sourceTree = SOURCE_ROOT; };
-		209BC72FED7A175E364746EB = { isa = PBXBuildFile; fileRef = 4779EF48347CA525143A2B54; };
-		3621557455A86797C404833C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/MessageImportView.swift"; sourceTree = SOURCE_ROOT; };
-		0ECC10D3B19D633FA621C590 = { isa = PBXBuildFile; fileRef = 3621557455A86797C404833C; };
-		72D5838A6E4840AAFE896FB5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/MikanseiApp.swift"; sourceTree = SOURCE_ROOT; };
-		727F023FDF337BA3E8AB18EC = { isa = PBXBuildFile; fileRef = 72D5838A6E4840AAFE896FB5; };
-		F3B6C1124B0DF9D9C8F1DF58 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/NativeAlarmScheduler.swift"; sourceTree = SOURCE_ROOT; };
-		CBB54B9A2C228A0F7D0632E5 = { isa = PBXBuildFile; fileRef = F3B6C1124B0DF9D9C8F1DF58; };
-		71FF5325F549501E6D0F3A4C = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/NotificationManager.swift"; sourceTree = SOURCE_ROOT; };
-		FE9C5056F4DFC350D49131E4 = { isa = PBXBuildFile; fileRef = 71FF5325F549501E6D0F3A4C; };
-		05BEDCC9CDF304B89471EBD6 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/ReminderOptionsView.swift"; sourceTree = SOURCE_ROOT; };
-		C06CE5FC4C0B16F63F3EBC0A = { isa = PBXBuildFile; fileRef = 05BEDCC9CDF304B89471EBD6; };
-		98470E50E821F5F2AF00BB26 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/RootView.swift"; sourceTree = SOURCE_ROOT; };
-		6E5ADF97B74568D5E0C965A2 = { isa = PBXBuildFile; fileRef = 98470E50E821F5F2AF00BB26; };
-		F499F78180BFBC467A0E27B8 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
-		C733C6442A281599567C6C83 = { isa = PBXBuildFile; fileRef = F499F78180BFBC467A0E27B8; };
-		74F9AAD7871BCD7BC41CDCF5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "App/Theme.swift"; sourceTree = SOURCE_ROOT; };
-		CE616C6B4D5D2068A1642076 = { isa = PBXBuildFile; fileRef = 74F9AAD7871BCD7BC41CDCF5; };
-		88EB406DC81D0AAC757C9D47 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/DeadlineActivityAttributes.swift"; sourceTree = SOURCE_ROOT; };
-		6DA92CF8CB39DC0727AFFDB3 = { isa = PBXBuildFile; fileRef = 88EB406DC81D0AAC757C9D47; };
-		376B0C4B80C2B5D8D869EBB9 = { isa = PBXBuildFile; fileRef = 88EB406DC81D0AAC757C9D47; };
-		EBCE2CD86B937A142540CD5F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/FocusClock.swift"; sourceTree = SOURCE_ROOT; };
-		A4AC334DEEDB8316C159A3A3 = { isa = PBXBuildFile; fileRef = EBCE2CD86B937A142540CD5F; };
-		47C085D94D8777C32CF7A167 = { isa = PBXBuildFile; fileRef = EBCE2CD86B937A142540CD5F; };
-		D38AE40FA49488BE2E817A29 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/ReminderAlarmMetadata.swift"; sourceTree = SOURCE_ROOT; };
-		752753ACD6785CFAA938E279 = { isa = PBXBuildFile; fileRef = D38AE40FA49488BE2E817A29; };
-		D362F09ECF9C5EEBDAE6F0C8 = { isa = PBXBuildFile; fileRef = D38AE40FA49488BE2E817A29; };
-		CBFCE6543A366193E9DEF873 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Shared/WidgetSnapshotStore.swift"; sourceTree = SOURCE_ROOT; };
-		4E447F625C4BA05ECABD4C18 = { isa = PBXBuildFile; fileRef = CBFCE6543A366193E9DEF873; };
-		80B33A3649E76A9E70361592 = { isa = PBXBuildFile; fileRef = CBFCE6543A366193E9DEF873; };
-		120C65F3A243CD19A6EC649A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/AppRoute.swift"; sourceTree = SOURCE_ROOT; };
-		7C9DC02F5F6408ACC311203A = { isa = PBXBuildFile; fileRef = 120C65F3A243CD19A6EC649A; };
-		A9551875D85E74C13F811A1D = { isa = PBXBuildFile; fileRef = 120C65F3A243CD19A6EC649A; };
-		A7AE391A6537A051CAB24CCF = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/Archive.swift"; sourceTree = SOURCE_ROOT; };
-		DF9466138765CCCB0BE76072 = { isa = PBXBuildFile; fileRef = A7AE391A6537A051CAB24CCF; };
-		CB92AFEC2E920BD498BAE6FB = { isa = PBXBuildFile; fileRef = A7AE391A6537A051CAB24CCF; };
-		C63A754DD2CB404C4CE5AC11 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/CalendarDisplay.swift"; sourceTree = SOURCE_ROOT; };
-		8F504D01148AD38A8407FB1E = { isa = PBXBuildFile; fileRef = C63A754DD2CB404C4CE5AC11; };
-		F92E65F03A805A56B2F370E9 = { isa = PBXBuildFile; fileRef = C63A754DD2CB404C4CE5AC11; };
-		2BFB5F84D3265D7D08F20490 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/CalendarSync.swift"; sourceTree = SOURCE_ROOT; };
-		113ADDE32572464C16152C8D = { isa = PBXBuildFile; fileRef = 2BFB5F84D3265D7D08F20490; };
-		2747757A49D458F720F9ACBC = { isa = PBXBuildFile; fileRef = 2BFB5F84D3265D7D08F20490; };
-		A88C3B83B5BE286EC5128CE7 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/Course.swift"; sourceTree = SOURCE_ROOT; };
-		788C68AA3B93E0C4B68BC63E = { isa = PBXBuildFile; fileRef = A88C3B83B5BE286EC5128CE7; };
-		1361F3F6C3BFCEC212BF4D30 = { isa = PBXBuildFile; fileRef = A88C3B83B5BE286EC5128CE7; };
-		A364BDB038BC32727C15C3B3 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/CourseICS.swift"; sourceTree = SOURCE_ROOT; };
-		4A00DBF98CC158C01FD6CE36 = { isa = PBXBuildFile; fileRef = A364BDB038BC32727C15C3B3; };
-		2BBB2856AA5B748D4BCAE36D = { isa = PBXBuildFile; fileRef = A364BDB038BC32727C15C3B3; };
-		A8DAF823F07359239D714C3B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/DeadlineActivitySnapshot.swift"; sourceTree = SOURCE_ROOT; };
-		9190AE888B88B6BDAAB45934 = { isa = PBXBuildFile; fileRef = A8DAF823F07359239D714C3B; };
-		D16DAFBE48D3BF8A157A6471 = { isa = PBXBuildFile; fileRef = A8DAF823F07359239D714C3B; };
-		70D9C6140FABB522BDC3448F = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/Entry.swift"; sourceTree = SOURCE_ROOT; };
-		62A5C24214FE9D98E6EF2E78 = { isa = PBXBuildFile; fileRef = 70D9C6140FABB522BDC3448F; };
-		06314631C7A5546779CEC54E = { isa = PBXBuildFile; fileRef = 70D9C6140FABB522BDC3448F; };
-		5487AEEB610BC9BDBCA3CB15 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/FocusSession.swift"; sourceTree = SOURCE_ROOT; };
-		D3DA7AFC28A1F6892E2A6C11 = { isa = PBXBuildFile; fileRef = 5487AEEB610BC9BDBCA3CB15; };
-		2716A362B19DC9C8CF66C5FE = { isa = PBXBuildFile; fileRef = 5487AEEB610BC9BDBCA3CB15; };
-		3144B491505E278E309A768A = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/FolderSyncTransport.swift"; sourceTree = SOURCE_ROOT; };
-		0C99FACD7B218F6451A45737 = { isa = PBXBuildFile; fileRef = 3144B491505E278E309A768A; };
-		30B6133C3008E6E287ED12DD = { isa = PBXBuildFile; fileRef = 3144B491505E278E309A768A; };
-		AE4AD9F79858106D43C762FA = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/MessageParser.swift"; sourceTree = SOURCE_ROOT; };
-		CE31AEBC18F7097EBB8FDABE = { isa = PBXBuildFile; fileRef = AE4AD9F79858106D43C762FA; };
-		308499A80B416EFFBCFFE2F5 = { isa = PBXBuildFile; fileRef = AE4AD9F79858106D43C762FA; };
-		AF281AD9F486C1A8BB025F07 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/ReminderOptions.swift"; sourceTree = SOURCE_ROOT; };
-		968911717DE06B37072A6847 = { isa = PBXBuildFile; fileRef = AF281AD9F486C1A8BB025F07; };
-		8806DD95B877BBA8FD6076CD = { isa = PBXBuildFile; fileRef = AF281AD9F486C1A8BB025F07; };
-		70A5A2D7BAE2D7CC6D3F0DD5 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/WidgetSnapshot.swift"; sourceTree = SOURCE_ROOT; };
-		63E388DBAC8541FB253B62E1 = { isa = PBXBuildFile; fileRef = 70A5A2D7BAE2D7CC6D3F0DD5; };
-		B1FCF06F40C51BDC73A0D227 = { isa = PBXBuildFile; fileRef = 70A5A2D7BAE2D7CC6D3F0DD5; };
-		A6A1A135C8DEEE157EBC259E = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sources/MikanseiCore/WorkspaceSync.swift"; sourceTree = SOURCE_ROOT; };
-		6558D564C1540E2ABC10D7CE = { isa = PBXBuildFile; fileRef = A6A1A135C8DEEE157EBC259E; };
-		18DDE438FB34ACD7C10D7B42 = { isa = PBXBuildFile; fileRef = A6A1A135C8DEEE157EBC259E; };
-		04D86BF0E73970160CC9B2D9 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sync/FolderSyncManager.swift"; sourceTree = SOURCE_ROOT; };
-		A38B063349FCECEC9F1A2245 = { isa = PBXBuildFile; fileRef = 04D86BF0E73970160CC9B2D9; };
-		ED42AEF648B905ED6EE31F55 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Sync/FolderSyncSettings.swift"; sourceTree = SOURCE_ROOT; };
-		EBE5B1BDD909ABD5834F4C1B = { isa = PBXBuildFile; fileRef = ED42AEF648B905ED6EE31F55; };
-		3E47B32AAEF627458588F2C0 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UITests/MikanseiUITests.swift"; sourceTree = SOURCE_ROOT; };
-		5C8DE70DA08297174B7F123B = { isa = PBXBuildFile; fileRef = 3E47B32AAEF627458588F2C0; };
-		8A1D83136F71AC95E298489D = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Widgets/DeadlineLiveActivity.swift"; sourceTree = SOURCE_ROOT; };
-		2C4C5F774E2924EB2603BE9A = { isa = PBXBuildFile; fileRef = 8A1D83136F71AC95E298489D; };
-		73B439AF8340CA6E15E83B75 = { isa = PBXBuildFile; fileRef = 8A1D83136F71AC95E298489D; };
-		900953CC04BDDF20698310C6 = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Widgets/MikanseiWidgets.swift"; sourceTree = SOURCE_ROOT; };
-		F3E447C3380759BB2CD2C67C = { isa = PBXBuildFile; fileRef = 900953CC04BDDF20698310C6; };
-		34D56BBECF7BC1FF0C17AFC4 = { isa = PBXBuildFile; fileRef = 900953CC04BDDF20698310C6; };
-		4861412A8C098412F8FADD0B = { isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Widgets/ReminderAlarmActivity.swift"; sourceTree = SOURCE_ROOT; };
-		6576A3A2031B5815002BCDB1 = { isa = PBXBuildFile; fileRef = 4861412A8C098412F8FADD0B; };
-		6BF21CE41FB038D01EB99324 = { isa = PBXBuildFile; fileRef = 4861412A8C098412F8FADD0B; };
-		07C82FF41026E356F467DC81 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon20x20.png"; sourceTree = SOURCE_ROOT; };
-		C843526D732CADB098A0B54A = { isa = PBXBuildFile; fileRef = 07C82FF41026E356F467DC81; };
-		8A17CB8C1C9024052E3B16E8 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon20x20@2x.png"; sourceTree = SOURCE_ROOT; };
-		AE025C05617C5254A5A12922 = { isa = PBXBuildFile; fileRef = 8A17CB8C1C9024052E3B16E8; };
-		0E863EEB8FB395A65E5D2D67 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon20x20@3x.png"; sourceTree = SOURCE_ROOT; };
-		5F90D54D4AA7AD665BF5C499 = { isa = PBXBuildFile; fileRef = 0E863EEB8FB395A65E5D2D67; };
-		567BAD0EC1B5D0E01E06AAAD = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon29x29.png"; sourceTree = SOURCE_ROOT; };
-		7A04645927C48D3B9A9AFF34 = { isa = PBXBuildFile; fileRef = 567BAD0EC1B5D0E01E06AAAD; };
-		9F5930A3535F3AAFF460B88A = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon29x29@2x.png"; sourceTree = SOURCE_ROOT; };
-		261CEACC963E10086B6B0C7C = { isa = PBXBuildFile; fileRef = 9F5930A3535F3AAFF460B88A; };
-		AD80B1305C72FE07C5897743 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon29x29@3x.png"; sourceTree = SOURCE_ROOT; };
-		9EF90BBD6A735461096DAB52 = { isa = PBXBuildFile; fileRef = AD80B1305C72FE07C5897743; };
-		C0C6CA14607C0D332B42FE53 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon40x40.png"; sourceTree = SOURCE_ROOT; };
-		A5FC69F049F997626EE81701 = { isa = PBXBuildFile; fileRef = C0C6CA14607C0D332B42FE53; };
-		023009023DBBB44207A86305 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon40x40@2x.png"; sourceTree = SOURCE_ROOT; };
-		F8463A9029F577C5E06D97BB = { isa = PBXBuildFile; fileRef = 023009023DBBB44207A86305; };
-		0CF872FF9315A9E1CDC6639E = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon40x40@3x.png"; sourceTree = SOURCE_ROOT; };
-		0B3203C4AEEAD48C042BD063 = { isa = PBXBuildFile; fileRef = 0CF872FF9315A9E1CDC6639E; };
-		DC54EABAA1FDCFBDBD1E4F6C = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon60x60@2x.png"; sourceTree = SOURCE_ROOT; };
-		072708027173F8EDC5FF866D = { isa = PBXBuildFile; fileRef = DC54EABAA1FDCFBDBD1E4F6C; };
-		A5943D34E7D305AE21147206 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon60x60@3x.png"; sourceTree = SOURCE_ROOT; };
-		D3CCAC822A6000C15AFD331E = { isa = PBXBuildFile; fileRef = A5943D34E7D305AE21147206; };
-		CAC72C28A798457F71BEC2C2 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon76x76.png"; sourceTree = SOURCE_ROOT; };
-		352F11747DE916C96B17ACF5 = { isa = PBXBuildFile; fileRef = CAC72C28A798457F71BEC2C2; };
-		2546CF28DD7E56E1F77C6B6F = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon76x76@2x.png"; sourceTree = SOURCE_ROOT; };
-		2F92B4FBAB6513E0DAD90638 = { isa = PBXBuildFile; fileRef = 2546CF28DD7E56E1F77C6B6F; };
-		92DB27979499EDAAA86B4E26 = { isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon83.5x83.5@2x.png"; sourceTree = SOURCE_ROOT; };
-		37109DAD10CED605D16302FC = { isa = PBXBuildFile; fileRef = 92DB27979499EDAAA86B4E26; };
-		17ED94A344416B6704BF3CE7 = { isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-chime.wav"; sourceTree = SOURCE_ROOT; };
-		131404E3188480E3BE63F523 = { isa = PBXBuildFile; fileRef = 17ED94A344416B6704BF3CE7; };
-		D486BCA03C8373AB8A4E6AD3 = { isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-morning.wav"; sourceTree = SOURCE_ROOT; };
-		25ECE73021645EACD490FCFF = { isa = PBXBuildFile; fileRef = D486BCA03C8373AB8A4E6AD3; };
-		7AA99A31E854D4175DEBE719 = { isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-pulse.wav"; sourceTree = SOURCE_ROOT; };
-		5D527298D562ED9B472D2FEB = { isa = PBXBuildFile; fileRef = 7AA99A31E854D4175DEBE719; };
-		8043F938DE44F0862C5759C9 = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App/Info.plist; sourceTree = SOURCE_ROOT; };
-		BB5E62A0B1E65C2D802862CA = { isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Widgets/Info.plist; sourceTree = SOURCE_ROOT; };
-		EEB8D2129CF6E076F7455CB0 = { isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shared/Mikansei.entitlements; sourceTree = SOURCE_ROOT; };
-		36992FD9EFCC35941EC8F506 = { isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mikansei.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		1BDCCF10062BC847C2914E5C = { isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MikanseiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		4EFF2A916A79728361E137BE = { isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MikanseiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		F1D7D62061CF86DF48068A80 = { isa = PBXBuildFile; fileRef = 4EFF2A916A79728361E137BE; settings = { ATTRIBUTES = (RemoveHeadersOnCopy,); }; };
-		7856763FBF5D8529A9AD8704 = { isa = PBXCopyFilesBuildPhase; buildActionMask = 2147483647; dstPath = ""; dstSubfolderSpec = 13; files = (F1D7D62061CF86DF48068A80,); name = "Embed App Extensions"; runOnlyForDeploymentPostprocessing = 0; };
-		50F0FC3AFD5FBC981B5A0DDD = { isa = PBXGroup; name = Resources; children = (07C82FF41026E356F467DC81, 8A17CB8C1C9024052E3B16E8, 0E863EEB8FB395A65E5D2D67, 567BAD0EC1B5D0E01E06AAAD, 9F5930A3535F3AAFF460B88A, AD80B1305C72FE07C5897743, C0C6CA14607C0D332B42FE53, 023009023DBBB44207A86305, 0CF872FF9315A9E1CDC6639E, DC54EABAA1FDCFBDBD1E4F6C, A5943D34E7D305AE21147206, CAC72C28A798457F71BEC2C2, 2546CF28DD7E56E1F77C6B6F, 92DB27979499EDAAA86B4E26, 17ED94A344416B6704BF3CE7, D486BCA03C8373AB8A4E6AD3, 7AA99A31E854D4175DEBE719,); sourceTree = "<group>"; };
-		3C3B0F03DC089F93B8457928 = { isa = PBXGroup; name = App; children = (8133315A88BDC801B0B347C2, 87698B15A51502547E56D21A, 70613647BDFEFFECE0ED65EE, 67B61FA83A1CC4D1A96DFA3C, F6403AB1D221F130099CE41E, F6DAECF327BAC73E2B8632F9, F620CD28A1DDF89ED5F39C39, 4779EF48347CA525143A2B54, 3621557455A86797C404833C, 72D5838A6E4840AAFE896FB5, F3B6C1124B0DF9D9C8F1DF58, 71FF5325F549501E6D0F3A4C, 05BEDCC9CDF304B89471EBD6, 98470E50E821F5F2AF00BB26, F499F78180BFBC467A0E27B8, 74F9AAD7871BCD7BC41CDCF5, 8043F938DE44F0862C5759C9, 50F0FC3AFD5FBC981B5A0DDD,); sourceTree = "<group>"; };
-		B0B8C84E77856132D5681A59 = { isa = PBXGroup; name = Core; children = (120C65F3A243CD19A6EC649A, A7AE391A6537A051CAB24CCF, C63A754DD2CB404C4CE5AC11, 2BFB5F84D3265D7D08F20490, A88C3B83B5BE286EC5128CE7, A364BDB038BC32727C15C3B3, A8DAF823F07359239D714C3B, 70D9C6140FABB522BDC3448F, 5487AEEB610BC9BDBCA3CB15, 3144B491505E278E309A768A, AE4AD9F79858106D43C762FA, AF281AD9F486C1A8BB025F07, 70A5A2D7BAE2D7CC6D3F0DD5, A6A1A135C8DEEE157EBC259E,); sourceTree = "<group>"; };
-		E717C295FF9827DFF805D88B = { isa = PBXGroup; name = UITests; children = (3E47B32AAEF627458588F2C0,); sourceTree = "<group>"; };
-		726771E79DB6AA5402F2AD14 = { isa = PBXGroup; name = Widgets; children = (8A1D83136F71AC95E298489D, 900953CC04BDDF20698310C6, 4861412A8C098412F8FADD0B, BB5E62A0B1E65C2D802862CA,); sourceTree = "<group>"; };
-		AC019E2923F944A838FB0A8F = { isa = PBXGroup; name = Shared; children = (88EB406DC81D0AAC757C9D47, EBCE2CD86B937A142540CD5F, D38AE40FA49488BE2E817A29, CBFCE6543A366193E9DEF873, EEB8D2129CF6E076F7455CB0,); sourceTree = "<group>"; };
-		5ABAD42FBC764E056DACA39F = { isa = PBXGroup; name = Sync; children = (04D86BF0E73970160CC9B2D9, ED42AEF648B905ED6EE31F55,); sourceTree = "<group>"; };
-		615B463D1028E4E24B674CF7 = { isa = PBXGroup; name = Products; children = (36992FD9EFCC35941EC8F506, 4EFF2A916A79728361E137BE, 1BDCCF10062BC847C2914E5C,); sourceTree = "<group>"; };
-		870B3294C0CBD48AF6BBCC1B = { isa = PBXGroup; children = (3C3B0F03DC089F93B8457928, 726771E79DB6AA5402F2AD14, B0B8C84E77856132D5681A59, AC019E2923F944A838FB0A8F, 5ABAD42FBC764E056DACA39F, E717C295FF9827DFF805D88B, 615B463D1028E4E24B674CF7,); sourceTree = "<group>"; };
-		949D493B91791558E87BC5D7 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (FA8EE1BB46B2780FFEE29876, 44A9777C82921F467105EEC0, D2AA6B471EF34DC42140533C, FAF7C6C64FF5D6AF0A558FF3, 5F4D1CD505CEEFA4A5388E6D, EF113836C9D25DAAD58E6632, 7ED200A96026C06A12BEDCE0, 209BC72FED7A175E364746EB, 0ECC10D3B19D633FA621C590, 727F023FDF337BA3E8AB18EC, CBB54B9A2C228A0F7D0632E5, FE9C5056F4DFC350D49131E4, C06CE5FC4C0B16F63F3EBC0A, 6E5ADF97B74568D5E0C965A2, C733C6442A281599567C6C83, CE616C6B4D5D2068A1642076, 7C9DC02F5F6408ACC311203A, DF9466138765CCCB0BE76072, 8F504D01148AD38A8407FB1E, 113ADDE32572464C16152C8D, 788C68AA3B93E0C4B68BC63E, 4A00DBF98CC158C01FD6CE36, 9190AE888B88B6BDAAB45934, 62A5C24214FE9D98E6EF2E78, D3DA7AFC28A1F6892E2A6C11, 0C99FACD7B218F6451A45737, CE31AEBC18F7097EBB8FDABE, 968911717DE06B37072A6847, 63E388DBAC8541FB253B62E1, 6558D564C1540E2ABC10D7CE, 6DA92CF8CB39DC0727AFFDB3, A4AC334DEEDB8316C159A3A3, 752753ACD6785CFAA938E279, 4E447F625C4BA05ECABD4C18, A38B063349FCECEC9F1A2245, EBE5B1BDD909ABD5834F4C1B,); runOnlyForDeploymentPostprocessing = 0; };
-		BD92572B49AC16A86614498D = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		8ECC8B5D05B79F879ACDF1A2 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (C843526D732CADB098A0B54A, AE025C05617C5254A5A12922, 5F90D54D4AA7AD665BF5C499, 7A04645927C48D3B9A9AFF34, 261CEACC963E10086B6B0C7C, 9EF90BBD6A735461096DAB52, A5FC69F049F997626EE81701, F8463A9029F577C5E06D97BB, 0B3203C4AEEAD48C042BD063, 072708027173F8EDC5FF866D, D3CCAC822A6000C15AFD331E, 352F11747DE916C96B17ACF5, 2F92B4FBAB6513E0DAD90638, 37109DAD10CED605D16302FC, 131404E3188480E3BE63F523, 25ECE73021645EACD490FCFF, 5D527298D562ED9B472D2FEB,); runOnlyForDeploymentPostprocessing = 0; };
-		73449B7401E2150CE31884A3 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (5C8DE70DA08297174B7F123B,); runOnlyForDeploymentPostprocessing = 0; };
-		156998F1D551F8233F560236 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		7AB1BC06231813FA800FC177 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		2B30B1D5F15490C7A8567E54 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (73B439AF8340CA6E15E83B75, 34D56BBECF7BC1FF0C17AFC4, 6BF21CE41FB038D01EB99324, A9551875D85E74C13F811A1D, CB92AFEC2E920BD498BAE6FB, F92E65F03A805A56B2F370E9, 2747757A49D458F720F9ACBC, 1361F3F6C3BFCEC212BF4D30, 2BBB2856AA5B748D4BCAE36D, D16DAFBE48D3BF8A157A6471, 06314631C7A5546779CEC54E, 2716A362B19DC9C8CF66C5FE, 30B6133C3008E6E287ED12DD, 308499A80B416EFFBCFFE2F5, 8806DD95B877BBA8FD6076CD, B1FCF06F40C51BDC73A0D227, 18DDE438FB34ACD7C10D7B42, 376B0C4B80C2B5D8D869EBB9, 47C085D94D8777C32CF7A167, D362F09ECF9C5EEBDAE6F0C8, 80B33A3649E76A9E70361592,); runOnlyForDeploymentPostprocessing = 0; };
-		88D478711989184D5A6ECFF8 = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		92821982D6BE621F123FB103 = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
-		7E85D4A68785761E1DBB22D8 = { isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = 874E7FD7A39CF1D6319F589D; remoteInfo = Mikansei; };
-		BAE932EF166B50AB877FDC6F = { isa = PBXTargetDependency; target = 874E7FD7A39CF1D6319F589D; targetProxy = 7E85D4A68785761E1DBB22D8; };
-		937A01D863611CD7A85B6FE9 = { isa = PBXContainerItemProxy; containerPortal = 98F54143AB4E86B28C3AFEE0; proxyType = 1; remoteGlobalIDString = 4862E1059F9C44D08E030AE5; remoteInfo = MikanseiWidgets; };
-		A9181351A1FEE60D4A78323F = { isa = PBXTargetDependency; target = 4862E1059F9C44D08E030AE5; targetProxy = 937A01D863611CD7A85B6FE9; };
-		ED8772ADEC3A6C25161BC957 = { isa = XCBuildConfiguration; buildSettings = { SDKROOT = "iphoneos"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; SWIFT_VERSION = "5.0"; CLANG_ENABLE_MODULES = "YES"; CLANG_ENABLE_OBJC_ARC = "YES"; ENABLE_USER_SCRIPT_SANDBOXING = "YES"; ENABLE_STRICT_OBJC_MSGSEND = "YES"; GCC_WARN_UNUSED_VARIABLE = "YES"; CLANG_WARN_DOCUMENTATION_COMMENTS = "YES"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; DEBUG_INFORMATION_FORMAT = "dwarf"; SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG"; ENABLE_TESTABILITY = "YES"; ONLY_ACTIVE_ARCH = "YES"; }; name = Debug; };
-		00F209874A1F7309F6DCEAA7 = { isa = XCBuildConfiguration; buildSettings = { SDKROOT = "iphoneos"; IPHONEOS_DEPLOYMENT_TARGET = "17.0"; SWIFT_VERSION = "5.0"; CLANG_ENABLE_MODULES = "YES"; CLANG_ENABLE_OBJC_ARC = "YES"; ENABLE_USER_SCRIPT_SANDBOXING = "YES"; ENABLE_STRICT_OBJC_MSGSEND = "YES"; GCC_WARN_UNUSED_VARIABLE = "YES"; CLANG_WARN_DOCUMENTATION_COMMENTS = "YES"; SWIFT_OPTIMIZATION_LEVEL = "-O"; DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"; }; name = Release; };
-		640DC9EFD529235A8D9E2727 = { isa = XCConfigurationList; buildConfigurations = (ED8772ADEC3A6C25161BC957, 00F209874A1F7309F6DCEAA7,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		F8975E934DA2067E0E497395 = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.mikansei"; GENERATE_INFOPLIST_FILE = "NO"; INFOPLIST_FILE = "App/Info.plist"; INFOPLIST_KEY_CFBundleDisplayName = "Mikansei"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = "YES"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = "NO"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "0.3.1"; CURRENT_PROJECT_VERSION = "5"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",); SWIFT_EMIT_LOC_STRINGS = "YES"; DEVELOPMENT_TEAM = "7JMRL8X34C"; CODE_SIGN_ENTITLEMENTS = "Shared/Mikansei.entitlements"; MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(PRODUCT_BUNDLE_IDENTIFIER).shared"; }; name = Debug; };
-		F72D4F08E84CA4C7F809A7CF = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.mikansei"; GENERATE_INFOPLIST_FILE = "NO"; INFOPLIST_FILE = "App/Info.plist"; INFOPLIST_KEY_CFBundleDisplayName = "Mikansei"; INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity"; INFOPLIST_KEY_UIApplicationSceneManifest_Generation = "YES"; INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = "YES"; INFOPLIST_KEY_UILaunchScreen_Generation = "YES"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait"; INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = "NO"; CODE_SIGN_STYLE = "Automatic"; MARKETING_VERSION = "0.3.1"; CURRENT_PROJECT_VERSION = "5"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks",); SWIFT_EMIT_LOC_STRINGS = "YES"; DEVELOPMENT_TEAM = "7JMRL8X34C"; CODE_SIGN_ENTITLEMENTS = "Shared/Mikansei.entitlements"; MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(PRODUCT_BUNDLE_IDENTIFIER).shared"; }; name = Release; };
-		4867F1BF372A84237FA0A5A7 = { isa = XCConfigurationList; buildConfigurations = (F8975E934DA2067E0E497395, F72D4F08E84CA4C7F809A7CF,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		DF53765BF9D03B65CB04A4C8 = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.qingdanji.uitests"; GENERATE_INFOPLIST_FILE = "YES"; CODE_SIGN_STYLE = "Automatic"; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = "Mikansei"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",); }; name = Debug; };
-		04B042A5E7A3FDC0670ED689 = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.qingdanji.uitests"; GENERATE_INFOPLIST_FILE = "YES"; CODE_SIGN_STYLE = "Automatic"; TARGETED_DEVICE_FAMILY = "1,2"; TEST_TARGET_NAME = "Mikansei"; LD_RUNPATH_SEARCH_PATHS = ("$(inherited)", "@executable_path/Frameworks", "@loader_path/Frameworks",); }; name = Release; };
-		52AD4600EC3994E0CD3216B8 = { isa = XCConfigurationList; buildConfigurations = (DF53765BF9D03B65CB04A4C8, 04B042A5E7A3FDC0670ED689,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		A374F42373C88BA4875AC06D = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; GENERATE_INFOPLIST_FILE = "NO"; INFOPLIST_FILE = "Widgets/Info.plist"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = "NO"; CODE_SIGN_STYLE = "Automatic"; SKIP_INSTALL = "YES"; APPLICATION_EXTENSION_API_ONLY = "YES"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"; SWIFT_EMIT_LOC_STRINGS = "YES"; DEVELOPMENT_TEAM = "7JMRL8X34C"; CURRENT_PROJECT_VERSION = "5"; MARKETING_VERSION = "0.3.1"; MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared"; CODE_SIGN_ENTITLEMENTS = "Shared/Mikansei.entitlements"; MIKANSEI_HOST_BUNDLE_IDENTIFIER = "com.personal.mikansei"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.mikansei.widgets"; }; name = Debug; };
-		CF02D12F16C52D6AA42C1FAD = { isa = XCBuildConfiguration; buildSettings = { PRODUCT_NAME = "$(TARGET_NAME)"; GENERATE_INFOPLIST_FILE = "NO"; INFOPLIST_FILE = "Widgets/Info.plist"; TARGETED_DEVICE_FAMILY = "1,2"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; SUPPORTS_MACCATALYST = "NO"; CODE_SIGN_STYLE = "Automatic"; SKIP_INSTALL = "YES"; APPLICATION_EXTENSION_API_ONLY = "YES"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"; SWIFT_EMIT_LOC_STRINGS = "YES"; DEVELOPMENT_TEAM = "7JMRL8X34C"; CURRENT_PROJECT_VERSION = "5"; MARKETING_VERSION = "0.3.1"; MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared"; CODE_SIGN_ENTITLEMENTS = "Shared/Mikansei.entitlements"; MIKANSEI_HOST_BUNDLE_IDENTIFIER = "com.personal.mikansei"; PRODUCT_BUNDLE_IDENTIFIER = "com.personal.mikansei.widgets"; }; name = Release; };
-		81536FFAB1000DF879015486 = { isa = XCConfigurationList; buildConfigurations = (A374F42373C88BA4875AC06D, CF02D12F16C52D6AA42C1FAD,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
-		874E7FD7A39CF1D6319F589D = { isa = PBXNativeTarget; buildConfigurationList = 4867F1BF372A84237FA0A5A7; buildPhases = (949D493B91791558E87BC5D7, BD92572B49AC16A86614498D, 8ECC8B5D05B79F879ACDF1A2, 7856763FBF5D8529A9AD8704,); buildRules = (); dependencies = (A9181351A1FEE60D4A78323F,); name = Mikansei; productName = Mikansei; productReference = 36992FD9EFCC35941EC8F506; productType = "com.apple.product-type.application"; };
-		C3769DB3E0FDCF115F76F98F = { isa = PBXNativeTarget; buildConfigurationList = 52AD4600EC3994E0CD3216B8; buildPhases = (73449B7401E2150CE31884A3, 156998F1D551F8233F560236, 7AB1BC06231813FA800FC177,); buildRules = (); dependencies = (BAE932EF166B50AB877FDC6F,); name = MikanseiUITests; productName = MikanseiUITests; productReference = 1BDCCF10062BC847C2914E5C; productType = "com.apple.product-type.bundle.ui-testing"; };
-		4862E1059F9C44D08E030AE5 = { isa = PBXNativeTarget; buildConfigurationList = 81536FFAB1000DF879015486; buildPhases = (2B30B1D5F15490C7A8567E54, 88D478711989184D5A6ECFF8, 92821982D6BE621F123FB103,); buildRules = (); dependencies = (); name = MikanseiWidgets; productName = MikanseiWidgets; productReference = 4EFF2A916A79728361E137BE; productType = "com.apple.product-type.app-extension"; };
-		98F54143AB4E86B28C3AFEE0 = { isa = PBXProject; attributes = { "LastUpgradeCheck" = "2600"; "BuildIndependentTargetsInParallel" = "YES"; "TargetAttributes" = { "874E7FD7A39CF1D6319F589D" = { "CreatedOnToolsVersion" = "26.0"; }; "C3769DB3E0FDCF115F76F98F" = { "TestTargetID" = "874E7FD7A39CF1D6319F589D"; "CreatedOnToolsVersion" = "26.0"; }; "4862E1059F9C44D08E030AE5" = { "CreatedOnToolsVersion" = "26.0"; }; }; }; buildConfigurationList = 640DC9EFD529235A8D9E2727; compatibilityVersion = "Xcode 14.0"; developmentRegion = zh_CN; hasScannedForEncodings = 0; knownRegions = (zh_CN, en, Base); mainGroup = 870B3294C0CBD48AF6BBCC1B; productRefGroup = 615B463D1028E4E24B674CF7; projectDirPath = ""; projectRoot = ""; targets = (874E7FD7A39CF1D6319F589D, C3769DB3E0FDCF115F76F98F, 4862E1059F9C44D08E030AE5,); };
+
+/* Begin PBXBuildFile section */
+		06314631C7A5546779CEC54E /* Sources/MikanseiCore/Entry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D9C6140FABB522BDC3448F /* Sources/MikanseiCore/Entry.swift */; };
+		072708027173F8EDC5FF866D /* App/Resources/AppIcon60x60@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = DC54EABAA1FDCFBDBD1E4F6C /* App/Resources/AppIcon60x60@2x.png */; };
+		0B3203C4AEEAD48C042BD063 /* App/Resources/AppIcon40x40@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0CF872FF9315A9E1CDC6639E /* App/Resources/AppIcon40x40@3x.png */; };
+		0C99FACD7B218F6451A45737 /* Sources/MikanseiCore/FolderSyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3144B491505E278E309A768A /* Sources/MikanseiCore/FolderSyncTransport.swift */; };
+		0ECC10D3B19D633FA621C590 /* App/MessageImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3621557455A86797C404833C /* App/MessageImportView.swift */; };
+		113ADDE32572464C16152C8D /* Sources/MikanseiCore/CalendarSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFB5F84D3265D7D08F20490 /* Sources/MikanseiCore/CalendarSync.swift */; };
+		131404E3188480E3BE63F523 /* App/Resources/mikansei-chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = 17ED94A344416B6704BF3CE7 /* App/Resources/mikansei-chime.wav */; };
+		1361F3F6C3BFCEC212BF4D30 /* Sources/MikanseiCore/Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = A88C3B83B5BE286EC5128CE7 /* Sources/MikanseiCore/Course.swift */; };
+		18DDE438FB34ACD7C10D7B42 /* Sources/MikanseiCore/WorkspaceSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A1A135C8DEEE157EBC259E /* Sources/MikanseiCore/WorkspaceSync.swift */; };
+		209BC72FED7A175E364746EB /* App/EntryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4779EF48347CA525143A2B54 /* App/EntryStore.swift */; };
+		25ECE73021645EACD490FCFF /* App/Resources/mikansei-morning.wav in Resources */ = {isa = PBXBuildFile; fileRef = D486BCA03C8373AB8A4E6AD3 /* App/Resources/mikansei-morning.wav */; };
+		261CEACC963E10086B6B0C7C /* App/Resources/AppIcon29x29@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 9F5930A3535F3AAFF460B88A /* App/Resources/AppIcon29x29@2x.png */; };
+		2716A362B19DC9C8CF66C5FE /* Sources/MikanseiCore/FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5487AEEB610BC9BDBCA3CB15 /* Sources/MikanseiCore/FocusSession.swift */; };
+		2747757A49D458F720F9ACBC /* Sources/MikanseiCore/CalendarSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BFB5F84D3265D7D08F20490 /* Sources/MikanseiCore/CalendarSync.swift */; };
+		2BBB2856AA5B748D4BCAE36D /* Sources/MikanseiCore/CourseICS.swift in Sources */ = {isa = PBXBuildFile; fileRef = A364BDB038BC32727C15C3B3 /* Sources/MikanseiCore/CourseICS.swift */; };
+		2F92B4FBAB6513E0DAD90638 /* App/Resources/AppIcon76x76@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 2546CF28DD7E56E1F77C6B6F /* App/Resources/AppIcon76x76@2x.png */; };
+		308499A80B416EFFBCFFE2F5 /* Sources/MikanseiCore/MessageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4AD9F79858106D43C762FA /* Sources/MikanseiCore/MessageParser.swift */; };
+		30B6133C3008E6E287ED12DD /* Sources/MikanseiCore/FolderSyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3144B491505E278E309A768A /* Sources/MikanseiCore/FolderSyncTransport.swift */; };
+		34D56BBECF7BC1FF0C17AFC4 /* Widgets/MikanseiWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 900953CC04BDDF20698310C6 /* Widgets/MikanseiWidgets.swift */; };
+		352F11747DE916C96B17ACF5 /* App/Resources/AppIcon76x76.png in Resources */ = {isa = PBXBuildFile; fileRef = CAC72C28A798457F71BEC2C2 /* App/Resources/AppIcon76x76.png */; };
+		37109DAD10CED605D16302FC /* App/Resources/AppIcon83.5x83.5@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 92DB27979499EDAAA86B4E26 /* App/Resources/AppIcon83.5x83.5@2x.png */; };
+		376B0C4B80C2B5D8D869EBB9 /* Shared/DeadlineActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88EB406DC81D0AAC757C9D47 /* Shared/DeadlineActivityAttributes.swift */; };
+		44A9777C82921F467105EEC0 /* App/CalendarScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87698B15A51502547E56D21A /* App/CalendarScheduleView.swift */; };
+		47C085D94D8777C32CF7A167 /* Shared/FocusClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCE2CD86B937A142540CD5F /* Shared/FocusClock.swift */; };
+		4A00DBF98CC158C01FD6CE36 /* Sources/MikanseiCore/CourseICS.swift in Sources */ = {isa = PBXBuildFile; fileRef = A364BDB038BC32727C15C3B3 /* Sources/MikanseiCore/CourseICS.swift */; };
+		4E447F625C4BA05ECABD4C18 /* Shared/WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFCE6543A366193E9DEF873 /* Shared/WidgetSnapshotStore.swift */; };
+		5C8DE70DA08297174B7F123B /* UITests/MikanseiUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E47B32AAEF627458588F2C0 /* UITests/MikanseiUITests.swift */; };
+		5D527298D562ED9B472D2FEB /* App/Resources/mikansei-pulse.wav in Resources */ = {isa = PBXBuildFile; fileRef = 7AA99A31E854D4175DEBE719 /* App/Resources/mikansei-pulse.wav */; };
+		5F4D1CD505CEEFA4A5388E6D /* App/CoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6403AB1D221F130099CE41E /* App/CoursesView.swift */; };
+		5F90D54D4AA7AD665BF5C499 /* App/Resources/AppIcon20x20@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = 0E863EEB8FB395A65E5D2D67 /* App/Resources/AppIcon20x20@3x.png */; };
+		62A5C24214FE9D98E6EF2E78 /* Sources/MikanseiCore/Entry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70D9C6140FABB522BDC3448F /* Sources/MikanseiCore/Entry.swift */; };
+		63E388DBAC8541FB253B62E1 /* Sources/MikanseiCore/WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A5A2D7BAE2D7CC6D3F0DD5 /* Sources/MikanseiCore/WidgetSnapshot.swift */; };
+		6558D564C1540E2ABC10D7CE /* Sources/MikanseiCore/WorkspaceSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A1A135C8DEEE157EBC259E /* Sources/MikanseiCore/WorkspaceSync.swift */; };
+		6BF21CE41FB038D01EB99324 /* Widgets/ReminderAlarmActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4861412A8C098412F8FADD0B /* Widgets/ReminderAlarmActivity.swift */; };
+		6DA92CF8CB39DC0727AFFDB3 /* Shared/DeadlineActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88EB406DC81D0AAC757C9D47 /* Shared/DeadlineActivityAttributes.swift */; };
+		6E5ADF97B74568D5E0C965A2 /* App/RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98470E50E821F5F2AF00BB26 /* App/RootView.swift */; };
+		727F023FDF337BA3E8AB18EC /* App/MikanseiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72D5838A6E4840AAFE896FB5 /* App/MikanseiApp.swift */; };
+		73B439AF8340CA6E15E83B75 /* Widgets/DeadlineLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1D83136F71AC95E298489D /* Widgets/DeadlineLiveActivity.swift */; };
+		752753ACD6785CFAA938E279 /* Shared/ReminderAlarmMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38AE40FA49488BE2E817A29 /* Shared/ReminderAlarmMetadata.swift */; };
+		788C68AA3B93E0C4B68BC63E /* Sources/MikanseiCore/Course.swift in Sources */ = {isa = PBXBuildFile; fileRef = A88C3B83B5BE286EC5128CE7 /* Sources/MikanseiCore/Course.swift */; };
+		7A04645927C48D3B9A9AFF34 /* App/Resources/AppIcon29x29.png in Resources */ = {isa = PBXBuildFile; fileRef = 567BAD0EC1B5D0E01E06AAAD /* App/Resources/AppIcon29x29.png */; };
+		7C9DC02F5F6408ACC311203A /* Sources/MikanseiCore/AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120C65F3A243CD19A6EC649A /* Sources/MikanseiCore/AppRoute.swift */; };
+		7ED200A96026C06A12BEDCE0 /* App/EntryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = F620CD28A1DDF89ED5F39C39 /* App/EntryEditor.swift */; };
+		80B33A3649E76A9E70361592 /* Shared/WidgetSnapshotStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBFCE6543A366193E9DEF873 /* Shared/WidgetSnapshotStore.swift */; };
+		8806DD95B877BBA8FD6076CD /* Sources/MikanseiCore/ReminderOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF281AD9F486C1A8BB025F07 /* Sources/MikanseiCore/ReminderOptions.swift */; };
+		8F504D01148AD38A8407FB1E /* Sources/MikanseiCore/CalendarDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63A754DD2CB404C4CE5AC11 /* Sources/MikanseiCore/CalendarDisplay.swift */; };
+		9190AE888B88B6BDAAB45934 /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8DAF823F07359239D714C3B /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift */; };
+		968911717DE06B37072A6847 /* Sources/MikanseiCore/ReminderOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF281AD9F486C1A8BB025F07 /* Sources/MikanseiCore/ReminderOptions.swift */; };
+		9EF90BBD6A735461096DAB52 /* App/Resources/AppIcon29x29@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = AD80B1305C72FE07C5897743 /* App/Resources/AppIcon29x29@3x.png */; };
+		A38B063349FCECEC9F1A2245 /* Sync/FolderSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04D86BF0E73970160CC9B2D9 /* Sync/FolderSyncManager.swift */; };
+		A4AC334DEEDB8316C159A3A3 /* Shared/FocusClock.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBCE2CD86B937A142540CD5F /* Shared/FocusClock.swift */; };
+		A5FC69F049F997626EE81701 /* App/Resources/AppIcon40x40.png in Resources */ = {isa = PBXBuildFile; fileRef = C0C6CA14607C0D332B42FE53 /* App/Resources/AppIcon40x40.png */; };
+		A9551875D85E74C13F811A1D /* Sources/MikanseiCore/AppRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 120C65F3A243CD19A6EC649A /* Sources/MikanseiCore/AppRoute.swift */; };
+		AE025C05617C5254A5A12922 /* App/Resources/AppIcon20x20@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A17CB8C1C9024052E3B16E8 /* App/Resources/AppIcon20x20@2x.png */; };
+		B1FCF06F40C51BDC73A0D227 /* Sources/MikanseiCore/WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A5A2D7BAE2D7CC6D3F0DD5 /* Sources/MikanseiCore/WidgetSnapshot.swift */; };
+		C06CE5FC4C0B16F63F3EBC0A /* App/ReminderOptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BEDCC9CDF304B89471EBD6 /* App/ReminderOptionsView.swift */; };
+		C733C6442A281599567C6C83 /* App/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F499F78180BFBC467A0E27B8 /* App/SettingsView.swift */; };
+		C843526D732CADB098A0B54A /* App/Resources/AppIcon20x20.png in Resources */ = {isa = PBXBuildFile; fileRef = 07C82FF41026E356F467DC81 /* App/Resources/AppIcon20x20.png */; };
+		CB92AFEC2E920BD498BAE6FB /* Sources/MikanseiCore/Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AE391A6537A051CAB24CCF /* Sources/MikanseiCore/Archive.swift */; };
+		CBB54B9A2C228A0F7D0632E5 /* App/NativeAlarmScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B6C1124B0DF9D9C8F1DF58 /* App/NativeAlarmScheduler.swift */; };
+		CE31AEBC18F7097EBB8FDABE /* Sources/MikanseiCore/MessageParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE4AD9F79858106D43C762FA /* Sources/MikanseiCore/MessageParser.swift */; };
+		CE616C6B4D5D2068A1642076 /* App/Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74F9AAD7871BCD7BC41CDCF5 /* App/Theme.swift */; };
+		D16DAFBE48D3BF8A157A6471 /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8DAF823F07359239D714C3B /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift */; };
+		D2AA6B471EF34DC42140533C /* App/CalendarSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70613647BDFEFFECE0ED65EE /* App/CalendarSyncManager.swift */; };
+		D362F09ECF9C5EEBDAE6F0C8 /* Shared/ReminderAlarmMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = D38AE40FA49488BE2E817A29 /* Shared/ReminderAlarmMetadata.swift */; };
+		D3CCAC822A6000C15AFD331E /* App/Resources/AppIcon60x60@3x.png in Resources */ = {isa = PBXBuildFile; fileRef = A5943D34E7D305AE21147206 /* App/Resources/AppIcon60x60@3x.png */; };
+		D3DA7AFC28A1F6892E2A6C11 /* Sources/MikanseiCore/FocusSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5487AEEB610BC9BDBCA3CB15 /* Sources/MikanseiCore/FocusSession.swift */; };
+		DF9466138765CCCB0BE76072 /* Sources/MikanseiCore/Archive.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7AE391A6537A051CAB24CCF /* Sources/MikanseiCore/Archive.swift */; };
+		EBE5B1BDD909ABD5834F4C1B /* Sync/FolderSyncSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED42AEF648B905ED6EE31F55 /* Sync/FolderSyncSettings.swift */; };
+		EF113836C9D25DAAD58E6632 /* App/DeadlineActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6DAECF327BAC73E2B8632F9 /* App/DeadlineActivityManager.swift */; };
+		F1D7D62061CF86DF48068A80 /* MikanseiWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 4EFF2A916A79728361E137BE /* MikanseiWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		F8463A9029F577C5E06D97BB /* App/Resources/AppIcon40x40@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 023009023DBBB44207A86305 /* App/Resources/AppIcon40x40@2x.png */; };
+		F92E65F03A805A56B2F370E9 /* Sources/MikanseiCore/CalendarDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63A754DD2CB404C4CE5AC11 /* Sources/MikanseiCore/CalendarDisplay.swift */; };
+		FA8EE1BB46B2780FFEE29876 /* App/CalendarPlanEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8133315A88BDC801B0B347C2 /* App/CalendarPlanEditor.swift */; };
+		FAF7C6C64FF5D6AF0A558FF3 /* App/CalendarSyncView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67B61FA83A1CC4D1A96DFA3C /* App/CalendarSyncView.swift */; };
+		FE9C5056F4DFC350D49131E4 /* App/NotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71FF5325F549501E6D0F3A4C /* App/NotificationManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7E85D4A68785761E1DBB22D8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 874E7FD7A39CF1D6319F589D;
+			remoteInfo = Mikansei;
+		};
+		937A01D863611CD7A85B6FE9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 98F54143AB4E86B28C3AFEE0 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4862E1059F9C44D08E030AE5;
+			remoteInfo = MikanseiWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7856763FBF5D8529A9AD8704 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F1D7D62061CF86DF48068A80 /* MikanseiWidgets.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		023009023DBBB44207A86305 /* App/Resources/AppIcon40x40@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon40x40@2x.png"; sourceTree = SOURCE_ROOT; };
+		04D86BF0E73970160CC9B2D9 /* Sync/FolderSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sync/FolderSyncManager.swift; sourceTree = SOURCE_ROOT; };
+		05BEDCC9CDF304B89471EBD6 /* App/ReminderOptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/ReminderOptionsView.swift; sourceTree = SOURCE_ROOT; };
+		07C82FF41026E356F467DC81 /* App/Resources/AppIcon20x20.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = App/Resources/AppIcon20x20.png; sourceTree = SOURCE_ROOT; };
+		0CF872FF9315A9E1CDC6639E /* App/Resources/AppIcon40x40@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon40x40@3x.png"; sourceTree = SOURCE_ROOT; };
+		0E863EEB8FB395A65E5D2D67 /* App/Resources/AppIcon20x20@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon20x20@3x.png"; sourceTree = SOURCE_ROOT; };
+		120C65F3A243CD19A6EC649A /* Sources/MikanseiCore/AppRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/AppRoute.swift; sourceTree = SOURCE_ROOT; };
+		17ED94A344416B6704BF3CE7 /* App/Resources/mikansei-chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-chime.wav"; sourceTree = SOURCE_ROOT; };
+		1BDCCF10062BC847C2914E5C /* MikanseiUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MikanseiUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2546CF28DD7E56E1F77C6B6F /* App/Resources/AppIcon76x76@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon76x76@2x.png"; sourceTree = SOURCE_ROOT; };
+		2BFB5F84D3265D7D08F20490 /* Sources/MikanseiCore/CalendarSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/CalendarSync.swift; sourceTree = SOURCE_ROOT; };
+		3144B491505E278E309A768A /* Sources/MikanseiCore/FolderSyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/FolderSyncTransport.swift; sourceTree = SOURCE_ROOT; };
+		3621557455A86797C404833C /* App/MessageImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MessageImportView.swift; sourceTree = SOURCE_ROOT; };
+		36992FD9EFCC35941EC8F506 /* Mikansei.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mikansei.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3E47B32AAEF627458588F2C0 /* UITests/MikanseiUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UITests/MikanseiUITests.swift; sourceTree = SOURCE_ROOT; };
+		4779EF48347CA525143A2B54 /* App/EntryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/EntryStore.swift; sourceTree = SOURCE_ROOT; };
+		4861412A8C098412F8FADD0B /* Widgets/ReminderAlarmActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widgets/ReminderAlarmActivity.swift; sourceTree = SOURCE_ROOT; };
+		4EFF2A916A79728361E137BE /* MikanseiWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MikanseiWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5487AEEB610BC9BDBCA3CB15 /* Sources/MikanseiCore/FocusSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/FocusSession.swift; sourceTree = SOURCE_ROOT; };
+		567BAD0EC1B5D0E01E06AAAD /* App/Resources/AppIcon29x29.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = App/Resources/AppIcon29x29.png; sourceTree = SOURCE_ROOT; };
+		67B61FA83A1CC4D1A96DFA3C /* App/CalendarSyncView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CalendarSyncView.swift; sourceTree = SOURCE_ROOT; };
+		70613647BDFEFFECE0ED65EE /* App/CalendarSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CalendarSyncManager.swift; sourceTree = SOURCE_ROOT; };
+		70A5A2D7BAE2D7CC6D3F0DD5 /* Sources/MikanseiCore/WidgetSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/WidgetSnapshot.swift; sourceTree = SOURCE_ROOT; };
+		70D9C6140FABB522BDC3448F /* Sources/MikanseiCore/Entry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/Entry.swift; sourceTree = SOURCE_ROOT; };
+		71FF5325F549501E6D0F3A4C /* App/NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/NotificationManager.swift; sourceTree = SOURCE_ROOT; };
+		72D5838A6E4840AAFE896FB5 /* App/MikanseiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/MikanseiApp.swift; sourceTree = SOURCE_ROOT; };
+		74F9AAD7871BCD7BC41CDCF5 /* App/Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/Theme.swift; sourceTree = SOURCE_ROOT; };
+		7AA99A31E854D4175DEBE719 /* App/Resources/mikansei-pulse.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-pulse.wav"; sourceTree = SOURCE_ROOT; };
+		8043F938DE44F0862C5759C9 /* App/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = App/Info.plist; sourceTree = SOURCE_ROOT; };
+		8133315A88BDC801B0B347C2 /* App/CalendarPlanEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CalendarPlanEditor.swift; sourceTree = SOURCE_ROOT; };
+		87698B15A51502547E56D21A /* App/CalendarScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CalendarScheduleView.swift; sourceTree = SOURCE_ROOT; };
+		88EB406DC81D0AAC757C9D47 /* Shared/DeadlineActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/DeadlineActivityAttributes.swift; sourceTree = SOURCE_ROOT; };
+		8A17CB8C1C9024052E3B16E8 /* App/Resources/AppIcon20x20@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon20x20@2x.png"; sourceTree = SOURCE_ROOT; };
+		8A1D83136F71AC95E298489D /* Widgets/DeadlineLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widgets/DeadlineLiveActivity.swift; sourceTree = SOURCE_ROOT; };
+		900953CC04BDDF20698310C6 /* Widgets/MikanseiWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Widgets/MikanseiWidgets.swift; sourceTree = SOURCE_ROOT; };
+		92DB27979499EDAAA86B4E26 /* App/Resources/AppIcon83.5x83.5@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon83.5x83.5@2x.png"; sourceTree = SOURCE_ROOT; };
+		98470E50E821F5F2AF00BB26 /* App/RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/RootView.swift; sourceTree = SOURCE_ROOT; };
+		9F5930A3535F3AAFF460B88A /* App/Resources/AppIcon29x29@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon29x29@2x.png"; sourceTree = SOURCE_ROOT; };
+		A364BDB038BC32727C15C3B3 /* Sources/MikanseiCore/CourseICS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/CourseICS.swift; sourceTree = SOURCE_ROOT; };
+		A5943D34E7D305AE21147206 /* App/Resources/AppIcon60x60@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon60x60@3x.png"; sourceTree = SOURCE_ROOT; };
+		A6A1A135C8DEEE157EBC259E /* Sources/MikanseiCore/WorkspaceSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/WorkspaceSync.swift; sourceTree = SOURCE_ROOT; };
+		A7AE391A6537A051CAB24CCF /* Sources/MikanseiCore/Archive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/Archive.swift; sourceTree = SOURCE_ROOT; };
+		A88C3B83B5BE286EC5128CE7 /* Sources/MikanseiCore/Course.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/Course.swift; sourceTree = SOURCE_ROOT; };
+		A8DAF823F07359239D714C3B /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/DeadlineActivitySnapshot.swift; sourceTree = SOURCE_ROOT; };
+		AD80B1305C72FE07C5897743 /* App/Resources/AppIcon29x29@3x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon29x29@3x.png"; sourceTree = SOURCE_ROOT; };
+		AE4AD9F79858106D43C762FA /* Sources/MikanseiCore/MessageParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/MessageParser.swift; sourceTree = SOURCE_ROOT; };
+		AF281AD9F486C1A8BB025F07 /* Sources/MikanseiCore/ReminderOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/ReminderOptions.swift; sourceTree = SOURCE_ROOT; };
+		BB5E62A0B1E65C2D802862CA /* Widgets/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Widgets/Info.plist; sourceTree = SOURCE_ROOT; };
+		C0C6CA14607C0D332B42FE53 /* App/Resources/AppIcon40x40.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = App/Resources/AppIcon40x40.png; sourceTree = SOURCE_ROOT; };
+		C63A754DD2CB404C4CE5AC11 /* Sources/MikanseiCore/CalendarDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MikanseiCore/CalendarDisplay.swift; sourceTree = SOURCE_ROOT; };
+		CAC72C28A798457F71BEC2C2 /* App/Resources/AppIcon76x76.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = App/Resources/AppIcon76x76.png; sourceTree = SOURCE_ROOT; };
+		CBFCE6543A366193E9DEF873 /* Shared/WidgetSnapshotStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/WidgetSnapshotStore.swift; sourceTree = SOURCE_ROOT; };
+		D38AE40FA49488BE2E817A29 /* Shared/ReminderAlarmMetadata.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/ReminderAlarmMetadata.swift; sourceTree = SOURCE_ROOT; };
+		D486BCA03C8373AB8A4E6AD3 /* App/Resources/mikansei-morning.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = "App/Resources/mikansei-morning.wav"; sourceTree = SOURCE_ROOT; };
+		DC54EABAA1FDCFBDBD1E4F6C /* App/Resources/AppIcon60x60@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "App/Resources/AppIcon60x60@2x.png"; sourceTree = SOURCE_ROOT; };
+		EBCE2CD86B937A142540CD5F /* Shared/FocusClock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Shared/FocusClock.swift; sourceTree = SOURCE_ROOT; };
+		ED42AEF648B905ED6EE31F55 /* Sync/FolderSyncSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sync/FolderSyncSettings.swift; sourceTree = SOURCE_ROOT; };
+		EEB8D2129CF6E076F7455CB0 /* Shared/Mikansei.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Shared/Mikansei.entitlements; sourceTree = SOURCE_ROOT; };
+		F3B6C1124B0DF9D9C8F1DF58 /* App/NativeAlarmScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/NativeAlarmScheduler.swift; sourceTree = SOURCE_ROOT; };
+		F499F78180BFBC467A0E27B8 /* App/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/SettingsView.swift; sourceTree = SOURCE_ROOT; };
+		F620CD28A1DDF89ED5F39C39 /* App/EntryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/EntryEditor.swift; sourceTree = SOURCE_ROOT; };
+		F6403AB1D221F130099CE41E /* App/CoursesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/CoursesView.swift; sourceTree = SOURCE_ROOT; };
+		F6DAECF327BAC73E2B8632F9 /* App/DeadlineActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App/DeadlineActivityManager.swift; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		156998F1D551F8233F560236 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		88D478711989184D5A6ECFF8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BD92572B49AC16A86614498D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3C3B0F03DC089F93B8457928 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				8133315A88BDC801B0B347C2 /* App/CalendarPlanEditor.swift */,
+				87698B15A51502547E56D21A /* App/CalendarScheduleView.swift */,
+				70613647BDFEFFECE0ED65EE /* App/CalendarSyncManager.swift */,
+				67B61FA83A1CC4D1A96DFA3C /* App/CalendarSyncView.swift */,
+				F6403AB1D221F130099CE41E /* App/CoursesView.swift */,
+				F6DAECF327BAC73E2B8632F9 /* App/DeadlineActivityManager.swift */,
+				F620CD28A1DDF89ED5F39C39 /* App/EntryEditor.swift */,
+				4779EF48347CA525143A2B54 /* App/EntryStore.swift */,
+				3621557455A86797C404833C /* App/MessageImportView.swift */,
+				72D5838A6E4840AAFE896FB5 /* App/MikanseiApp.swift */,
+				F3B6C1124B0DF9D9C8F1DF58 /* App/NativeAlarmScheduler.swift */,
+				71FF5325F549501E6D0F3A4C /* App/NotificationManager.swift */,
+				05BEDCC9CDF304B89471EBD6 /* App/ReminderOptionsView.swift */,
+				98470E50E821F5F2AF00BB26 /* App/RootView.swift */,
+				F499F78180BFBC467A0E27B8 /* App/SettingsView.swift */,
+				74F9AAD7871BCD7BC41CDCF5 /* App/Theme.swift */,
+				8043F938DE44F0862C5759C9 /* App/Info.plist */,
+				50F0FC3AFD5FBC981B5A0DDD /* Resources */,
+			);
+			name = App;
+			sourceTree = "<group>";
+		};
+		50F0FC3AFD5FBC981B5A0DDD /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				07C82FF41026E356F467DC81 /* App/Resources/AppIcon20x20.png */,
+				8A17CB8C1C9024052E3B16E8 /* App/Resources/AppIcon20x20@2x.png */,
+				0E863EEB8FB395A65E5D2D67 /* App/Resources/AppIcon20x20@3x.png */,
+				567BAD0EC1B5D0E01E06AAAD /* App/Resources/AppIcon29x29.png */,
+				9F5930A3535F3AAFF460B88A /* App/Resources/AppIcon29x29@2x.png */,
+				AD80B1305C72FE07C5897743 /* App/Resources/AppIcon29x29@3x.png */,
+				C0C6CA14607C0D332B42FE53 /* App/Resources/AppIcon40x40.png */,
+				023009023DBBB44207A86305 /* App/Resources/AppIcon40x40@2x.png */,
+				0CF872FF9315A9E1CDC6639E /* App/Resources/AppIcon40x40@3x.png */,
+				DC54EABAA1FDCFBDBD1E4F6C /* App/Resources/AppIcon60x60@2x.png */,
+				A5943D34E7D305AE21147206 /* App/Resources/AppIcon60x60@3x.png */,
+				CAC72C28A798457F71BEC2C2 /* App/Resources/AppIcon76x76.png */,
+				2546CF28DD7E56E1F77C6B6F /* App/Resources/AppIcon76x76@2x.png */,
+				92DB27979499EDAAA86B4E26 /* App/Resources/AppIcon83.5x83.5@2x.png */,
+				17ED94A344416B6704BF3CE7 /* App/Resources/mikansei-chime.wav */,
+				D486BCA03C8373AB8A4E6AD3 /* App/Resources/mikansei-morning.wav */,
+				7AA99A31E854D4175DEBE719 /* App/Resources/mikansei-pulse.wav */,
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		5ABAD42FBC764E056DACA39F /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				04D86BF0E73970160CC9B2D9 /* Sync/FolderSyncManager.swift */,
+				ED42AEF648B905ED6EE31F55 /* Sync/FolderSyncSettings.swift */,
+			);
+			name = Sync;
+			sourceTree = "<group>";
+		};
+		615B463D1028E4E24B674CF7 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				36992FD9EFCC35941EC8F506 /* Mikansei.app */,
+				4EFF2A916A79728361E137BE /* MikanseiWidgets.appex */,
+				1BDCCF10062BC847C2914E5C /* MikanseiUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		726771E79DB6AA5402F2AD14 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				8A1D83136F71AC95E298489D /* Widgets/DeadlineLiveActivity.swift */,
+				900953CC04BDDF20698310C6 /* Widgets/MikanseiWidgets.swift */,
+				4861412A8C098412F8FADD0B /* Widgets/ReminderAlarmActivity.swift */,
+				BB5E62A0B1E65C2D802862CA /* Widgets/Info.plist */,
+			);
+			name = Widgets;
+			sourceTree = "<group>";
+		};
+		870B3294C0CBD48AF6BBCC1B = {
+			isa = PBXGroup;
+			children = (
+				3C3B0F03DC089F93B8457928 /* App */,
+				726771E79DB6AA5402F2AD14 /* Widgets */,
+				B0B8C84E77856132D5681A59 /* Core */,
+				AC019E2923F944A838FB0A8F /* Shared */,
+				5ABAD42FBC764E056DACA39F /* Sync */,
+				E717C295FF9827DFF805D88B /* UITests */,
+				615B463D1028E4E24B674CF7 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AC019E2923F944A838FB0A8F /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				88EB406DC81D0AAC757C9D47 /* Shared/DeadlineActivityAttributes.swift */,
+				EBCE2CD86B937A142540CD5F /* Shared/FocusClock.swift */,
+				D38AE40FA49488BE2E817A29 /* Shared/ReminderAlarmMetadata.swift */,
+				CBFCE6543A366193E9DEF873 /* Shared/WidgetSnapshotStore.swift */,
+				EEB8D2129CF6E076F7455CB0 /* Shared/Mikansei.entitlements */,
+			);
+			name = Shared;
+			sourceTree = "<group>";
+		};
+		B0B8C84E77856132D5681A59 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				120C65F3A243CD19A6EC649A /* Sources/MikanseiCore/AppRoute.swift */,
+				A7AE391A6537A051CAB24CCF /* Sources/MikanseiCore/Archive.swift */,
+				C63A754DD2CB404C4CE5AC11 /* Sources/MikanseiCore/CalendarDisplay.swift */,
+				2BFB5F84D3265D7D08F20490 /* Sources/MikanseiCore/CalendarSync.swift */,
+				A88C3B83B5BE286EC5128CE7 /* Sources/MikanseiCore/Course.swift */,
+				A364BDB038BC32727C15C3B3 /* Sources/MikanseiCore/CourseICS.swift */,
+				A8DAF823F07359239D714C3B /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift */,
+				70D9C6140FABB522BDC3448F /* Sources/MikanseiCore/Entry.swift */,
+				5487AEEB610BC9BDBCA3CB15 /* Sources/MikanseiCore/FocusSession.swift */,
+				3144B491505E278E309A768A /* Sources/MikanseiCore/FolderSyncTransport.swift */,
+				AE4AD9F79858106D43C762FA /* Sources/MikanseiCore/MessageParser.swift */,
+				AF281AD9F486C1A8BB025F07 /* Sources/MikanseiCore/ReminderOptions.swift */,
+				70A5A2D7BAE2D7CC6D3F0DD5 /* Sources/MikanseiCore/WidgetSnapshot.swift */,
+				A6A1A135C8DEEE157EBC259E /* Sources/MikanseiCore/WorkspaceSync.swift */,
+			);
+			name = Core;
+			sourceTree = "<group>";
+		};
+		E717C295FF9827DFF805D88B /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				3E47B32AAEF627458588F2C0 /* UITests/MikanseiUITests.swift */,
+			);
+			name = UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4862E1059F9C44D08E030AE5 /* MikanseiWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 81536FFAB1000DF879015486 /* Build configuration list for PBXNativeTarget "MikanseiWidgets" */;
+			buildPhases = (
+				2B30B1D5F15490C7A8567E54 /* Sources */,
+				88D478711989184D5A6ECFF8 /* Frameworks */,
+				92821982D6BE621F123FB103 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MikanseiWidgets;
+			productName = MikanseiWidgets;
+			productReference = 4EFF2A916A79728361E137BE /* MikanseiWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		874E7FD7A39CF1D6319F589D /* Mikansei */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4867F1BF372A84237FA0A5A7 /* Build configuration list for PBXNativeTarget "Mikansei" */;
+			buildPhases = (
+				949D493B91791558E87BC5D7 /* Sources */,
+				BD92572B49AC16A86614498D /* Frameworks */,
+				8ECC8B5D05B79F879ACDF1A2 /* Resources */,
+				7856763FBF5D8529A9AD8704 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A9181351A1FEE60D4A78323F /* PBXTargetDependency */,
+			);
+			name = Mikansei;
+			productName = Mikansei;
+			productReference = 36992FD9EFCC35941EC8F506 /* Mikansei.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C3769DB3E0FDCF115F76F98F /* MikanseiUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 52AD4600EC3994E0CD3216B8 /* Build configuration list for PBXNativeTarget "MikanseiUITests" */;
+			buildPhases = (
+				73449B7401E2150CE31884A3 /* Sources */,
+				156998F1D551F8233F560236 /* Frameworks */,
+				7AB1BC06231813FA800FC177 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				BAE932EF166B50AB877FDC6F /* PBXTargetDependency */,
+			);
+			name = MikanseiUITests;
+			productName = MikanseiUITests;
+			productReference = 1BDCCF10062BC847C2914E5C /* MikanseiUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		98F54143AB4E86B28C3AFEE0 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					4862E1059F9C44D08E030AE5 = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					874E7FD7A39CF1D6319F589D = {
+						CreatedOnToolsVersion = 26.0;
+					};
+					C3769DB3E0FDCF115F76F98F = {
+						CreatedOnToolsVersion = 26.0;
+						TestTargetID = 874E7FD7A39CF1D6319F589D;
+					};
+				};
+			};
+			buildConfigurationList = 640DC9EFD529235A8D9E2727 /* Build configuration list for PBXProject "Mikansei" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = zh_CN;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				zh_CN,
+				en,
+				Base,
+			);
+			mainGroup = 870B3294C0CBD48AF6BBCC1B;
+			productRefGroup = 615B463D1028E4E24B674CF7 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				874E7FD7A39CF1D6319F589D /* Mikansei */,
+				C3769DB3E0FDCF115F76F98F /* MikanseiUITests */,
+				4862E1059F9C44D08E030AE5 /* MikanseiWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7AB1BC06231813FA800FC177 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8ECC8B5D05B79F879ACDF1A2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C843526D732CADB098A0B54A /* App/Resources/AppIcon20x20.png in Resources */,
+				AE025C05617C5254A5A12922 /* App/Resources/AppIcon20x20@2x.png in Resources */,
+				5F90D54D4AA7AD665BF5C499 /* App/Resources/AppIcon20x20@3x.png in Resources */,
+				7A04645927C48D3B9A9AFF34 /* App/Resources/AppIcon29x29.png in Resources */,
+				261CEACC963E10086B6B0C7C /* App/Resources/AppIcon29x29@2x.png in Resources */,
+				9EF90BBD6A735461096DAB52 /* App/Resources/AppIcon29x29@3x.png in Resources */,
+				A5FC69F049F997626EE81701 /* App/Resources/AppIcon40x40.png in Resources */,
+				F8463A9029F577C5E06D97BB /* App/Resources/AppIcon40x40@2x.png in Resources */,
+				0B3203C4AEEAD48C042BD063 /* App/Resources/AppIcon40x40@3x.png in Resources */,
+				072708027173F8EDC5FF866D /* App/Resources/AppIcon60x60@2x.png in Resources */,
+				D3CCAC822A6000C15AFD331E /* App/Resources/AppIcon60x60@3x.png in Resources */,
+				352F11747DE916C96B17ACF5 /* App/Resources/AppIcon76x76.png in Resources */,
+				2F92B4FBAB6513E0DAD90638 /* App/Resources/AppIcon76x76@2x.png in Resources */,
+				37109DAD10CED605D16302FC /* App/Resources/AppIcon83.5x83.5@2x.png in Resources */,
+				131404E3188480E3BE63F523 /* App/Resources/mikansei-chime.wav in Resources */,
+				25ECE73021645EACD490FCFF /* App/Resources/mikansei-morning.wav in Resources */,
+				5D527298D562ED9B472D2FEB /* App/Resources/mikansei-pulse.wav in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		92821982D6BE621F123FB103 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2B30B1D5F15490C7A8567E54 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				73B439AF8340CA6E15E83B75 /* Widgets/DeadlineLiveActivity.swift in Sources */,
+				34D56BBECF7BC1FF0C17AFC4 /* Widgets/MikanseiWidgets.swift in Sources */,
+				6BF21CE41FB038D01EB99324 /* Widgets/ReminderAlarmActivity.swift in Sources */,
+				A9551875D85E74C13F811A1D /* Sources/MikanseiCore/AppRoute.swift in Sources */,
+				CB92AFEC2E920BD498BAE6FB /* Sources/MikanseiCore/Archive.swift in Sources */,
+				F92E65F03A805A56B2F370E9 /* Sources/MikanseiCore/CalendarDisplay.swift in Sources */,
+				2747757A49D458F720F9ACBC /* Sources/MikanseiCore/CalendarSync.swift in Sources */,
+				1361F3F6C3BFCEC212BF4D30 /* Sources/MikanseiCore/Course.swift in Sources */,
+				2BBB2856AA5B748D4BCAE36D /* Sources/MikanseiCore/CourseICS.swift in Sources */,
+				D16DAFBE48D3BF8A157A6471 /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift in Sources */,
+				06314631C7A5546779CEC54E /* Sources/MikanseiCore/Entry.swift in Sources */,
+				2716A362B19DC9C8CF66C5FE /* Sources/MikanseiCore/FocusSession.swift in Sources */,
+				30B6133C3008E6E287ED12DD /* Sources/MikanseiCore/FolderSyncTransport.swift in Sources */,
+				308499A80B416EFFBCFFE2F5 /* Sources/MikanseiCore/MessageParser.swift in Sources */,
+				8806DD95B877BBA8FD6076CD /* Sources/MikanseiCore/ReminderOptions.swift in Sources */,
+				B1FCF06F40C51BDC73A0D227 /* Sources/MikanseiCore/WidgetSnapshot.swift in Sources */,
+				18DDE438FB34ACD7C10D7B42 /* Sources/MikanseiCore/WorkspaceSync.swift in Sources */,
+				376B0C4B80C2B5D8D869EBB9 /* Shared/DeadlineActivityAttributes.swift in Sources */,
+				47C085D94D8777C32CF7A167 /* Shared/FocusClock.swift in Sources */,
+				D362F09ECF9C5EEBDAE6F0C8 /* Shared/ReminderAlarmMetadata.swift in Sources */,
+				80B33A3649E76A9E70361592 /* Shared/WidgetSnapshotStore.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		73449B7401E2150CE31884A3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5C8DE70DA08297174B7F123B /* UITests/MikanseiUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		949D493B91791558E87BC5D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA8EE1BB46B2780FFEE29876 /* App/CalendarPlanEditor.swift in Sources */,
+				44A9777C82921F467105EEC0 /* App/CalendarScheduleView.swift in Sources */,
+				D2AA6B471EF34DC42140533C /* App/CalendarSyncManager.swift in Sources */,
+				FAF7C6C64FF5D6AF0A558FF3 /* App/CalendarSyncView.swift in Sources */,
+				5F4D1CD505CEEFA4A5388E6D /* App/CoursesView.swift in Sources */,
+				EF113836C9D25DAAD58E6632 /* App/DeadlineActivityManager.swift in Sources */,
+				7ED200A96026C06A12BEDCE0 /* App/EntryEditor.swift in Sources */,
+				209BC72FED7A175E364746EB /* App/EntryStore.swift in Sources */,
+				0ECC10D3B19D633FA621C590 /* App/MessageImportView.swift in Sources */,
+				727F023FDF337BA3E8AB18EC /* App/MikanseiApp.swift in Sources */,
+				CBB54B9A2C228A0F7D0632E5 /* App/NativeAlarmScheduler.swift in Sources */,
+				FE9C5056F4DFC350D49131E4 /* App/NotificationManager.swift in Sources */,
+				C06CE5FC4C0B16F63F3EBC0A /* App/ReminderOptionsView.swift in Sources */,
+				6E5ADF97B74568D5E0C965A2 /* App/RootView.swift in Sources */,
+				C733C6442A281599567C6C83 /* App/SettingsView.swift in Sources */,
+				CE616C6B4D5D2068A1642076 /* App/Theme.swift in Sources */,
+				7C9DC02F5F6408ACC311203A /* Sources/MikanseiCore/AppRoute.swift in Sources */,
+				DF9466138765CCCB0BE76072 /* Sources/MikanseiCore/Archive.swift in Sources */,
+				8F504D01148AD38A8407FB1E /* Sources/MikanseiCore/CalendarDisplay.swift in Sources */,
+				113ADDE32572464C16152C8D /* Sources/MikanseiCore/CalendarSync.swift in Sources */,
+				788C68AA3B93E0C4B68BC63E /* Sources/MikanseiCore/Course.swift in Sources */,
+				4A00DBF98CC158C01FD6CE36 /* Sources/MikanseiCore/CourseICS.swift in Sources */,
+				9190AE888B88B6BDAAB45934 /* Sources/MikanseiCore/DeadlineActivitySnapshot.swift in Sources */,
+				62A5C24214FE9D98E6EF2E78 /* Sources/MikanseiCore/Entry.swift in Sources */,
+				D3DA7AFC28A1F6892E2A6C11 /* Sources/MikanseiCore/FocusSession.swift in Sources */,
+				0C99FACD7B218F6451A45737 /* Sources/MikanseiCore/FolderSyncTransport.swift in Sources */,
+				CE31AEBC18F7097EBB8FDABE /* Sources/MikanseiCore/MessageParser.swift in Sources */,
+				968911717DE06B37072A6847 /* Sources/MikanseiCore/ReminderOptions.swift in Sources */,
+				63E388DBAC8541FB253B62E1 /* Sources/MikanseiCore/WidgetSnapshot.swift in Sources */,
+				6558D564C1540E2ABC10D7CE /* Sources/MikanseiCore/WorkspaceSync.swift in Sources */,
+				6DA92CF8CB39DC0727AFFDB3 /* Shared/DeadlineActivityAttributes.swift in Sources */,
+				A4AC334DEEDB8316C159A3A3 /* Shared/FocusClock.swift in Sources */,
+				752753ACD6785CFAA938E279 /* Shared/ReminderAlarmMetadata.swift in Sources */,
+				4E447F625C4BA05ECABD4C18 /* Shared/WidgetSnapshotStore.swift in Sources */,
+				A38B063349FCECEC9F1A2245 /* Sync/FolderSyncManager.swift in Sources */,
+				EBE5B1BDD909ABD5834F4C1B /* Sync/FolderSyncSettings.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A9181351A1FEE60D4A78323F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4862E1059F9C44D08E030AE5 /* MikanseiWidgets */;
+			targetProxy = 937A01D863611CD7A85B6FE9 /* PBXContainerItemProxy */;
+		};
+		BAE932EF166B50AB877FDC6F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 874E7FD7A39CF1D6319F589D /* Mikansei */;
+			targetProxy = 7E85D4A68785761E1DBB22D8 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		00F209874A1F7309F6DCEAA7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		04B042A5E7A3FDC0670ED689 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.personal.qingdanji.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Mikansei;
+			};
+			name = Release;
+		};
+		A374F42373C88BA4875AC06D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 7JMRL8X34C;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.3.1;
+				MIKANSEI_HOST_BUNDLE_IDENTIFIER = com.personal.mikansei;
+				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared";
+				PRODUCT_BUNDLE_IDENTIFIER = com.personal.mikansei.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CF02D12F16C52D6AA42C1FAD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 7JMRL8X34C;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.3.1;
+				MIKANSEI_HOST_BUNDLE_IDENTIFIER = com.personal.mikansei;
+				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared";
+				PRODUCT_BUNDLE_IDENTIFIER = com.personal.mikansei.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		DF53765BF9D03B65CB04A4C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.personal.qingdanji.uitests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Mikansei;
+			};
+			name = Debug;
+		};
+		ED8772ADEC3A6C25161BC957 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		F72D4F08E84CA4C7F809A7CF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 6PVAPR495F;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Mikansei;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.3.1;
+				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(PRODUCT_BUNDLE_IDENTIFIER).shared";
+				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei;
+				PRODUCT_NAME = Mikansei;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		F8975E934DA2067E0E497395 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 6PVAPR495F;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Mikansei;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.3.1;
+				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(PRODUCT_BUNDLE_IDENTIFIER).shared";
+				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei;
+				PRODUCT_NAME = Mikansei;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4867F1BF372A84237FA0A5A7 /* Build configuration list for PBXNativeTarget "Mikansei" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F8975E934DA2067E0E497395 /* Debug */,
+				F72D4F08E84CA4C7F809A7CF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		52AD4600EC3994E0CD3216B8 /* Build configuration list for PBXNativeTarget "MikanseiUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF53765BF9D03B65CB04A4C8 /* Debug */,
+				04B042A5E7A3FDC0670ED689 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		640DC9EFD529235A8D9E2727 /* Build configuration list for PBXProject "Mikansei" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ED8772ADEC3A6C25161BC957 /* Debug */,
+				00F209874A1F7309F6DCEAA7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		81536FFAB1000DF879015486 /* Build configuration list for PBXNativeTarget "MikanseiWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A374F42373C88BA4875AC06D /* Debug */,
+				CF02D12F16C52D6AA42C1FAD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
 	};
-	rootObject = 98F54143AB4E86B28C3AFEE0;
+	rootObject = 98F54143AB4E86B28C3AFEE0 /* Project object */;
 }
