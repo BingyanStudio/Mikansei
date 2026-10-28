@@ -236,7 +236,13 @@ def copy_shared_project(project_source, project_destination):
 def copy_handoff_files(stage):
     scripts_destination = stage / "Scripts"
     scripts_destination.mkdir(parents=True, exist_ok=True)
-    for script_name in ("generate_project.py", "prepare_testflight.py", "supabase_config.py"):
+    for script_name in (
+        "generate_project.py",
+        "prepare_testflight.py",
+        "supabase_config.py",
+        "check_ios_archive_icons.py",
+        "repair_ios_icons.py",
+    ):
         source = SOURCE_ROOT / "Scripts" / script_name
         if not source.is_file() or source.is_symlink():
             raise PrepareError("必要脚本缺失或不是普通文件: {}".format(script_name))
@@ -668,6 +674,17 @@ def main():
                     unsigned=arguments.unsigned_check
                 )
                 archive_code = run_logged(command, stage, log_file)
+                if archive_code == 0:
+                    checker = stage / "Scripts" / "check_ios_archive_icons.py"
+                    archive_code = run_logged(
+                        [
+                            sys.executable,
+                            str(checker),
+                            str(stage / "Mikansei.xcarchive"),
+                        ],
+                        stage,
+                        log_file,
+                    )
 
         write_manifest(
             stage,

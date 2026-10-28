@@ -1,5 +1,14 @@
 # 验证记录
 
+## App Store 图标上传修补 · 0.3.1 (6) 派生包 · 2026-10-28
+
+- **用户反馈**：Apple 上传邮件针对 0.3.1 (4)、`net.bingyan.KikuchiHeinrich.mikansei`，报缺少 120 × 120、152 × 152 图标及 `CFBundleIconName`。
+- **定位**：远端 `main` 的 `1c968a009b5b862ae145a9efe43f7666a21364c8` 已为 0.3.1 (5)，仍未把 `App/Assets.xcassets` 接入主 App 资源阶段，也未设置主图标资产名。0.4.2 (10) 和 0.5.0 (11) 的交接归档则已包含上述图标与声明，不能把本次旧工程报错当作新交接归档的检查结果。
+- **工具**：新增 `Scripts/repair_ios_icons.py`，为旧工程补资产目录资源与 `AppIcon` 设置，移除旧散图资源引用和手写图标声明，写入前备份。新增 `Scripts/check_ios_archive_icons.py`，检查最终 `.xcarchive` / `.app` 的 Assets.car、主图标名、PNG 引用及实际尺寸；准备助手在归档成功后调用它，检查失败返回非零。
+- **修补副本**：从上述 `main` 导出原生源码，在 `../Archives/Builds/TestFlightPreparation/2026-10-28-main-iconfix/Source/` 应用修复；App / Widgets 的 build 从 5 改为 6，版本仍为 0.3.1。逐项比较所有既有 build settings，除图标名和该 build 更新外均保留；Team `6PVAPR495F`、主 ID `net.bingyan.KikuchiHeinrich.mikansei` 和 `.widgets` 保留。此派生源码包由原始提交与修复工具共同标识，不将它伪称为远端 main 的新提交。
+- **实际归档**：Xcode 26.5，`CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`，退出码 0，`ARCHIVE SUCCEEDED`；主 App 和 Widgets 均确认 0.3.1 (6)，图标检查通过。日志 `/private/tmp/mikansei-main-iconfix-build.log`。修复脚本再次运行报告无须修改；Python 3.9 语法解析通过。
+- **边界**：没有运行自动化测试、签名、安装、上传或获得 Apple 验证结果。只依据本地实际产物确认邮件指出的三项图标缺失已补齐。未更改当前分支的 App 业务源码、Team 或 Bundle ID。
+
 ## 原生 Supabase 共享云账号 · 0.5.0 (11) · 2026-10-28
 
 - **实现范围**：iOS / macOS 设置新增邮箱验证码、首次合并确认、会话恢复、同步状态、手动同步、退出和二次确认删除入口。复用 Mikanseta 项目和 `mikanseta_archives`，不迁移或清空既有云数据。

@@ -29,6 +29,7 @@ Mikansei 可在不登录时离线使用。本机数据只有在用户主动使�
 | 文件 | 用途 |
 | --- | --- |
 | [BUILD_GUIDE.md](BUILD_GUIDE.md) | 准备工程、签名、归档、上传和云账号上线前条件 |
+| [ICON_UPLOAD_FIX.md](ICON_UPLOAD_FIX.md) | ITMS-90022 / 90023 / 90713 图标问题、旧上架工程修补与归档检查 |
 | [SUPABASE_NATIVE.md](../SUPABASE_NATIVE.md) | 原生客户端云账号配置、同步行为与管理员上线步骤 |
 | [APP_STORE_CONNECT_FIELDS.md](APP_STORE_CONNECT_FIELDS.md) | 后台字段逐项填写 |
 | [BETA_DESCRIPTION.txt](BETA_DESCRIPTION.txt) | 可直接粘贴的测试版简介 |

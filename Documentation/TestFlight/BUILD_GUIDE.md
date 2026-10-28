@@ -19,11 +19,13 @@ python3 Scripts/prepare_testflight.py \
 
 签名归档会从原工程 `Mikansei` App target 的 Release 配置读取版本与 build；本轮交接资料的目标值为 `0.5.0` 和 `11`，归档前请核对实际工程与二进制。若需通过助手覆盖 build，可加 `--build-number 11`，App 与 Widget 会同步更新。主 App Bundle ID 默认是 `com.personal.mikansei.beta.<TeamID小写>`，Widget 为主 ID 加 `.widgets`。如需自选主 Bundle ID，可加 `--bundle-id com.example.mikansei.beta`。
 
+**如果发布者已经创建 App Store Connect 应用记录，请沿用该记录的 Bundle ID。** 例如现有记录为 `net.bingyan.KikuchiHeinrich.mikansei` 时，在上述命令中加 `--bundle-id net.bingyan.KikuchiHeinrich.mikansei`；Team 仍填写发布者自己的真实 Team ID。默认的独立 Beta ID 适用于新建测试 App，不应替换已经使用的分发标识。
+
 发布者也可以省略 `--archive`，只生成准备包和可复制的 `xcodebuild` 命令；随后在自己的 Mac 上运行打印的命令。签名归档使用 Xcode Automatic Signing 和 `-allowProvisioningUpdates`，由发布者的 Xcode 账号创建或更新所需的 provisioning profile。工具不登录 Apple 账号、不上传、不导出 `.p12`、证书私钥或 Supabase 管理凭据；公开 Supabase 客户端配置可随源码包提供。归档命令、过程输出和失败退出码记录在 `Prepared-Mikansei/build.log`；包内 `PREPARED_APP.json` 列出可复制到 App Store Connect 的 Team、App Bundle ID、Widget Bundle ID、版本和 build number。
 
 ## 2. 在 App Store Connect 创建 App 记录
 
-首次上传前，发布者先登录 App Store Connect，在 **Apps** 页面点 **+ > New App** 创建记录，选择 iOS 平台，并将 Bundle ID 设为 `PREPARED_APP.json` 中的 `bundle_id`。填写名称、主要语言和 SKU 后创建记录。不要使用原开发版的 Bundle ID；Beta 使用独立 ID。Apple 的操作说明：[创建 App 记录](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/)。
+首次上传且尚无应用记录时，发布者先登录 App Store Connect，在 **Apps** 页面点 **+ > New App** 创建记录，选择 iOS 平台，并将 Bundle ID 设为 `PREPARED_APP.json` 中的 `bundle_id`。填写名称、主要语言和 SKU 后创建记录。已经有记录时，继续使用原记录，并按上一节指定其现有 Bundle ID。Apple 的操作说明：[创建 App 记录](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/)。
 
 ## 3. 在 Xcode Organizer 上传
 
@@ -43,7 +45,7 @@ open ../Prepared-Mikansei/Mikansei.xcarchive
 
 ## 5. 数据迁移与 App 能力
 
-Beta 使用独立 Bundle ID，旧开发版与 Beta 会被系统视为两个 App，Beta 不会自动接管旧 App 的本地数据库。安装前请在旧版 **我的 > 数据与备份 > 导出 JSON 备份**；安装 Beta 后用同一页面的 **导入 JSON 备份** 手动合并。
+助手默认使用独立 Beta Bundle ID；采用该默认值时，旧开发版与 Beta 会被系统视为两个 App，Beta 不会自动接管旧 App 的本地数据库。安装前请在旧版 **我的 > 数据与备份 > 导出 JSON 备份**；安装 Beta 后用同一页面的 **导入 JSON 备份** 手动合并。若继续更新同一分发 App，应沿用其既有 Bundle ID。
 
 工程的共享 capability 是 **Keychain Sharing**：App 与 Widget 用同一团队下的共享 Keychain access group。生成器会按新的主 Bundle ID 同步 host 和 keychain suffix。Keychain Sharing 不等于 App Groups；无需为此启用 App Groups。Mikansei 的 iCloud Drive 文件夹同步由用户在 App 内选择文件夹，通过系统文件选择器访问；这不要求伪造 CloudKit container 或推送服务配置，也不要为此额外开启这些 capabilities。可查阅 Apple 文档：[Keychain Sharing](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps) · [配置 App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups) · [SwiftUI 文件导入器](https://developer.apple.com/documentation/swiftui/view/fileimporter(ispresented:allowedcontenttypes:allowsmultipleselection:oncompletion:))。
 
@@ -66,3 +68,7 @@ python3 Scripts/prepare_testflight.py \
 ```
 
 这会在复制品中清空 App 与 Widget 的 Team，执行 `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` 的 iOS Release archive，并将完整输出写入 `build.log`。它只能帮助检查编译；无签名归档不能安装到设备，也不能上传或分发到 TestFlight，不能代替发布者 Team 下的签名归档验证。本轮 0.5.0（11）的无签名检查已通过，实际证据见 [准备记录](PREPARATION_RECORD.md)。
+
+## 8. 上传提示缺少 App 图标
+
+如果收到 `ITMS-90022`、`ITMS-90023` 或 `ITMS-90713`，请阅读 [图标上传修复说明](ICON_UPLOAD_FIX.md)。源码目录里有 PNG 不代表归档已正确声明图标；需要检查最终 `.xcarchive` 中的图标文件和 `Info.plist`。准备助手在归档成功后会自动执行这项静态检查。
