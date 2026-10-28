@@ -2,7 +2,7 @@ import SwiftUI
 import UserNotifications
 
 @MainActor
-final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
+final class MacWorkspaceStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
     @Published private(set) var entries: [Entry] = []
     @Published private(set) var courses: [Course] = []
     @Published private(set) var replica = WorkspaceReplica()
@@ -10,13 +10,26 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
     @Published private(set) var hasUnsavedChanges = false
     @Published var error: String?
     @Published var calendarSettings = CalendarSyncSettings()
+    @Published private(set) var cloudArchiveState: CloudArchiveState?
     @Published var reminderRoute: MacReminderRoute?
     private let writer: EntryArchiveWriter
     private var notificationDelegate: MacNotificationDelegate?
     private var notificationTask: Task<Void, Never>?
     private var revision = 0
+    private var cloudSyncWriteFailed = false
+    private var cloudSyncCommitObserver: (@MainActor () -> Void)?
+    private var cloudSyncWaiters: [CheckedContinuation<Bool, Never>] = []
+    private var deletionSnapshotInitialized = false
+    private var deletionSnapshotEntries: [Entry] = []
+    private var deletionSnapshotCourses: [Course] = []
     var syncReady: Bool { !readOnly && !hasUnsavedChanges }
-    var archive: EntryArchive { EntryArchive(entries: entries, courses: courses, calendarSync: calendarSettings, replica: replica) }
+    var cloudSyncArchive: EntryArchive {
+        EntryArchive(entries: entries, courses: courses, calendarSync: calendarSettings,
+                     replica: replica, cloudArchiveState: cloudArchiveState)
+    }
+    var archive: EntryArchive { cloudSyncArchive }
+    var cloudSyncReady: Bool { !readOnly }
+    var cloudSyncSaveFailed: Bool { cloudSyncWriteFailed }
 
     init() {
         let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -29,6 +42,7 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
         do {
             let saved = testing ? EntryArchive(entries: []) : try repository.loadArchive()
             entries = saved.entries; courses = saved.courses; calendarSettings = saved.calendarSync
+            cloudArchiveState = saved.cloudArchiveState
             replica = saved.replica ?? WorkspaceReplica()
             if testing && ProcessInfo.processInfo.arguments.contains("--demo") {
                 entries = [Entry(title: "整理今日作业", kind: .homework, priority: .urgent, dueDate: Date().addingTimeInterval(3600)), Entry(title: "给家里打电话"), Entry(title: "学习笔记", body: "用侧栏浏览，在详情中编辑。", kind: .note)]
@@ -36,6 +50,9 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
             if seedGuide { entries = [Entry.builtInGuideNote()] }
             replica.capture(entries: entries, courses: courses, suppressed: calendarSettings.suppressed)
         } catch { readOnly = true; self.error = "无法读取原数据，请保留 App：\(error.localizedDescription)" }
+        deletionSnapshotEntries = entries
+        deletionSnapshotCourses = courses
+        deletionSnapshotInitialized = true
         persist()
         if !testing {
             let delegate = MacNotificationDelegate { [weak self] route in self?.reminderRoute = route }
@@ -43,16 +60,40 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
             UNUserNotificationCenter.current().delegate = delegate
         }
     }
-    func persist() {
+    func persist(recordingLocalDeletions: Bool = true) {
         guard !readOnly else { return }
+        if recordingLocalDeletions && deletionSnapshotInitialized {
+            let currentEntryIDs = Set(entries.map(\.id))
+            let currentCourseIDs = Set(courses.map(\.id))
+            let removedEntries = deletionSnapshotEntries.filter { !currentEntryIDs.contains($0.id) }
+            let removedCourses = deletionSnapshotCourses.filter { !currentCourseIDs.contains($0.id) }
+            if !removedEntries.isEmpty || !removedCourses.isEmpty {
+                cloudArchiveState = CloudArchiveCodec.recordingLocalDeletions(
+                    state: cloudArchiveState,
+                    removedEntries: removedEntries,
+                    removedCourses: removedCourses
+                )
+            }
+        }
+        deletionSnapshotEntries = entries
+        deletionSnapshotCourses = courses
         revision += 1; let current = revision
         hasUnsavedChanges = true
         writer.save(archive) { [weak self] result in
             DispatchQueue.main.async {
                 guard let self, current == self.revision else { return }
                 switch result {
-                case .success: self.hasUnsavedChanges = false; self.error = nil; self.scheduleNotifications()
-                case .failure(let error): self.error = "尚未保存，请重试：\(error.localizedDescription)"
+                case .success:
+                    self.hasUnsavedChanges = false
+                    self.cloudSyncWriteFailed = false
+                    self.error = nil
+                    self.scheduleNotifications()
+                    self.finishCloudSyncWaiters(success: true)
+                    self.cloudSyncCommitObserver?()
+                case .failure(let error):
+                    self.cloudSyncWriteFailed = true
+                    self.error = "尚未保存，请重试：\(error.localizedDescription)"
+                    self.finishCloudSyncWaiters(success: false)
                 }
             }
         }
@@ -137,6 +178,44 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace {
         persist()
     }
     func changed() { replica.capture(entries: entries, courses: courses, suppressed: calendarSettings.suppressed); persist() }
+    func applyCloudArchive(_ merge: CloudArchiveMerge) -> Bool {
+        guard !readOnly else { return false }
+        var settings = calendarSettings
+        for identity in merge.deletedCalendarOccurrences
+        where !settings.suppressed.contains(where: { $0.matches(identity) }) {
+            settings.suppressed.append(identity)
+        }
+        var nextReplica = replica
+        nextReplica.capture(entries: merge.entries, courses: merge.courses, suppressed: settings.suppressed)
+        let resolvedEntries = nextReplica.entries
+        let resolvedCourses = nextReplica.courses
+        guard resolvedEntries != entries || resolvedCourses != courses ||
+              settings != calendarSettings || nextReplica != replica ||
+              merge.state != cloudArchiveState else { return false }
+        entries = resolvedEntries
+        courses = resolvedCourses
+        calendarSettings = settings
+        replica = nextReplica
+        cloudArchiveState = merge.state
+        replica.capture(entries: entries, courses: courses, suppressed: calendarSettings.suppressed)
+        persist(recordingLocalDeletions: false)
+        return true
+    }
+    func waitForCloudSyncDurability() async -> Bool {
+        guard !readOnly, !cloudSyncWriteFailed else { return false }
+        if !hasUnsavedChanges { return true }
+        return await withCheckedContinuation { continuation in
+            cloudSyncWaiters.append(continuation)
+        }
+    }
+    func setCloudSyncCommitObserver(_ observer: (@MainActor () -> Void)?) {
+        cloudSyncCommitObserver = observer
+    }
+    private func finishCloudSyncWaiters(success: Bool) {
+        let pending = cloudSyncWaiters
+        cloudSyncWaiters.removeAll()
+        pending.forEach { $0.resume(returning: success) }
+    }
     func scheduleNotifications() {
         guard !ProcessInfo.processInfo.arguments.contains("--ui-testing") else { return }
         let entries = entries; let courses = courses

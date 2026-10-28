@@ -4,8 +4,10 @@ from pathlib import Path
 import hashlib
 import json
 import subprocess
+from supabase_config import write_client_resource
 
 ROOT = Path(__file__).resolve().parents[1]
+client_configuration = write_client_resource(ROOT)
 PROJECT = ROOT / "Mikansei.xcodeproj"
 PROJECT.mkdir(exist_ok=True)
 previous_objects = {}
@@ -47,6 +49,8 @@ asset_catalog = ROOT / "App/Assets.xcassets"
 app_privacy_manifest = ROOT / "App/PrivacyInfo.xcprivacy"
 widget_privacy_manifest = ROOT / "Widgets/PrivacyInfo.xcprivacy"
 app_resource_files = icon_files + [asset_catalog, app_privacy_manifest]
+if client_configuration is not None:
+    app_resource_files.append(client_configuration)
 widget_resource_files = [widget_privacy_manifest]
 for path in sorted(set(app_files + test_files + widget_files)):
     rel = path.relative_to(ROOT).as_posix()
@@ -61,6 +65,7 @@ for path in app_resource_files + widget_resource_files:
         ".png": "image.png",
         ".xcassets": "folder.assetcatalog",
         ".xcprivacy": "text.xml",
+        ".plist": "text.plist.xml",
     }[path.suffix]
     obj("ref:" + rel, f"isa = PBXFileReference; lastKnownFileType = {quote(file_type)}; path = {quote(rel)}; sourceTree = SOURCE_ROOT;")
     obj("build:" + rel, f"isa = PBXBuildFile; fileRef = {uid('ref:' + rel)};")
@@ -111,7 +116,7 @@ app_settings = {
     "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight",
     "TARGETED_DEVICE_FAMILY": "1,2", "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
     "SUPPORTS_MACCATALYST": "NO",
-    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.3.2", "CURRENT_PROJECT_VERSION": "6",
+    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.5.0", "CURRENT_PROJECT_VERSION": "11",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks", "SWIFT_EMIT_LOC_STRINGS": "YES",
 }
 widget_settings = {

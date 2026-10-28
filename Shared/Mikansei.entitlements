@@ -4,6 +4,7 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
+		<string>$(AppIdentifierPrefix)$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 		<string>$(AppIdentifierPrefix)$(MIKANSEI_SHARED_KEYCHAIN_SUFFIX)</string>
 	</array>
 </dict>

@@ -1,16 +1,17 @@
-Please test these flows in the first full external beta of native Mikansei. Skip optional integrations as needed.
+Please test the native iOS app’s local features first. Calendar, reminders, cloud accounts, and iCloud Drive folder sync are optional.
 
-1. Task completion: open “待办” (Tasks), tap + at upper right, enter a title, and tap “保存” (Save). Tap the circle beside the task to complete or reopen it.
-2. Checklist: open the task, add a step under “Checklist · 逐项勾选,” tap “添加” (Add) and “保存” (Save), then toggle the step on its card.
-3. Notes: open the bottom “笔记” (Notes) tab and tap + to open the full-screen editor. Add a title and body, tap “完成” (Done), then try the eye button for preview.
-4. JSON backup: tap the upper-left gear, then “导出 JSON 备份” (Export JSON Backup) under “数据与备份” (Data and Backup). Save in Files. Test import only with a copy; import merges data.
-5. Calendar (optional): iOS may request calendar access on first launch; decline and continue if you prefer. To test import, open “日历自动导入” (Automatic Calendar Import) in Settings, allow access, select a test calendar, and tap “立即同步” (Sync Now). Only selected calendars are imported.
-6. Widgets (optional): open the app once, then add a Mikansei “今日清单,” “快速添加,” “今日进度,” or “正在做 · 计时” widget from Home Screen edit mode. Check its tasks and app links. Lock Screen widgets depend on device support.
-7. Live Activity (optional): create a task due today by tapping +, then “今天” (Today), and save. If you decline the notification prompt, choose “先保存事项” (Save Item Anyway). In Settings enable “自动显示今日 DDL” under “锁屏与灵动岛 · 实时活动.” Allow Live Activities if prompted; check the Lock Screen and Dynamic Island on a supported iPhone.
-8. Message parsing (optional): tap “从消息添加,” paste a fictional or redacted sample, tap “提取建议,” review it, then tap “核对并编辑事项.” Parsing is on-device and needs no messaging-app login.
-9. Course ICS (optional): from Schedule open “课表与登记” → “导入 ICS / CSV 课表.” Review the preview and tap “确认导入,” or cancel to avoid saving test courses.
-10. iCloud Drive sync (optional): in Settings, find “iCloud Drive · 跨设备同步,” select a test folder, and tap “立即同步.” Select the same folder on another device using the same Apple ID to check merging.
-11. Notifications and alarms (optional): save a task due “今天” to try notification permission. To test alarms, create a schedule and choose “闹钟提醒” under “提醒形式.” If declined, choose “先保存事项.” Alarms require iOS 26 or later.
-12. Privacy and support (optional): in Settings under “隐私与支持,” open “隐私政策,” “使用帮助与支持,” or “邮件联系开发者.”
+1. Tasks: open “待办” (Tasks), tap +, enter a title, and save. Tap the circle beside the task to complete or reopen it.
+2. Checklist: open a task, add a step under “Checklist · 逐项勾选,” save, then check the step and progress on the card.
+3. Notes: open “笔记” (Notes), create and save a note, then try the eye button for preview.
+4. JSON backup: open “我的” (Settings) → “数据与备份” (Data and Backup) and export JSON. Import only a copy; import merges content.
+5. Calendar (optional): open “日历自动导入” (Automatic Calendar Import), select a dedicated test calendar, and tap “立即同步” (Sync Now). Only selected sources are imported; automatic import does not edit Apple Calendar.
+6. Widgets and Live Activity (optional): add a Mikansei widget from the Home Screen. For Live Activity, create an unfinished task due today, enable “自动显示今日 DDL” under “锁屏与灵动岛 · 实时活动,” and allow the feature if prompted. Availability depends on the device and OS.
+7. Message parsing (optional): use fictional or redacted text with “从消息添加” (Add from Message). Review suggestions before editing; parsing is on-device.
+8. Course import (optional): in Schedule → “课表与登记” (Courses and Check-in), preview an ICS / CSV file before confirming, or cancel to avoid saving test courses.
+9. iCloud Drive folder sync (optional): choose a dedicated folder in Settings and tap “立即同步.” It is separate from cloud account sync. Another device can select the same folder to check merging.
+10. Email cloud account (optional; only if this build has an enabled service and you have an accessible test mailbox): in Settings, open “Mikansei · Mikanseta 云账号.” Request an email code. Requesting a code for a new email can create an account; sign-in requires verification. Before first sign-in, read and confirm the merge notice. Sign-in merges local tasks, schedules, notes, checklists, courses, completion state, and timers with that account’s existing archive. Use only a test mailbox you control; never sign in to another person’s account. Without sign-in, local use should remain available and local content should not upload. If available, check sync on two test devices and confirm sign-out keeps both local and server data. Online cloud behavior has not been verified in this handoff; if unavailable or failing, skip it and report the issue. Do not use a personal primary account or real sensitive data.
+11. Account deletion (only after the administrator deploys and enables the deletion RPC): this removes the shared Mikansei / Mikanseta account and cloud archive. Other devices will not be able to refresh their login normally or continue writing to the archive. Use a test account with no sensitive data. Other devices’ local copies are not automatically cleared, and existing tokens may remain valid until they expire. Deployment and online verification are pending.
+12. Notifications and alarms (optional): save a task with a due time to try notifications. To test alarms, create a schedule and select “闹钟提醒.” AlarmKit requires iOS 26 or later.
+13. Privacy and support: under “我的” → “隐私与支持,” open the privacy policy, support page, or email link.
 
-These integrations are optional; declining permissions does not block local tasks or notes. Report your device, iOS version, reproduction steps, and result. Redact screenshots. Feedback: kikuchiheinr@qq.com.
+Local features do not require sign-in. If cloud service is unavailable, continue offline. Local content is not merged or uploaded before you confirm first sign-in. Report your device, iOS version, steps, and results. Redact screenshots. Feedback: kikuchiheinr@qq.com.

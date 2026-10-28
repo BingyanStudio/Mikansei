@@ -1,5 +1,18 @@
 # 验证记录
 
+## 原生 Supabase 共享云账号 · 0.5.0 (11) · 2026-10-28
+
+- **实现范围**：iOS / macOS 设置新增邮箱验证码、首次合并确认、会话恢复、同步状态、手动同步、退出和二次确认删除入口。复用 Mikanseta 项目和 `mikanseta_archives`，不迁移或清空既有云数据。
+- **兼容策略**：云协议沿用 Flutter v1 的事项时间戳与删除标记；本机 `EntryArchive` v1 新增可选兼容状态。保留未识别的顶层、事项及课程字段；不重放其他设备的 Lamport replica；日历来源与授权保持本机设置。本机保存成功后才上传，原生上传采用条件更新并有限重试。课表沿用 Flutter 的本机优先和永久删除标记规则。
+- **会话和传输**：系统钥匙串保存登录凭据；App 使用专用访问组，Widget 继续通过原共享组读取摘要，不含 Supabase 配置。前台实时订阅加 30 秒轮询，2 秒合并推送；补齐 join / heartbeat 超时和断线重连，停止与换号通过会话代次隔离。这些是实现说明，尚未进行真实在线行为验收。
+- **iOS 构建**：Xcode 26.5、iOS 26.5 SDK，`Scripts/prepare_testflight.py --unsigned-check` 退出码 0，`ARCHIVE SUCCEEDED`。最终准备目录为 `../Archives/Builds/TestFlightPreparation/2026-10-28-cloud-final-unsigned/`，含日志、清单与无签名归档。App / Widgets 均为 0.5.0 (11)，检查副本使用独立 Beta Bundle ID。
+- **Mac 构建**：Release、`CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO`，退出码 0，`BUILD SUCCEEDED`。`lipo -archs` 确认 x86_64 / arm64，产物为 0.5.0 (11)。日志 `/private/tmp/mikansei-cloud-mac-final.log`；未安装或启动。
+- **资源与身份核对**：两端 App 的公开客户端资源均与本机既有 Mikanseta 配置一致，Widget 不含该资源；最终准备副本与工作区 Swift 源码逐字节一致。原源码的 iOS Team `7JMRL8X34C`、`com.personal.mikansei` / `.widgets` 和 Mac `com.personal.mikansei.macOS` 保留。公开客户端配置被 Git 忽略，示例与验证脚本入库；未嵌入管理密钥。
+- **文档与静态检查**：主 App / Mac 隐私清单和 TestFlight 资料按可选云账号更新；Python 语法、工程与隐私 plist 可解析。所有源码与文档检查结果均不等同于设备行为验收。
+- **既有警告**：iOS 仍有 `NotificationManager` 字典及 `EntryStore` WidgetSnapshot 的 Sendable 捕获警告（Swift 5 语言模式）；Mac 有冗余 `_ =` 和无 AppIntents 依赖的元数据提取提示。
+- **在线状态与边界**：只读 Auth 设置返回 HTTP 200，邮箱 provider 开启且允许注册；未发送真实验证码、登录、读取或上传私人云归档、调用删除 RPC。`Documentation/supabase-native-account.sql` 已准备但尚未部署，待项目管理员授权；创建函数本身不会删除数据。
+- **未执行**：自动化测试、真实双设备/跨 App 同步、断线与换号行为、实际 Keychain 恢复、账号删除、签名、安装、TestFlight 上传或审核。
+
 ## Routine 待办 frontier 与跨格式完成身份 · 0.3.2 (6) · 2026-10-22
 
 - **根因**：随待办轮询按 occurrence 逐次导入循环日历事件后，`TaskBoard.open` 将所有未来 occurrence 都当作独立开放项；Mac“常态”列表又直接读取原始 `store.entries`。同时 Swift `Entry` 的显式 CodingKeys 会丢弃 Flutter 的日历关联字段，跨格式保存后可能失去系列和原始 occurrence，造成再次导入时重复或把已完成 occurrence 重新露出来。

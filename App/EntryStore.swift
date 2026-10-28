@@ -2,7 +2,7 @@ import SwiftUI
 import WidgetKit
 
 @MainActor
-final class EntryStore: ObservableObject, SyncWorkspace {
+final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
     @Published private(set) var entries: [Entry] = []
     @Published private(set) var courses: [Course] = []
     @Published private(set) var readOnly = false
@@ -13,9 +13,18 @@ final class EntryStore: ObservableObject, SyncWorkspace {
     @Published private(set) var saveFailed = false
     @Published private(set) var replica = WorkspaceReplica()
     var syncReady: Bool { !readOnly && !hasUnsavedChanges }
+    @Published private(set) var cloudArchiveState: CloudArchiveState?
+    var cloudSyncArchive: EntryArchive {
+        EntryArchive(entries: entries, courses: courses, calendarSync: calendarSync,
+                     replica: replica, cloudArchiveState: cloudArchiveState)
+    }
+    var cloudSyncReady: Bool { !readOnly }
+    var cloudSyncSaveFailed: Bool { saveFailed }
     private let repository: EntryRepository
     private let writer: EntryArchiveWriter
     private var writeRevision = 0
+    private var cloudSyncCommitObserver: (@MainActor () -> Void)?
+    private var cloudSyncWaiters: [CheckedContinuation<Bool, Never>] = []
     private var backgroundWrite: UIBackgroundTaskIdentifier = .invalid
     private let widgetQueue = DispatchQueue(label: "Mikansei.widget-writer", qos: .utility)
     private var widgetRefresh: Task<Void, Never>?
@@ -36,7 +45,7 @@ final class EntryStore: ObservableObject, SyncWorkspace {
         } else {
             // 首次安装（档案文件原本不存在）时内置一份使用说明笔记；testing 走上面的分支，绝不播种。
             let seedGuide = !FileManager.default.fileExists(atPath: repository.fileURL.path)
-            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync; replica = archive.replica ?? WorkspaceReplica()
+            do { let archive = try repository.loadArchive(); entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync; replica = archive.replica ?? WorkspaceReplica(); cloudArchiveState = archive.cloudArchiveState
                 if seedGuide { entries = [Entry.builtInGuideNote()]; _ = commit(entries) }
             }
             catch {
@@ -47,15 +56,39 @@ final class EntryStore: ObservableObject, SyncWorkspace {
         if !readOnly { replica.capture(entries: entries, courses: courses, suppressed: calendarSync.suppressed); notifications.update(entries: entries, courses: courses); refreshWidgets() }
     }
     @discardableResult
-    private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil, calendarSync nextSync: CalendarSyncSettings? = nil, mergedReplica: WorkspaceReplica? = nil) -> Bool {
+    private func commit(_ next: [Entry], courses nextCourses: [Course]? = nil,
+                        calendarSync nextSync: CalendarSyncSettings? = nil,
+                        mergedReplica: WorkspaceReplica? = nil,
+                        cloudArchiveState nextCloudState: CloudArchiveState? = nil,
+                        replaceCloudArchiveState: Bool = false,
+                        recordLocalDeletions: Bool = true) -> Bool {
         guard !readOnly else { return false }
+        let priorEntries = entries
+        let priorCourses = courses
         var nextReplica = mergedReplica ?? replica
         nextReplica.capture(entries: next, courses: nextCourses ?? courses, suppressed: (nextSync ?? calendarSync).suppressed)
-        let archive = EntryArchive(entries: next, courses: nextCourses ?? courses, calendarSync: nextSync ?? calendarSync, replica: nextReplica)
+        var nextDurableCloudState = replaceCloudArchiveState ? nextCloudState : cloudArchiveState
+        if recordLocalDeletions {
+            let nextEntryIDs = Set(next.map(\.id))
+            let nextCourseIDs = Set((nextCourses ?? courses).map(\.id))
+            let removedEntries = priorEntries.filter { !nextEntryIDs.contains($0.id) }
+            let removedCourses = priorCourses.filter { !nextCourseIDs.contains($0.id) }
+            if !removedEntries.isEmpty || !removedCourses.isEmpty {
+                nextDurableCloudState = CloudArchiveCodec.recordingLocalDeletions(
+                    state: nextDurableCloudState,
+                    removedEntries: removedEntries,
+                    removedCourses: removedCourses
+                )
+            }
+        }
+        let archive = EntryArchive(entries: next, courses: nextCourses ?? courses,
+                                   calendarSync: nextSync ?? calendarSync, replica: nextReplica,
+                                   cloudArchiveState: nextDurableCloudState)
         writeRevision += 1
         let revision = writeRevision
         entries = archive.entries; courses = archive.courses; calendarSync = archive.calendarSync
         replica = nextReplica
+        cloudArchiveState = archive.cloudArchiveState
         hasUnsavedChanges = true
         saveFailed = false
         error = nil
@@ -77,12 +110,53 @@ final class EntryStore: ObservableObject, SyncWorkspace {
                     self.backgroundWrite = .invalid
                 }
                 switch result {
-                case .success: self.hasUnsavedChanges = false; self.refreshWidgets()
-                case .failure(let error): self.saveFailed = true; self.error = "保存失败，修改暂时只在内存中，请点击重试保存：\(error.localizedDescription)"
+                case .success:
+                    self.hasUnsavedChanges = false
+                    self.saveFailed = false
+                    self.refreshWidgets()
+                    self.finishCloudSyncWaiters(success: true)
+                    self.cloudSyncCommitObserver?()
+                case .failure(let error):
+                    self.saveFailed = true
+                    self.error = "保存失败，修改暂时只在内存中，请点击重试保存：\(error.localizedDescription)"
+                    self.finishCloudSyncWaiters(success: false)
                 }
             }
         }
         return true // Accepted in memory; failures remain visible and can be retried.
+    }
+    func applyCloudArchive(_ merge: CloudArchiveMerge) -> Bool {
+        guard !readOnly else { return false }
+        var settings = calendarSync
+        for identity in merge.deletedCalendarOccurrences
+        where !settings.suppressed.contains(where: { $0.matches(identity) }) {
+            settings.suppressed.append(identity)
+        }
+        var nextReplica = replica
+        nextReplica.capture(entries: merge.entries, courses: merge.courses, suppressed: settings.suppressed)
+        let resolvedEntries = nextReplica.entries
+        let resolvedCourses = nextReplica.courses
+        guard resolvedEntries != entries || resolvedCourses != courses ||
+              settings != calendarSync || nextReplica != replica ||
+              merge.state != cloudArchiveState else { return false }
+        return commit(resolvedEntries, courses: resolvedCourses, calendarSync: settings,
+                      mergedReplica: nextReplica, cloudArchiveState: merge.state,
+                      replaceCloudArchiveState: true, recordLocalDeletions: false)
+    }
+    func waitForCloudSyncDurability() async -> Bool {
+        guard !readOnly, !saveFailed else { return false }
+        if !hasUnsavedChanges { return true }
+        return await withCheckedContinuation { continuation in
+            cloudSyncWaiters.append(continuation)
+        }
+    }
+    func setCloudSyncCommitObserver(_ observer: (@MainActor () -> Void)?) {
+        cloudSyncCommitObserver = observer
+    }
+    private func finishCloudSyncWaiters(success: Bool) {
+        let pending = cloudSyncWaiters
+        cloudSyncWaiters.removeAll()
+        pending.forEach { $0.resume(returning: success) }
     }
     func retrySave() { _ = commit(entries) }
     func applySync(_ document: WorkspaceSyncDocument) {

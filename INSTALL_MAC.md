@@ -2,7 +2,7 @@
 
 需要 macOS 14 或更新版本。原生 Mac 界面采用 **侧栏 → 事项列表 → 详情**，支持鼠标、键盘、多列窗口和搜索。
 
-已经打包的 `Mikansei-macOS.app` 可以直接双击打开，也可拖入“应用程序”。电脑会保存自己的数据，选定同一 iCloud Drive 文件夹后与手机合并，见 [同步步骤](SYNC.md)。
+已经打包的 `Mikansei-macOS.app` 可以直接双击打开，也可拖入“应用程序”。电脑会保存自己的数据；原生源码 0.5.0 (11) 起，可在设置中登录与 Mikanseta 相同的邮箱云账号，确认后合并。也可选定同一 iCloud Drive 文件夹与手机合并，见 [同步步骤](SYNC.md)。此前安装包不会自动获得源码的新功能。
 
 从源码安装：安装完整 Xcode 后双击项目根目录的 `安装到Mac.command`。它会编译 Intel / Apple 芯片通用版本，使用本地签名，按 App 内嵌的版本号和构建号生成 `../Releases/Mikansei/macOS/<version+build>/Mikansei-macOS.app` 并打开。无需改变 iPhone 的 Team，也不删除 App 的数据。更新前先退出正在运行的旧 Mac 版。设置 `MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
 

@@ -11,6 +11,7 @@ struct MacBackupDocument: FileDocument {
 }
 struct MacSettingsView: View {
     @EnvironmentObject private var store: MacWorkspaceStore
+    @EnvironmentObject private var cloud: CloudAccountManager
     @EnvironmentObject private var sync: FolderSyncManager
     @State private var exporting = false
     @State private var backup = MacBackupDocument(data: Data())
@@ -18,6 +19,7 @@ struct MacSettingsView: View {
     @AppStorage("appearance") private var appearance = 0
     var body: some View {
         Form {
+            CloudAccountSettings(cloud: cloud)
             FolderSyncSettings(workspace: store)
             Section("提醒") {
                 Button("允许 Mac 提醒") { Task { do { let allowed = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]); notice = allowed ? "已允许通知" : "请在系统设置 → 通知 → Mikansei 允许提醒"; store.scheduleNotifications() } catch { notice = error.localizedDescription } } }

@@ -12,12 +12,13 @@
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
-当前原生版本 **0.3.2 (6)**：修复 routine 和循环日历事件在待办列表重复堆积的问题。同一系列只显示当前最早尚未完成的一次，完成后才推进到下一次；完成历史、个人修改、计时和 Checklist 保留，日历月 / 日视图继续展示未来 occurrence。跨端归档会保留可靠系列和原始 occurrence 身份。原有的 iCloud Drive 文件夹同步与 iPhone / Mac 待办、日程、笔记、Checklist、完成状态、计时和课表共享继续可用，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
+当前原生源码版本 **0.5.0 (11)**：iPhone 和 Mac 新增与 Mikanseta 共用的 Supabase 云账号。进入设置，使用同一邮箱的验证码登录，确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。本轮的编译与实际账号验证范围见 [验证记录](VALIDATION.md)。
 
 另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.5.3 (16)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 
 ## 已实现
 
+- **共享云账号**：原生 iOS / macOS 与 Mikanseta 共用邮箱验证码、Supabase 项目和归档表。首次合并需确认；本机保存成功后推送，前台通过实时订阅与轮询拉取，支持手动同步、退出和删除账户。账户删除接口需由项目管理员部署，见 [配置说明](Documentation/SUPABASE_NATIVE.md)。
 - **待办首页**：“已超时”在最前，其次正在做、待完成；每个栏目内按紧急 → 重要 → 普通，再按截止时间由近到远排序，同优先级无日期事项在后。
 - **完成与历史**：勾选立即反馈，以短淡入淡出更新“今日已完成”；清单按需渲染，文件与小组件写入在后台串行执行；按手机当地日期跨天后归入历史记录，可重新打开。启用系统“减弱动态效果”时减少动画。
 - **主屏幕小组件**：今日清单（小 / 中 / 大）、快速添加（小 / 中）、今日进度（小尺寸及锁屏）。点事项打开详情，点快速添加直接填写待办、作业或笔记。今日清单包括已超时、今天截止、无日期和今日完成的事项。
@@ -46,7 +47,7 @@
 5. 按 Xcode 的提示在手机上开启开发者模式并信任开发签名，点击 Run。
 6. 首次设置提醒时允许通知；在 App 左上角设置中添加课表或导入文件。
 
-这是用于个人试用的开发工程。此前版本通过 Personal Team 签名验证；本轮改动已在 Xcode 编译、签名并安装到 iPhone，界面与真机交互仍需验证。后续分发可在完成真机验证后考虑 TestFlight。
+这是用于个人试用的开发工程。此前版本通过 Personal Team 签名验证；本轮云账号版本的构建与设备验证状态见 [验证记录](VALIDATION.md)。TestFlight 分发还需要发布者完成签名、后台配置和审核。
 
 ## App 图标
 
@@ -87,7 +88,7 @@
 - 使用本地摘要，不发送任务到服务器，不包含备注、平台、群消息或 Checklist 正文。锁屏只显示前三件，完整列表在 App 内。
 - 苹果限制单次实时活动最长 8 小时；本版没有服务器推送来重启活动或在 App 未运行时刷新任务列表。日期跨天后旧卡片提示更新，回到 App 更新今日内容。系统实时活动权限需开启。
 
-设置页版本从安装包读取；此版为 **0.3.2 (6)**，iPhone、Mac 与 iPhone 扩展保持一致。
+设置页版本从安装包读取；当前源码为 **0.5.0 (11)**，iPhone、Mac 与 iPhone 扩展保持一致，已发布安装包的版本以其自身信息为准。
 
 ## 清单和日历的分工
 
@@ -149,7 +150,7 @@
 
 ## QQ 信息
 
-本版**不自动读取 QQ 群**。辅助解析仅处理你主动粘贴的文本，不上传原文，不需要 QQ 密码。
+本版**不自动读取 QQ 群**。辅助解析仅处理你主动粘贴的文本，不需要 QQ 密码；解析在本机进行。若将原文保存为事项正文并启用云账号，该正文会随归档上传。
 
 日期规则只覆盖常见绝对日期、今天 / 明天 / 后天，以及 `HH:mm` 时刻。缺少年份或时刻会提示假设；多个日期或不能可靠识别时，要求手动指定。旧消息中的“明天”按解析当天计算，必须核对。一次粘贴只创建一个事项。
 
@@ -157,7 +158,7 @@
 
 ## 数据
 
-手机数据位于 App 沙盒 `Application Support/QingdanJi/entries.json`，Mac 为 `Application Support/MikanseiMac/entries.json`。先保存本机，用户选择 iCloud Drive 文件夹后跨设备合并；没有自建服务器或额外账户登录。卸载 App 会删除本地数据，请定期在设置中导出备份到“文件”。完整同步范围、离线与冲突规则见 [SYNC.md](SYNC.md)。
+手机数据位于 App 沙盒 `Application Support/QingdanJi/entries.json`，Mac 为 `Application Support/MikanseiMac/entries.json`。先保存本机，可选择登录 Supabase 云账号或连接个人 iCloud Drive 文件夹进行跨设备合并。云账号会上传完整归档，使用 HTTPS 传输，不是端到端加密；不登录时不上传 Supabase。登录凭据保存在设备钥匙串，不写入 JSON 备份。卸载 App 会删除本地数据，请定期在设置中导出备份到“文件”。完整同步范围、离线与冲突规则见 [SYNC.md](SYNC.md)。
 
 小组件只读取任务摘要，通过 App 与扩展的同名 Keychain Access Group 共享；不申请 App Groups，不共享笔记正文、消息原文、提交平台或 Checklist 内容。[Apple 钥匙串共享说明](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps)。本机 Personal Team 现有描述文件允许相应钥匙串组；完整共享读取与小组件显示仍需真机确认。
 

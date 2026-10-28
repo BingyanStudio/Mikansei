@@ -16,11 +16,12 @@ public struct EntryArchive: Codable {
     public var courses: [Course]
     public var calendarSync: CalendarSyncSettings
     public var replica: WorkspaceReplica?
-    public init(entries: [Entry], courses: [Course] = [], calendarSync: CalendarSyncSettings = CalendarSyncSettings(), replica: WorkspaceReplica? = nil) {
+    public var cloudArchiveState: CloudArchiveState?
+    public init(entries: [Entry], courses: [Course] = [], calendarSync: CalendarSyncSettings = CalendarSyncSettings(), replica: WorkspaceReplica? = nil, cloudArchiveState: CloudArchiveState? = nil) {
         self.version = 1; self.entries = entries; self.courses = courses; self.calendarSync = calendarSync
-        self.replica = replica
+        self.replica = replica; self.cloudArchiveState = cloudArchiveState
     }
-    private enum CodingKeys: String, CodingKey { case version, entries, courses, calendarSync, replica }
+    private enum CodingKeys: String, CodingKey { case version, entries, courses, calendarSync, replica, cloudArchiveState }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = try c.decode(Int.self, forKey: .version)
@@ -28,6 +29,7 @@ public struct EntryArchive: Codable {
         courses = try c.decodeIfPresent([Course].self, forKey: .courses) ?? []
         calendarSync = try c.decodeIfPresent(CalendarSyncSettings.self, forKey: .calendarSync) ?? CalendarSyncSettings()
         replica = try c.decodeIfPresent(WorkspaceReplica.self, forKey: .replica)
+        cloudArchiveState = try c.decodeIfPresent(CloudArchiveState.self, forKey: .cloudArchiveState)
     }
     public func encoded() throws -> Data {
         let encoder = JSONEncoder()
@@ -37,7 +39,14 @@ public struct EntryArchive: Codable {
     }
     public static func decode(_ data: Data) throws -> EntryArchive {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            guard let date = CloudArchiveCodec.decodeDate(value) else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Archive date is not valid ISO-8601.")
+            }
+            return date
+        }
         let archive = try decoder.decode(Self.self, from: data)
         guard archive.version == 1 else { throw ArchiveError.unsupportedVersion }
         if let replica = archive.replica {

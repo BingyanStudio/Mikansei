@@ -14,6 +14,7 @@ struct BackupDocument: FileDocument {
 
 struct SettingsView: View {
     @EnvironmentObject private var store: EntryStore
+    @EnvironmentObject private var cloud: CloudAccountManager
     @EnvironmentObject private var notifications: NotificationManager
     @EnvironmentObject private var deadlineActivity: DeadlineActivityManager
     @AppStorage("appearance") private var appearance = 0
@@ -40,6 +41,7 @@ struct SettingsView: View {
                 NavigationLink { CoursesView() } label: { Label("课表与下课登记提醒", systemImage: "graduationcap") }
                 Text("填写或导入课表，下课时提醒你记录作业、DDL 和提交平台。") .font(.caption).foregroundStyle(.secondary)
             }
+            CloudAccountSettings(cloud: cloud)
             FolderSyncSettings(workspace: store)
             Section("日历") {
                 NavigationLink { CalendarSyncView() } label: { Label("日历自动导入", systemImage: "calendar.badge.plus") }

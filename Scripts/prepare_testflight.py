@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from supabase_config import load_client_configuration, write_client_resource
 
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
@@ -235,18 +236,33 @@ def copy_shared_project(project_source, project_destination):
 def copy_handoff_files(stage):
     scripts_destination = stage / "Scripts"
     scripts_destination.mkdir(parents=True, exist_ok=True)
-    for script_name in ("generate_project.py", "prepare_testflight.py"):
+    for script_name in ("generate_project.py", "prepare_testflight.py", "supabase_config.py"):
         source = SOURCE_ROOT / "Scripts" / script_name
         if not source.is_file() or source.is_symlink():
             raise PrepareError("必要脚本缺失或不是普通文件: {}".format(script_name))
         shutil.copy2(source, scripts_destination / script_name)
 
-    guide = SOURCE_ROOT / "Documentation" / "TestFlight" / "BUILD_GUIDE.md"
+    guide_source = SOURCE_ROOT / "Documentation" / "TestFlight"
+    guide = guide_source / "BUILD_GUIDE.md"
     if not guide.is_file() or guide.is_symlink():
         raise PrepareError("Documentation/TestFlight/BUILD_GUIDE.md 缺失。")
     guide_destination = stage / "Documentation" / "TestFlight"
-    guide_destination.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(guide, guide_destination / "BUILD_GUIDE.md")
+    copy_filtered_tree(guide_source, guide_destination)
+
+    for relative in (
+        "Documentation/SUPABASE_NATIVE.md",
+        "Documentation/supabase-native-account.sql",
+        "Configuration/README.md",
+        "Configuration/SupabaseClient.example.plist",
+        "Mikanseta/Documentation/SUPABASE_SETUP.md",
+        "Mikanseta/Documentation/supabase-schema.sql",
+    ):
+        source = SOURCE_ROOT / relative
+        if not source.is_file() or source.is_symlink():
+            raise PrepareError("必要的云账号交接资料缺失或不是普通文件: {}".format(relative))
+        destination = stage / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
 
 
 def copy_minimal_source(stage):
@@ -260,6 +276,9 @@ def copy_minimal_source(stage):
         stage / PROJECT_RELATIVE_PATH,
     )
     copy_handoff_files(stage)
+    configuration = load_client_configuration(SOURCE_ROOT)
+    if configuration is not None:
+        write_client_resource(stage, configuration)
 
 
 def load_project_json(project_file):

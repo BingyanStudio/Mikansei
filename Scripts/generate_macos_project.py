@@ -2,8 +2,10 @@
 """Generate a native macOS target without changing the iPhone signing settings."""
 from pathlib import Path
 import hashlib, json, subprocess
+from supabase_config import write_client_resource
 
 ROOT = Path(__file__).resolve().parents[1]
+client_configuration = write_client_resource(ROOT)
 PROJECT = ROOT / "MikanseiMac.xcodeproj"
 PROJECT.mkdir(exist_ok=True)
 previous_objects = {}
@@ -20,11 +22,14 @@ def ids(names): return "(" + ",".join(uid(x) for x in names) + ",)" if names els
 # The planning view is shared with the iPhone app target and self-contained, so the Mac
 # target compiles it too instead of duplicating the UI.
 sources = sorted(ROOT.glob("Mac/*.swift")) + sorted(ROOT.glob("Sync/*.swift")) + sorted(ROOT.glob("Sources/MikanseiCore/*.swift")) + [ROOT / "App" / "PlanningView.swift"]
-resources = sorted(ROOT.glob("Mac/Resources/*.icns"))
+resources = sorted(ROOT.glob("Mac/Resources/*.icns")) + [ROOT / "Mac/PrivacyInfo.xcprivacy"]
+if client_configuration is not None:
+    resources.append(client_configuration)
 tests = sorted(ROOT.glob("MacUITests/*.swift"))
 for path in sources + resources + tests:
     rel = path.relative_to(ROOT).as_posix()
-    obj("ref:" + rel, f"isa = PBXFileReference; path = {quote(rel)}; sourceTree = SOURCE_ROOT; lastKnownFileType = {'sourcecode.swift' if path.suffix == '.swift' else 'image.icns'};")
+    file_type = {".swift": "sourcecode.swift", ".icns": "image.icns", ".plist": "text.plist.xml", ".xcprivacy": "text.xml"}[path.suffix]
+    obj("ref:" + rel, f"isa = PBXFileReference; path = {quote(rel)}; sourceTree = SOURCE_ROOT; lastKnownFileType = {quote(file_type)};")
     obj("build:" + rel, f"isa = PBXBuildFile; fileRef = {uid('ref:' + rel)};")
 obj("product", 'isa = PBXFileReference; explicitFileType = wrapper.application; path = Mikansei.app; sourceTree = BUILT_PRODUCTS_DIR;')
 obj("tests-product", 'isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = MikanseiMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;')
@@ -43,7 +48,7 @@ settings = {
     "CLANG_ENABLE_MODULES": "YES", "PRODUCT_NAME": "Mikansei", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei.macOS",
     "INFOPLIST_FILE": "Mac/Info.plist", "GENERATE_INFOPLIST_FILE": "NO",
     "CODE_SIGN_STYLE": "Manual", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_ENTITLEMENTS": "Mac/MikanseiMac.entitlements",
-    "MARKETING_VERSION": "0.3.2", "CURRENT_PROJECT_VERSION": "6", "COMBINE_HIDPI_IMAGES": "YES",
+    "MARKETING_VERSION": "0.5.0", "CURRENT_PROJECT_VERSION": "11", "COMBINE_HIDPI_IMAGES": "YES",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks",
 }
 for name in ["Debug", "Release"]:

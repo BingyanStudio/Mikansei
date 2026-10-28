@@ -17,9 +17,9 @@ python3 Scripts/prepare_testflight.py \
 
 把 Team ID 占位文字替换成实际值再运行。工具会在源码旁新建 `Prepared-Mikansei/`，复制最小原生源码、共享 scheme、生成器和本指南；排除隐藏文件、个人 Xcode 状态及本机配置。目标路径必须不存在或为空，且不能与输入目录重叠。工具只在复制品中写入 Team ID、Bundle ID 和版本信息，不改原工程。
 
-签名归档会从原工程 `Mikansei` App target 的 Release 配置读取版本与 build；当前源码值为 `0.4.2` 和 `10`。如需覆盖 build，可加 `--build-number 11`，App 与 Widget 会同步更新。主 App Bundle ID 默认是 `com.personal.mikansei.beta.<TeamID小写>`，Widget 为主 ID 加 `.widgets`。如需自选主 Bundle ID，可加 `--bundle-id com.example.mikansei.beta`。
+签名归档会从原工程 `Mikansei` App target 的 Release 配置读取版本与 build；本轮交接资料的目标值为 `0.5.0` 和 `11`，归档前请核对实际工程与二进制。若需通过助手覆盖 build，可加 `--build-number 11`，App 与 Widget 会同步更新。主 App Bundle ID 默认是 `com.personal.mikansei.beta.<TeamID小写>`，Widget 为主 ID 加 `.widgets`。如需自选主 Bundle ID，可加 `--bundle-id com.example.mikansei.beta`。
 
-发布者也可以省略 `--archive`，只生成准备包和可复制的 `xcodebuild` 命令；随后在自己的 Mac 上运行打印的命令。签名归档使用 Xcode Automatic Signing 和 `-allowProvisioningUpdates`，由发布者的 Xcode 账号创建或更新所需的 provisioning profile。工具不登录 Apple 账号、不上传、不导出 `.p12`、证书私钥或 API key。归档命令、过程输出和失败退出码记录在 `Prepared-Mikansei/build.log`；包内 `PREPARED_APP.json` 列出可复制到 App Store Connect 的 Team、App Bundle ID、Widget Bundle ID、版本和 build number。
+发布者也可以省略 `--archive`，只生成准备包和可复制的 `xcodebuild` 命令；随后在自己的 Mac 上运行打印的命令。签名归档使用 Xcode Automatic Signing 和 `-allowProvisioningUpdates`，由发布者的 Xcode 账号创建或更新所需的 provisioning profile。工具不登录 Apple 账号、不上传、不导出 `.p12`、证书私钥或 Supabase 管理凭据；公开 Supabase 客户端配置可随源码包提供。归档命令、过程输出和失败退出码记录在 `Prepared-Mikansei/build.log`；包内 `PREPARED_APP.json` 列出可复制到 App Store Connect 的 Team、App Bundle ID、Widget Bundle ID、版本和 build number。
 
 ## 2. 在 App Store Connect 创建 App 记录
 
@@ -45,9 +45,17 @@ open ../Prepared-Mikansei/Mikansei.xcarchive
 
 Beta 使用独立 Bundle ID，旧开发版与 Beta 会被系统视为两个 App，Beta 不会自动接管旧 App 的本地数据库。安装前请在旧版 **我的 > 数据与备份 > 导出 JSON 备份**；安装 Beta 后用同一页面的 **导入 JSON 备份** 手动合并。
 
-工程的共享 capability 是 **Keychain Sharing**：App 与 Widget 用同一团队下的共享 Keychain access group。生成器会按新的主 Bundle ID 同步 host 和 keychain suffix。Keychain Sharing 不等于 App Groups；无需为此启用 App Groups。Mikansei 的 iCloud Drive 同步由用户在 App 内选择文件夹，通过系统文件选择器访问；这不要求伪造 CloudKit container 或推送服务配置，也不要为本次 TestFlight 额外开启这些 capabilities。可查阅 Apple 文档：[Keychain Sharing](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps) · [配置 App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups) · [SwiftUI 文件导入器](https://developer.apple.com/documentation/swiftui/view/fileimporter(ispresented:allowedcontenttypes:allowsmultipleselection:oncompletion:))。
+工程的共享 capability 是 **Keychain Sharing**：App 与 Widget 用同一团队下的共享 Keychain access group。生成器会按新的主 Bundle ID 同步 host 和 keychain suffix。Keychain Sharing 不等于 App Groups；无需为此启用 App Groups。Mikansei 的 iCloud Drive 文件夹同步由用户在 App 内选择文件夹，通过系统文件选择器访问；这不要求伪造 CloudKit container 或推送服务配置，也不要为此额外开启这些 capabilities。可查阅 Apple 文档：[Keychain Sharing](https://developer.apple.com/documentation/security/sharing-access-to-keychain-items-among-a-collection-of-apps) · [配置 App Groups](https://developer.apple.com/documentation/xcode/configuring-app-groups) · [SwiftUI 文件导入器](https://developer.apple.com/documentation/swiftui/view/fileimporter(ispresented:allowedcontenttypes:allowsmultipleselection:oncompletion:))。
 
-## 6. 无签名编译检查（仅维护者）
+## 6. 可选邮箱云账号上线条件
+
+原生 iOS 和 Mac 客户端提供可选邮箱 OTP 账号，与 Mikanseta 共用 Supabase 项目及 `mikanseta_archives`（每个 Auth 用户一条归档）。登录后，首次合并须由用户确认；未登录时继续离线使用且不上传本机数据。云账号与 iCloud Drive 文件夹同步是两项独立功能。
+
+源码使用经过验证的公开 Supabase 客户端配置。项目地址和 public/anon key 可嵌入客户端，不属于管理凭据；RLS 策略负责账号隔离。严禁将 service-role key、项目管理密钥、数据库密码、签名证书私钥放入客户端或交接包。
+
+如要启用或审核云账号功能，请先阅读[原生云账号配置说明](../SUPABASE_NATIVE.md)。账号认证、共享归档表及其 RLS 复用现有 Supabase 项目；首次请求验证码时，新邮箱可自动创建账号，完成验证码验证后才能登录。开放测试前请确认邮箱 OTP 投递和同步设置。App 内账号删除另需有权限的项目管理员部署[原生账号 SQL](../supabase-native-account.sql)；其中的 `mikansei_delete_account` RPC 只根据当前登录用户 `auth.uid()` 删除自己的 Auth 用户及共享归档，不接受调用者传入目标用户。该 SQL/RPC 当前尚未部署，因此 App 内删除功能暂不可用。本轮未真实发送验证码、登录、同步或删除。云功能审核还需发布者与管理员协商审核者可访问的邮箱和验证码方式；不能使用发布者私人邮箱，也不能假定 OTP 对审核者可达。
+
+## 7. 无签名编译检查（仅维护者）
 
 在没有发布者 Team ID 的情况下，维护者可以从原生源码根目录执行：
 
@@ -57,4 +65,4 @@ python3 Scripts/prepare_testflight.py \
   --unsigned-check
 ```
 
-这会在复制品中清空 App 与 Widget 的 Team，执行 `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` 的 iOS Release archive，并将完整输出写入 `build.log`。它只能帮助检查编译；无签名归档不能安装到设备，也不能上传或分发到 TestFlight，不能代替发布者 Team 下的签名归档验证。
+这会在复制品中清空 App 与 Widget 的 Team，执行 `CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO` 的 iOS Release archive，并将完整输出写入 `build.log`。它只能帮助检查编译；无签名归档不能安装到设备，也不能上传或分发到 TestFlight，不能代替发布者 Team 下的签名归档验证。本轮 0.5.0（11）的无签名检查已通过，实际证据见 [准备记录](PREPARATION_RECORD.md)。
