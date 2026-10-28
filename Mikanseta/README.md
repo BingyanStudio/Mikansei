@@ -54,15 +54,15 @@
 
 ## 在 Mac 上试用
 
-当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到工作区的 `Mikanseta-macOS.app` 并打开。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
+当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到相对于源码仓库根目录的 `../Releases/Mikanseta/macOS/<version+build>/Mikanseta-macOS.app` 并打开；版本号和构建号读取 App 内嵌的 `Info.plist`。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
 
-本轮 macOS Release 构建通过并已安装到 `Projects/Mikanseta-macOS.app`（0.4.2 (8)，x86_64 + arm64 通用，含共享文件夹书签权限），启动成功；Mac 原生界面仍未逐项验证，见 [验证记录](VALIDATION.md)。
+本轮 macOS Release 构建通过并已启动（0.4.2 (8)，x86_64 + arm64 通用，含共享文件夹书签权限）；Mac 原生界面仍未逐项验证，见 [验证记录](VALIDATION.md)。后续本地安装脚本按版本目录输出。
 
 第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
 
 ## 安装到安卓手机
 
-已生成 **0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。工作区交付文件位于 `../../Deliveries/Mikanseta/`，没有将安装包或私钥提交到 Git 历史。
+已生成 **0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。相对于源码仓库根目录，默认交付目录为 `../Releases/Mikanseta/Android/<version+build>/`，没有将安装包或私钥提交到 Git 历史。
 
 本轮已重新构建并导出 **0.4.2 (8)** Release APK，60.5 MB（含 Supabase 连接值读取、共享文件夹同步与对齐原生 Mikansei 的手机布局），SHA-256 `2a0217153e20a605947a494798191abed62426f92535178f961d3223221048c5`。
 
@@ -104,9 +104,9 @@ Mikanseta 登录 Supabase 账号后，本机保存的数据（含课表与完成
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
 
-本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 74 项全部通过（0.3.0 新增 16 项；0.4.0 新增共享文件夹协议与设置页测试 14 项；0.4.2 布局重构复用现有用例全部通过，并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 实际解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 需要把 `JAVA_HOME` 指向工作区 `.toolchains/jdk21`，之后校验通过。日志见 [验证记录](VALIDATION.md)。
+本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 74 项全部通过（0.3.0 新增 16 项；0.4.0 新增共享文件夹协议与设置页测试 14 项；0.4.2 布局重构复用现有用例全部通过，并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 实际解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 校验需将 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录；校验通过 APK Signature Scheme v2。日志见 [验证记录](VALIDATION.md)。
 
-`Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或工作区 `.toolchains/flutter`，否则查找已安装的 Flutter。缓存存放于工作区 `.toolchains/pub-cache`。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
+`Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或从源码仓库向上找到的 `.toolchains/flutter`，否则查找已安装的 Flutter。也可用 `MIKANSEI_TOOLCHAINS_DIR` 指定工具链根目录；缓存默认放在该目录的 `pub-cache/`，可通过 `PUB_CACHE` 覆盖。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 
 ```sh
 ./Scripts/flutter.sh pub get

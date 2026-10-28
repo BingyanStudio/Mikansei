@@ -4,7 +4,7 @@
 
 已经打包的 `Mikansei-macOS.app` 可以直接双击打开，也可拖入“应用程序”。电脑会保存自己的数据，选定同一 iCloud Drive 文件夹后与手机合并，见 [同步步骤](SYNC.md)。
 
-从源码安装：安装完整 Xcode 后双击项目根目录的 `安装到Mac.command`。它会编译 Intel / Apple 芯片通用版本，使用本地签名，在项目旁生成 `Mikansei-macOS.app` 并打开。无需改变 iPhone 的 Team，也不删除 App 的数据。更新前先退出正在运行的旧 Mac 版。
+从源码安装：安装完整 Xcode 后双击项目根目录的 `安装到Mac.command`。它会编译 Intel / Apple 芯片通用版本，使用本地签名，按 App 内嵌的版本号和构建号生成 `../Releases/Mikansei/macOS/<version+build>/Mikansei-macOS.app` 并打开。无需改变 iPhone 的 Team，也不删除 App 的数据。更新前先退出正在运行的旧 Mac 版。设置 `MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
 
 - **⌘N**：新建事项；日程页预填所选日期的开始和结束时间，课表页新建课程。
 - **⌘S / Esc**：编辑窗口保存 / 取消。

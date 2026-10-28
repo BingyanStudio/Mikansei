@@ -40,7 +40,7 @@ Xcode 可自动创建签名资源，但 Apple 账号登录、电脑信任和手�
 
 - **签名或平台报错**：先在 Xcode 选择手机并按 `⌘R` 一次，通常会给出具体的账号、签名或组件提示。签名失败时脚本不会尝试安装旧产物。
 - **免费账号过几天打不开**：Personal Team 的安装描述文件有效期为 7 天，届时重新双击安装。无需卸载 App。[Apple 免费账号限制](https://developer.apple.com/help/account/basics/about-your-developer-account)
-- **双击没执行**：可在终端运行 `bash /Users/xuyilin/Desktop/Projects/Mikansei/安装到iPhone.command`。不要移走入口文件和 Scripts 文件夹。
+- **双击没执行**：在源码仓库根目录打开终端，运行 `bash ./安装到iPhone.command`。不要移走入口文件和 `Scripts/` 文件夹。
 - **查看报错**：项目内 `LocalInstall/install.log` 保存编译与安装日志，Git 已忽略这个目录。
 
 只检查前置条件，不安装：

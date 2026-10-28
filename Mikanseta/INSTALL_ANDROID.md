@@ -34,20 +34,20 @@
 
 ## 重新构建
 
-工作区构建工具位于 `../../.toolchains/`，不会修改全局 Java 或 Flutter 设置。双击 `生成安卓安装包.command`，或执行：
+构建脚本从源码仓库及其祖先目录向上查找 `.toolchains/`，不会修改全局 Java 或 Flutter 设置。也可设置 `MIKANSEI_TOOLCHAINS_DIR` 指定工具链根目录。双击 `生成安卓安装包.command`，或执行：
 
 ```sh
 ./Scripts/build-android.sh
 ```
 
-原始输出为 `build/app/outputs/flutter-apk/app-release.apk`，同时复制到工作区 `../../Deliveries/Mikanseta/`，按版本命名并附 SHA-256 文件。这是包含多个 CPU 架构的单文件安装包，版本号读取 `pubspec.yaml`。可通过 `MIKANSETA_OUTPUT_DIR` 指定交付目录。
+原始输出为 `build/app/outputs/flutter-apk/app-release.apk`，同时默认复制到源码仓库根目录旁的 `../Releases/Mikanseta/Android/<version+build>/`，按版本命名并附 SHA-256 文件。例如当前 `0.5.2+15` 输出为 `../Releases/Mikanseta/Android/0.5.2+15/Mikanseta-0.5.2+15-android.apk`。该相对路径以源码仓库根目录为基准，不随命令当前目录变化。这是包含多个 CPU 架构的单文件安装包，版本号读取 `pubspec.yaml`。`MIKANSETA_OUTPUT_DIR` 可指定精确的 APK 输出目录；`MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
 
 其他电脑需要 Java 21、Android SDK（API 36、Build Tools 36.0.0、NDK 28.2.13676358）及本项目固定版本的 Flutter。可以用 `JAVA_HOME`、`ANDROID_HOME` 和 `FLUTTER_SDK` 指定现有工具。
 
 将 `android/key.properties.example` 复制为 `android/key.properties`，填写本地发布密钥信息。Release 构建使用发布签名，不回退到调试签名。后续更新需沿用该发布密钥。
 
-本工作区首次创建的密钥与密码单独保存在 `../../.toolchains/mikanseta-signing/`，请另行备份；它们不进入 Git 仓库，也不应随 APK 分发。
+本工作区首次创建的密钥与密码单独保存在工具链目录的 `mikanseta-signing/` 中，请另行备份；它们不进入 Git 仓库，也不应随 APK 分发。
 
 签名验证可使用 Android SDK 的 `apksigner verify --verbose`。实际构建和运行结果记录在 [VALIDATION.md](VALIDATION.md)。
 
-校验时需要把 `JAVA_HOME` 指向工作区 JDK：`JAVA_HOME=../../.toolchains/jdk21/Contents/Home`。设置后 `apksigner verify` 退出码为 0，本轮 APK 已通过 APK Signature Scheme v2 校验。日志见 [VALIDATION.md](VALIDATION.md)。
+校验时需要把 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录，并确认 `$JAVA_HOME/bin/java` 可用。设置后 `apksigner verify` 退出码为 0，本轮 APK 已通过 APK Signature Scheme v2 校验。日志见 [VALIDATION.md](VALIDATION.md)。

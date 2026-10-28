@@ -1,13 +1,20 @@
 #!/bin/bash
 set -euo pipefail
 mks_root="$(cd "$(dirname "$0")/.." && pwd)"
+mks_repo="$(cd "$mks_root/.." && pwd)"
+source "$mks_repo/Scripts/toolchains-path.sh"
+mks_toolchains="$(mikansei_toolchains_dir "$mks_repo")"
 mks_temp="$(mktemp -d)"
 trap 'rm -rf "$mks_temp"' EXIT
 swiftc -o "$mks_temp/native-check" "$mks_root"/../Sources/MikanseiCore/*.swift "$mks_root/Scripts/NativeBackupCheck.swift"
 "$mks_temp/native-check" fixture "$mks_temp/native.json"
 "$mks_root/Scripts/flutter.sh" pub get
-mks_sdk="${FLUTTER_SDK:-$mks_root/../../.toolchains/flutter}"
-if [[ -x "$mks_sdk/bin/dart" ]]; then
+mks_default_sdk=""
+if [[ -n "$mks_toolchains" ]]; then
+  mks_default_sdk="$mks_toolchains/flutter"
+fi
+mks_sdk="${FLUTTER_SDK:-$mks_default_sdk}"
+if [[ -n "$mks_sdk" && -x "$mks_sdk/bin/dart" ]]; then
   "$mks_sdk/bin/dart" "$mks_root/Scripts/backup_roundtrip.dart" "$mks_temp/native.json" "$mks_temp/flutter.json"
 else
   dart "$mks_root/Scripts/backup_roundtrip.dart" "$mks_temp/native.json" "$mks_temp/flutter.json"

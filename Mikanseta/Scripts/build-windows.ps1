@@ -9,15 +9,31 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
     throw "Windows packaging must run on Windows."
 }
 $appRoot = Split-Path $PSScriptRoot -Parent
-if (-not $OutputDirectory) {
-    $OutputDirectory = Join-Path $appRoot "build/windows-delivery"
-}
-$OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 $manifestText = Get-Content (Join-Path $appRoot "pubspec.yaml") -Raw
 $match = [regex]::Match($manifestText, '(?m)^version:\s*(\d+\.\d+\.\d+)\+(\d+)\s*$')
 if (-not $match.Success) { throw "Cannot read the app version from pubspec.yaml." }
 $version = $match.Groups[1].Value
 $buildNumber = $match.Groups[2].Value
+$versionBuild = "$version+$buildNumber"
+if (-not $OutputDirectory) {
+    if ($env:MIKANSETA_OUTPUT_DIR) {
+        $OutputDirectory = $env:MIKANSETA_OUTPUT_DIR
+    }
+}
+if (-not $OutputDirectory) {
+    $repositoryRoot = Split-Path $appRoot -Parent
+    if ($env:MIKANSEI_RELEASES_DIR) {
+        $releaseRoot = $env:MIKANSEI_RELEASES_DIR
+        if (-not [IO.Path]::IsPathRooted($releaseRoot)) {
+            $releaseRoot = Join-Path $repositoryRoot $releaseRoot
+        }
+    } else {
+        $workspaceRoot = Split-Path $repositoryRoot -Parent
+        $releaseRoot = Join-Path $workspaceRoot "Releases"
+    }
+    $OutputDirectory = Join-Path $releaseRoot "Mikanseta/Windows/$versionBuild"
+}
+$OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 
 Push-Location $appRoot
 try {

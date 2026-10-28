@@ -4,6 +4,8 @@
 
 团队介绍与产品思路见 [产品点子稿](Documentation/Mikansei-产品点子稿.md)。
 
+源码、发布成品、设计稿和归档的目录边界见 [项目目录说明](Documentation/PROJECT_LAYOUT.md)。
+
 [下载 Mikanseta 安卓公开测试版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-v0.4.2/Mikanseta-Android.apk) · [下载 Windows 安装版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64-Setup.exe) · [下载 Windows 免安装版](https://github.com/KikuchiHeinrich/Mikansei/releases/download/mikanseta-windows-v0.4.3/Mikanseta-Windows-x64.zip) · [Windows 使用说明](Mikanseta/INSTALL_WINDOWS.md)
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。

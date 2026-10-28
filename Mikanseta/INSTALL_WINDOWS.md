@@ -29,12 +29,12 @@ Windows 版提供清单、Checklist、日历视图、循环、专注计时、课
 ./Scripts/build-windows.ps1
 ```
 
-脚本从 pubspec.yaml 读取版本，构建 Release、复制运行库、生成 ZIP 与安装程序及 SHA-256。输出位于 build/windows-delivery/，可用 -OutputDirectory 指定位置。
+脚本从 pubspec.yaml 读取版本，构建 Release、复制运行库、生成 ZIP 与安装程序及 SHA-256。本地默认输出到仓库旁的 `../Releases/Mikanseta/Windows/<version+build>/`。输出优先级为 `-OutputDirectory`、`MIKANSETA_OUTPUT_DIR`、默认版本目录；`MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
 
 同时提供 SUPABASE_URL 和 SUPABASE_ANON_KEY 环境变量时，构建会加入账号服务连接。构建不读取开发者的个人会话、任务文件或签名私钥。
 
 ## 自动构建与验证
 
-.github/workflows/mikanseta-windows.yml 在 Windows 2022 上运行静态检查、Flutter 回归、Windows 应用集成、Release 构建和安装验证。工作流上传构建产物，由发布流程核对后发布。
+`.github/workflows/mikanseta-windows.yml` 在 Windows 2022 上运行静态检查、Flutter 回归、Windows 应用集成、Release 构建和安装验证。CI 显式将 `-OutputDirectory build/windows-delivery` 传给打包脚本，以供后续安装检查与 artifact 上传使用；工作流上传构建产物，由发布流程核对后发布。
 
 实际验证结果见 [VALIDATION.md](VALIDATION.md)。源码工程已接入不等于 Windows 安装包已构建或所有实机行为均已验收。

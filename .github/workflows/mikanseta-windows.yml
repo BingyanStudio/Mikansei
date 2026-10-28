@@ -61,7 +61,7 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.MIKANSETA_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.MIKANSETA_SUPABASE_ANON_KEY }}
-        run: ./Scripts/build-windows.ps1
+        run: ./Scripts/build-windows.ps1 -OutputDirectory build/windows-delivery
       - name: Verify installer and Release startup
         run: |
           $delivery = Resolve-Path "build/windows-delivery"

@@ -1,10 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 mks_root="$(cd "$(dirname "$0")/.." && pwd)"
-mks_sdk="${FLUTTER_SDK:-$mks_root/../../.toolchains/flutter}"
-if [[ -x "$mks_sdk/bin/flutter" ]]; then
+mks_repo="$(cd "$mks_root/.." && pwd)"
+source "$mks_repo/Scripts/toolchains-path.sh"
+mks_toolchains="$(mikansei_toolchains_dir "$mks_repo")"
+mks_default_sdk=""
+if [[ -n "$mks_toolchains" ]]; then
+  mks_default_sdk="$mks_toolchains/flutter"
+fi
+mks_sdk="${FLUTTER_SDK:-$mks_default_sdk}"
+if [[ -n "$mks_sdk" && -x "$mks_sdk/bin/flutter" ]]; then
   mks_flutter="$mks_sdk/bin/flutter"
-  export PUB_CACHE="${PUB_CACHE:-$mks_root/../../.toolchains/pub-cache}"
+  if [[ -n "$mks_toolchains" ]]; then
+    export PUB_CACHE="${PUB_CACHE:-$mks_toolchains/pub-cache}"
+  fi
 else
   mks_flutter="$(command -v flutter || true)"
 fi

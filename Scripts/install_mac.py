@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import sys
 
+from path_helpers import releases_dir, version_build
+
 ROOT = Path(__file__).resolve().parents[1]
 BUILD = ROOT / "LocalInstall"
 
@@ -25,7 +27,11 @@ def main():
                        cwd=ROOT, stdout=output, stderr=subprocess.STDOUT, timeout=1200, check=True)
     source = derived / "Build/Products/Release/Mikansei.app"
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(source)], check=True)
-    destination = ROOT.parent / "Mikansei-macOS.app"
+    with (source / "Contents/Info.plist").open("rb") as file:
+        source_info = plistlib.load(file)
+    release_version = version_build(source_info)
+    destination = releases_dir(ROOT) / "Mikansei" / "macOS" / release_version / "Mikansei-macOS.app"
+    destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         with (destination / "Contents/Info.plist").open("rb") as file:
             previous = plistlib.load(file)
@@ -34,9 +40,7 @@ def main():
         shutil.rmtree(destination)
     subprocess.run(["ditto", str(source), str(destination)], check=True)
     subprocess.run(["codesign", "--verify", "--deep", "--strict", str(destination)], check=True)
-    with (destination / "Contents/Info.plist").open("rb") as file:
-        version = plistlib.load(file)
-    print(f"Mac 版 {version['CFBundleShortVersionString']} ({version['CFBundleVersion']}) 已准备好：{destination}", flush=True)
+    print(f"Mac 版 {source_info['CFBundleShortVersionString']} ({source_info['CFBundleVersion']}) 已准备好：{destination}", flush=True)
     if not args.no_open:
         subprocess.run(["open", str(destination)], check=True)
     print("在 iPhone 和 Mac 的设置里，各选择一次同一个 iCloud Drive 文件夹即可同步。")
