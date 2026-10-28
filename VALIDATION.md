@@ -44,7 +44,7 @@
 
 ## 真机安装：main 最新版本已装到 iPhone
 
-- 在 Mac 用 Xcode 26.5 对 `main`（8dfc658）编译并签名 `Mikansei` 与内嵌 `MikanseiWidgets`，`BUILD SUCCEEDED`，`codesign --verify --strict` 通过；沿用原 Team `7JMRL8X34C`、自动签名与 Bundle Identifier `com.personal.mikansei`。
+- 在 Mac 用 Xcode 26.5 对 `main`（8dfc658）编译并签名 `Mikansei` 与内嵌 `MikanseiWidgets`，`BUILD SUCCEEDED`，`codesign --verify --strict` 通过；沿用原 Team `7JMRL8X34C`、自动签名与 Bundle Identifier `net.bingyan.KikuchiHeinrich.mikansei`。
 - 用安装助手安装到已连接的 iPhone 17（XYLiPhone，UDID `00008150-000D758A369BC01C`，开发者模式已开启），安装后自动启动成功；设备端查询为 Mikansei 0.1.0 (1)，App 与小组件进程均在运行。
 - 未做：UI 测试、真实日历来源导入、锁屏闹钟响铃、小组件真实布局与读取手感仍需在手机上人工确认。
 

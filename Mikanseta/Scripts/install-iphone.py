@@ -52,7 +52,7 @@ def main():
                         '-allowProvisioningDeviceRegistration', 'build'], cwd=root, stdout=stream, stderr=subprocess.STDOUT, check=True)
         app = local / 'DerivedData/Build/Products/Release-iphoneos/Mikanseta.app'
         info = plistlib.loads((app / 'Info.plist').read_bytes())
-        if info['CFBundleIdentifier'] == 'com.personal.mikansei':
+        if info['CFBundleIdentifier'] == 'net.bingyan.KikuchiHeinrich.mikansei':
             raise RuntimeError('安装标识与原版冲突，安装已停止。')
         subprocess.run(['xcrun', 'devicectl', 'device', 'install', 'app', '--device', device['identifier'], str(app)], stdout=stream, stderr=subprocess.STDOUT, check=True)
         launch = subprocess.run(['xcrun', 'devicectl', 'device', 'process', 'launch', '--device', device['identifier'], info['CFBundleIdentifier']], stdout=stream, stderr=subprocess.STDOUT)

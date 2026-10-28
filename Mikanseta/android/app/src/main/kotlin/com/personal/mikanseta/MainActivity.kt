@@ -1,4 +1,4 @@
-package com.personal.mikanseta
+package net.bingyan.KikuchiHeinrich.mikanseta
 
 import android.app.Activity
 import android.content.Intent

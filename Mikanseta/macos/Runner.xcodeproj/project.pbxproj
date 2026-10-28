@@ -188,7 +188,7 @@
 "GENERATE_INFOPLIST_FILE" = "YES";
 "MARKETING_VERSION" = "1.0";
 "TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/mikanseta.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/mikanseta";
-"PRODUCT_BUNDLE_IDENTIFIER" = "com.personal.mikanseta.RunnerTests";
+"PRODUCT_BUNDLE_IDENTIFIER" = "net.bingyan.KikuchiHeinrich.mikanseta.RunnerTests";
 "SWIFT_VERSION" = "5.0";
 "BUNDLE_LOADER" = "$(TEST_HOST)";
 "CURRENT_PROJECT_VERSION" = "1";
@@ -999,7 +999,7 @@
 "GENERATE_INFOPLIST_FILE" = "YES";
 "MARKETING_VERSION" = "1.0";
 "TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/mikanseta.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/mikanseta";
-"PRODUCT_BUNDLE_IDENTIFIER" = "com.personal.mikanseta.RunnerTests";
+"PRODUCT_BUNDLE_IDENTIFIER" = "net.bingyan.KikuchiHeinrich.mikanseta.RunnerTests";
 "SWIFT_VERSION" = "5.0";
 "BUNDLE_LOADER" = "$(TEST_HOST)";
 "CURRENT_PROJECT_VERSION" = "1";
@@ -1013,7 +1013,7 @@
 "GENERATE_INFOPLIST_FILE" = "YES";
 "MARKETING_VERSION" = "1.0";
 "TEST_HOST" = "$(BUILT_PRODUCTS_DIR)/mikanseta.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/mikanseta";
-"PRODUCT_BUNDLE_IDENTIFIER" = "com.personal.mikanseta.RunnerTests";
+"PRODUCT_BUNDLE_IDENTIFIER" = "net.bingyan.KikuchiHeinrich.mikanseta.RunnerTests";
 "SWIFT_VERSION" = "5.0";
 "BUNDLE_LOADER" = "$(TEST_HOST)";
 "CURRENT_PROJECT_VERSION" = "1";

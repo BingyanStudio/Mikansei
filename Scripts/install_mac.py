@@ -29,7 +29,7 @@ def main():
     if destination.exists():
         with (destination / "Contents/Info.plist").open("rb") as file:
             previous = plistlib.load(file)
-        if previous.get("CFBundleIdentifier") != "com.personal.mikansei.macOS":
+        if previous.get("CFBundleIdentifier") != "net.bingyan.KikuchiHeinrich.mikansei.macOS":
             raise RuntimeError("目标位置有另一个应用，请先为它改名。")
         shutil.rmtree(destination)
     subprocess.run(["ditto", str(source), str(destination)], check=True)

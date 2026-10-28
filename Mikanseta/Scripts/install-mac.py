@@ -10,7 +10,7 @@ import tempfile
 root = Path(__file__).resolve().parents[1]
 source = root / 'build/macos/Build/Products/Release/Mikanseta.app'
 destination = root.parent.parent / 'Mikanseta-macOS.app'
-expected = 'com.personal.mikanseta.macOS'
+expected = 'net.bingyan.KikuchiHeinrich.mikanseta.macOS'
 
 def identity(path):
     return plistlib.loads((path / 'Contents/Info.plist').read_bytes())['CFBundleIdentifier']

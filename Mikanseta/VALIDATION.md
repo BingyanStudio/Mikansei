@@ -47,7 +47,7 @@
 
 ## iOS 工程改名与真机安装（2026-10-13）
 
-Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta，安装脚本同时更新。源码目录保留 `ios/Runner/`，供 Flutter 自动生成插件注册文件；开发命令通过 `--flavor Mikanseta` 选择新方案，继续使用已有 Debug / Profile / Release 配置。Team `7JMRL8X34C` 和 App 安装标识 `com.personal.mikanseta` 保留。此次只调整工程名称与安装流程，App 版本保持 0.1.0 (1)。
+Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta，安装脚本同时更新。源码目录保留 `ios/Runner/`，供 Flutter 自动生成插件注册文件；开发命令通过 `--flavor Mikanseta` 选择新方案，继续使用已有 Debug / Profile / Release 配置。Team `7JMRL8X34C` 和 App 安装标识 `net.bingyan.KikuchiHeinrich.mikanseta` 保留。此次只调整工程名称与安装流程，App 版本保持 0.1.0 (1)。
 
 工程列表与构建设置验证通过；模拟器普通启动包、真机 Release 不签名包与自动签名构建均通过。已签名发布包通过 `codesign --verify --deep --strict`，安装脚本成功安装，设备应用列表确认真实版本。初次自动启动因手机锁定返回 Locked；用户解锁后再次启动成功，随后设备进程列表确认 Mikanseta 仍在运行。这里只验证真机启动与进程存活，不将其报告为真机界面逐项验证通过。
 
@@ -66,7 +66,7 @@ Xcode 工程、工作区、App 目标和共享运行方案统一改为 Mikanseta
 
 ## 安卓首个 APK（2026-10-14）
 
-- Mikanseta 0.1.1 (2) Release 通用 APK 构建通过，包名 `com.personal.mikanseta`。54.0 MB，包含 `armeabi-v7a`、`arm64-v8a`、`x86_64`；最低 API 24，目标 API 36。
+- Mikanseta 0.1.1 (2) Release 通用 APK 构建通过，包名 `net.bingyan.KikuchiHeinrich.mikanseta`。54.0 MB，包含 `armeabi-v7a`、`arm64-v8a`、`x86_64`；最低 API 24，目标 API 36。
 - 发布签名使用独立 RSA 3072 密钥，`apksigner verify --verbose --print-certs` 通过（APK v2）。私钥及 `android/key.properties` 保存在本地，不提交 Git；提供不含凭据的配置样例。
 - Gradle 9.3.1 使用官方 bin 下载源并固定 SHA-256；Java 21 与 Android 命令行工具下载校验和通过。SDK、NDK、模拟器和缓存位于工作区 `.toolchains`，未修改全局 Java / Flutter 配置。当前网络下 Maven Central 对 Gradle 请求返回 403，工作区专用 Gradle 缓存中设置了 Google 托管 Central 镜像与阿里云插件镜像；工程仍保留默认仓库设置。
 - Android 16 / API 36、x86_64 独立模拟器集成测试通过：原生读写、快速添加、卡片内子事项勾选及重新读取、计时、完成保留与设置页。测试使用调试包和 `--no-enable-impeller`；Flutter 工具仅在此空白 QA 模拟器切换测试签名，测试后清理调试包。
@@ -111,7 +111,7 @@ Android 系统时钟采用 [官方通用 Intent](https://developer.android.com/g
 | 只读回归修复 | `read-only timeline cannot create schedules and day/week choices persist` 曾失败一次：只读模式下拖动选择时段触发 null check 异常，报在 `test/migration_test.dart:157`。该回归已在工作区 `lib/src/calendar_view.dart` 修复，单独重跑该项通过；随后完整套件 44 项全部通过。修复前的那次失败不计入通过。 |
 | Android 原生编译 | `:app:compileReleaseKotlin --offline` 通过；包含前台提醒降级和外部路由白名单修复。 |
 | Android Release 构建 | `./Scripts/build-android.sh` 通过，导出 **0.2.0 (4)** 通用 APK，55.9 MB，最低 API 24、目标 API 36。 |
-| Android APK 签名与元数据 | 设置工作区 JDK 后，`apksigner verify --verbose` 通过 APK Signature Scheme v2；`aapt` 确认包名 `com.personal.mikanseta`、版本码 4。APK 声明通知、精确闹钟、全屏 Intent、开机接收和媒体播放前台服务权限。SHA-256：`b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`。 |
+| Android APK 签名与元数据 | 设置工作区 JDK 后，`apksigner verify --verbose` 通过 APK Signature Scheme v2；`aapt` 确认包名 `net.bingyan.KikuchiHeinrich.mikanseta`、版本码 4。APK 声明通知、精确闹钟、全屏 Intent、开机接收和媒体播放前台服务权限。SHA-256：`b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`。 |
 | iOS 模拟器构建 | `./Scripts/flutter.sh build ios --simulator --flavor Mikanseta` 通过，产物包含 `MikansetaWidgets.appex`，版本元数据为 0.2.0 (4)。Flutter 提示缺少 `Debug-Mikanseta` 配置并回退到 `Debug`；此项不是 Release 或真机签名验证。 |
 | Android 真机 / 模拟器 | 未运行。本机 `adb devices -l` 未列出设备；无法据此确认通知授权、精确闹钟、全屏提醒、重启恢复或小组件的运行效果。 |
 | Android 系统日历结果回流 | 尚未实现即时回流：`takeCalendarEdits` 仍返回空列表。通过系统日历编辑后，事项的本地关联可能要等所选来源的后续同步更新；从未选择来源时不会立即回写。 |

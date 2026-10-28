@@ -86,9 +86,9 @@ Xcode 工程、运行方案和 App 目标均名为 `Mikanseta`。源码目录 `i
 
 | 平台 | 安装标识 | 本地数据 |
 | --- | --- | --- |
-| iOS | `com.personal.mikanseta` | App 沙盒应用支持目录的 `Mikanseta/entries.json` |
-| macOS | `com.personal.mikanseta.macOS` | App 沙盒应用支持目录的 `Mikanseta/entries.json` |
-| Android | `com.personal.mikanseta` | App 私有目录的 `Mikanseta/entries.json` |
+| iOS | `net.bingyan.KikuchiHeinrich.mikanseta` | App 沙盒应用支持目录的 `Mikanseta/entries.json` |
+| macOS | `net.bingyan.KikuchiHeinrich.mikanseta.macOS` | App 沙盒应用支持目录的 `Mikanseta/entries.json` |
+| Android | `net.bingyan.KikuchiHeinrich.mikanseta` | App 私有目录的 `Mikanseta/entries.json` |
 
 备份导入会复制并合并数据，两端的后续编辑不会自动共享。原版课表与 Apple 日历配置在备份中保留，不触发原版服务。Android 日历来源与关联按本机安装身份隔离，换手机或重装后需重新选择来源；安装身份不随 Android 系统备份恢复，以免复用另一部手机的日历编号。原设备的 `replica` 同步副本不会随备份复制或回传；原版导入时由原版重建本机同步记录，避免复用另一个设备的同步身份。本版不写入原版 iCloud 同步文件夹。
 

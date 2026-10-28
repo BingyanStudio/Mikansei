@@ -68,7 +68,7 @@ def configure(platform):
   if platform=='ios':
    info['NSAlarmKitUsageDescription']='按事项截止时间、日程或下课时间设置闹钟提醒。';info['NSSupportsLiveActivities']=True
    info['MikansetaSharedKeychainGroup']='$(AppIdentifierPrefix)$(MIKANSETA_SHARED_KEYCHAIN_SUFFIX)'
-   info['CFBundleURLTypes']=[{'CFBundleURLName':'com.personal.mikanseta','CFBundleURLSchemes':['mikanseta']}]
+   info['CFBundleURLTypes']=[{'CFBundleURLName':'net.bingyan.KikuchiHeinrich.mikanseta','CFBundleURLSchemes':['mikanseta']}]
    info['FlutterDeepLinkingEnabled']=False
   with plist.open('wb') as f:plistlib.dump(info,f)
 configure('ios');configure('macos')

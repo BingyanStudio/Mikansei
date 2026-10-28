@@ -28,7 +28,7 @@
 
 ## 安装包信息
 
-当前版本为 **0.2.0 (4)**，包名 `com.personal.mikanseta`，最低 Android 7.0（API 24），目标 API 36。通用 APK 包含 ARM64、32 位 ARM 和 x86_64；使用专用发布证书签名。实际运行验证范围见 [VALIDATION.md](VALIDATION.md)。
+当前版本为 **0.2.0 (4)**，包名 `net.bingyan.KikuchiHeinrich.mikanseta`，最低 Android 7.0（API 24），目标 API 36。通用 APK 包含 ARM64、32 位 ARM 和 x86_64；使用专用发布证书签名。实际运行验证范围见 [VALIDATION.md](VALIDATION.md)。
 
 本轮于 **2026-10-16 11:10 +0800** 重新构建并导出 APK，大小 55.9 MB。SHA-256 为 `b463a8de2d1c03b34dbe70b6bc0908f94cd405a8f0d1ac0e33e31c655d9b1d63`；签名验证通过 APK Signature Scheme v2。完整验证范围见 [VALIDATION.md](VALIDATION.md)。
 

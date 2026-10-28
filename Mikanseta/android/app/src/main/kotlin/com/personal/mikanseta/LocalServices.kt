@@ -1,4 +1,4 @@
-package com.personal.mikanseta
+package net.bingyan.KikuchiHeinrich.mikanseta
 
 import android.app.*
 import android.appwidget.AppWidgetManager
@@ -22,9 +22,9 @@ import java.util.concurrent.Executors
 /** All alarms and widgets use this app's sandbox. No external clock records are changed. */
 object LocalServices {
     private const val PREFS = "mikanseta-services-v1"
-    const val FIRE = "com.personal.mikanseta.FIRE"
-    const val STOP = "com.personal.mikanseta.STOP"
-    const val SNOOZE = "com.personal.mikanseta.SNOOZE"
+    const val FIRE = "net.bingyan.KikuchiHeinrich.mikanseta.FIRE"
+    const val STOP = "net.bingyan.KikuchiHeinrich.mikanseta.STOP"
+    const val SNOOZE = "net.bingyan.KikuchiHeinrich.mikanseta.SNOOZE"
     private const val LIVE = 9101
     fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     fun manager(c: Context) = c.getSystemService(NotificationManager::class.java)

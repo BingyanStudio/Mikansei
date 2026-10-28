@@ -86,7 +86,7 @@ common = {
     "GCC_WARN_UNUSED_VARIABLE": "YES", "CLANG_WARN_DOCUMENTATION_COMMENTS": "YES",
 }
 app_settings = {
-    "PRODUCT_NAME": "$(TARGET_NAME)", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei",
+    "PRODUCT_NAME": "$(TARGET_NAME)", "PRODUCT_BUNDLE_IDENTIFIER": "net.bingyan.KikuchiHeinrich.mikansei",
     "GENERATE_INFOPLIST_FILE": "NO", "INFOPLIST_FILE": "App/Info.plist", "INFOPLIST_KEY_CFBundleDisplayName": "Mikansei",
     "INFOPLIST_KEY_LSApplicationCategoryType": "public.app-category.productivity",
     "INFOPLIST_KEY_UIApplicationSceneManifest_Generation": "YES",
@@ -108,7 +108,7 @@ widget_settings = {
     "SWIFT_EMIT_LOC_STRINGS": "YES",
 }
 test_settings = {
-    "PRODUCT_NAME": "$(TARGET_NAME)", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.qingdanji.uitests",
+    "PRODUCT_NAME": "$(TARGET_NAME)", "PRODUCT_BUNDLE_IDENTIFIER": "net.bingyan.KikuchiHeinrich.qingdanji.uitests",
     "GENERATE_INFOPLIST_FILE": "YES", "CODE_SIGN_STYLE": "Automatic", "TARGETED_DEVICE_FAMILY": "1,2",
     "TEST_TARGET_NAME": "Mikansei", "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks @loader_path/Frameworks",
 }

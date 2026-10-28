@@ -630,7 +630,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.personal.qingdanji.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.qingdanji.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Mikansei;
@@ -642,6 +642,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6PVAPR495F;
@@ -653,10 +654,11 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.3.1;
-				MIKANSEI_HOST_BUNDLE_IDENTIFIER = com.personal.mikansei;
+				MIKANSEI_HOST_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei;
 				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared";
 				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -670,6 +672,7 @@
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
 				CODE_SIGN_ENTITLEMENTS = Shared/Mikansei.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6PVAPR495F;
@@ -681,10 +684,11 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 0.3.1;
-				MIKANSEI_HOST_BUNDLE_IDENTIFIER = com.personal.mikansei;
+				MIKANSEI_HOST_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei;
 				MIKANSEI_SHARED_KEYCHAIN_SUFFIX = "$(MIKANSEI_HOST_BUNDLE_IDENTIFIER).shared";
 				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.mikansei.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -703,7 +707,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.personal.qingdanji.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.bingyan.KikuchiHeinrich.qingdanji.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Mikansei;

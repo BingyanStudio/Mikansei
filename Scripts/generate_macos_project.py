@@ -32,7 +32,7 @@ obj("proxy", f"isa = PBXContainerItemProxy; containerPortal = {uid('project')}; 
 obj("dependency", f"isa = PBXTargetDependency; target = {uid('target')}; targetProxy = {uid('proxy')};")
 settings = {
     "SDKROOT": "macosx", "MACOSX_DEPLOYMENT_TARGET": "14.0", "SWIFT_VERSION": "5.0",
-    "CLANG_ENABLE_MODULES": "YES", "PRODUCT_NAME": "Mikansei", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei.macOS",
+    "CLANG_ENABLE_MODULES": "YES", "PRODUCT_NAME": "Mikansei", "PRODUCT_BUNDLE_IDENTIFIER": "net.bingyan.KikuchiHeinrich.mikansei.macOS",
     "INFOPLIST_FILE": "Mac/Info.plist", "GENERATE_INFOPLIST_FILE": "NO",
     "CODE_SIGN_STYLE": "Manual", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_ENTITLEMENTS": "Mac/MikanseiMac.entitlements",
     "MARKETING_VERSION": "0.3.0", "CURRENT_PROJECT_VERSION": "4", "COMBINE_HIDPI_IMAGES": "YES",
@@ -41,7 +41,7 @@ settings = {
 for name in ["Debug", "Release"]:
     values = dict(settings, SWIFT_OPTIMIZATION_LEVEL="-Onone" if name == "Debug" else "-O")
     obj(name, "isa = XCBuildConfiguration; name = " + name + "; buildSettings = { " + " ".join(k + " = " + quote(v) + ";" for k,v in values.items()) + " };")
-    test_values = {"SDKROOT": "macosx", "MACOSX_DEPLOYMENT_TARGET": "14.0", "SWIFT_VERSION": "5.0", "PRODUCT_NAME": "MikanseiMacUITests", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei.macOS.uitests", "GENERATE_INFOPLIST_FILE": "YES", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_STYLE": "Manual", "TEST_TARGET_NAME": "MikanseiMac"}
+    test_values = {"SDKROOT": "macosx", "MACOSX_DEPLOYMENT_TARGET": "14.0", "SWIFT_VERSION": "5.0", "PRODUCT_NAME": "MikanseiMacUITests", "PRODUCT_BUNDLE_IDENTIFIER": "net.bingyan.KikuchiHeinrich.mikansei.macOS.uitests", "GENERATE_INFOPLIST_FILE": "YES", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_STYLE": "Manual", "TEST_TARGET_NAME": "MikanseiMac"}
     obj("tests-" + name, "isa = XCBuildConfiguration; name = " + name + "; buildSettings = { " + " ".join(k + " = " + quote(v) + ";" for k,v in test_values.items()) + " };")
 obj("configurations", f"isa = XCConfigurationList; buildConfigurations = {ids(['Debug','Release'])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")
 obj("tests-configurations", f"isa = XCConfigurationList; buildConfigurations = {ids(['tests-Debug','tests-Release'])}; defaultConfigurationIsVisible = 0; defaultConfigurationName = Release;")
