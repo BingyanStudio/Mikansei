@@ -34,7 +34,7 @@ Releases/
         └── build metadata and SHA-256 files
 ```
 
-Android 和 Windows 的版本号及构建号读取 `Mikanseta/pubspec.yaml`。当前源码版本 `0.5.2+15` 的 Android APK 默认位于 `Releases/Mikanseta/Android/0.5.2+15/Mikanseta-0.5.2+15-android.apk`；本地 Windows 包默认写入 `Releases/Mikanseta/Windows/0.5.2+15/`。两个 macOS 安装脚本读取构建后 App 的 `Contents/Info.plist`，用内嵌版本和构建号选择目录。
+Android 和 Windows 的版本号及构建号读取 `Mikanseta/pubspec.yaml`。例如，源码版本 `0.5.2+15` 的 Android APK 默认位于 `Releases/Mikanseta/Android/0.5.2+15/Mikanseta-0.5.2+15-android.apk`；本地 Windows 包默认写入 `Releases/Mikanseta/Windows/0.5.2+15/`。两个 macOS 安装脚本读取构建后 App 的 `Contents/Info.plist`，用内嵌版本和构建号选择目录。
 
 可用 `MIKANSEI_RELEASES_DIR` 把整个 `Releases/` 根目录放到其他位置。相对路径以源码仓库为基准。Android 脚本支持 `MIKANSETA_OUTPUT_DIR` 指定 APK 和校验文件的精确输出目录。Windows 脚本按 `-OutputDirectory`、`MIKANSETA_OUTPUT_DIR`、默认版本目录的顺序选择输出位置；默认版本目录使用 `MIKANSEI_RELEASES_DIR` 指定的根目录（如有）。
 

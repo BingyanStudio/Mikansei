@@ -40,7 +40,7 @@
 ./Scripts/build-android.sh
 ```
 
-原始输出为 `build/app/outputs/flutter-apk/app-release.apk`，同时默认复制到源码仓库根目录旁的 `../Releases/Mikanseta/Android/<version+build>/`，按版本命名并附 SHA-256 文件。例如当前 `0.5.2+15` 输出为 `../Releases/Mikanseta/Android/0.5.2+15/Mikanseta-0.5.2+15-android.apk`。该相对路径以源码仓库根目录为基准，不随命令当前目录变化。这是包含多个 CPU 架构的单文件安装包，版本号读取 `pubspec.yaml`。`MIKANSETA_OUTPUT_DIR` 可指定精确的 APK 输出目录；`MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
+原始输出为 `build/app/outputs/flutter-apk/app-release.apk`，同时默认复制到源码仓库根目录旁的 `../Releases/Mikanseta/Android/<version+build>/`，按版本命名并附 SHA-256 文件。例如，源码版本为 `0.5.2+15` 时，输出为 `../Releases/Mikanseta/Android/0.5.2+15/Mikanseta-0.5.2+15-android.apk`。该相对路径以源码仓库根目录为基准，不随命令当前目录变化。这是包含多个 CPU 架构的单文件安装包，版本号读取 `pubspec.yaml`。`MIKANSETA_OUTPUT_DIR` 可指定精确的 APK 输出目录；`MIKANSEI_RELEASES_DIR` 可更换 `Releases/` 根目录。
 
 其他电脑需要 Java 21、Android SDK（API 36、Build Tools 36.0.0、NDK 28.2.13676358）及本项目固定版本的 Flutter。可以用 `JAVA_HOME`、`ANDROID_HOME` 和 `FLUTTER_SDK` 指定现有工具。
 

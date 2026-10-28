@@ -12,7 +12,7 @@
 
 当前原生版本 **0.3.2 (6)**：修复 routine 和循环日历事件在待办列表重复堆积的问题。同一系列只显示当前最早尚未完成的一次，完成后才推进到下一次；完成历史、个人修改、计时和 Checklist 保留，日历月 / 日视图继续展示未来 occurrence。跨端归档会保留可靠系列和原始 occurrence 身份。原有的 iCloud Drive 文件夹同步与 iPhone / Mac 待办、日程、笔记、Checklist、完成状态、计时和课表共享继续可用，见 [同步步骤](SYNC.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
-另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.4.5 (11)**；现有 Windows 公开包仍为 **0.4.3 (9)**，Android 公开包仍为 **0.4.2 (8)**，上方下载链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
+另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.5.3 (16)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 
 ## 已实现
 

@@ -181,7 +181,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.5.2 (15)';
+  String displayVersion = '0.5.3 (16)';
   String? error;
   String? serviceError;
 

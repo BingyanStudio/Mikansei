@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'domain.dart';
+import 'haptics.dart';
 import 'segmented_strip.dart';
 import 'store.dart';
 
@@ -519,16 +519,109 @@ class TimelineCalendar extends StatefulWidget {
   State<TimelineCalendar> createState() => _TimelineCalendarState();
 }
 
-class _TimelineCalendarState extends State<TimelineCalendar> {
+class _TimelineCalendarState extends State<TimelineCalendar>
+    with WidgetsBindingObserver, RouteAware {
   final scroll = ScrollController(initialScrollOffset: 7 * 72);
   final gridKey = GlobalKey(), viewportKey = GlobalKey();
+  final _rangeHaptics = HoldHaptics();
   Offset? pointer;
   int? selectedDay, anchorMinute, tipMinute;
   Timer? autoScroll;
+  DateTime? _lastStepHaptic;
+  ModalRoute<dynamic>? _route;
   static const hourHeight = 72.0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.store.addListener(_onStoreChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      if (_route != null) appRouteObserver.unsubscribe(this);
+      _route = route;
+      if (route != null) appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant TimelineCalendar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) {
+      oldWidget.store.removeListener(_onStoreChanged);
+      widget.store.addListener(_onStoreChanged);
+    }
+    var daysChanged = oldWidget.days.length != widget.days.length;
+    if (!daysChanged) {
+      for (var index = 0; index < widget.days.length; index++) {
+        if (oldWidget.days[index] != widget.days[index]) {
+          daysChanged = true;
+          break;
+        }
+      }
+    }
+    if (daysChanged) _cancelRange();
+  }
+
+  void _onStoreChanged() {
+    if (widget.store.readOnly) _cancelRange();
+  }
+
+  void _cancelRange({bool feedback = false}) {
+    autoScroll?.cancel();
+    autoScroll = null;
+    _rangeHaptics.cancel(feedback: feedback);
+    pointer = null;
+    _lastStepHaptic = null;
+    if (mounted && selectedDay != null) {
+      setState(() {
+        selectedDay = null;
+        anchorMinute = null;
+        tipMinute = null;
+      });
+    } else {
+      selectedDay = null;
+      anchorMinute = null;
+      tipMinute = null;
+    }
+  }
+
+  void _completeRange() {
+    autoScroll?.cancel();
+    autoScroll = null;
+    pointer = null;
+    _lastStepHaptic = null;
+    _rangeHaptics.finish(dropped: true);
+    setState(() {
+      selectedDay = null;
+      anchorMinute = null;
+      tipMinute = null;
+    });
+  }
+
+  @override
+  void didPushNext() => _cancelRange();
+
+  @override
+  void didPop() => _cancelRange();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _cancelRange();
+  }
+
   @override
   void dispose() {
     autoScroll?.cancel();
+    widget.store.removeListener(_onStoreChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    appRouteObserver.unsubscribe(this);
+    _rangeHaptics.cancel();
     scroll.dispose();
     super.dispose();
   }
@@ -548,16 +641,30 @@ class _TimelineCalendarState extends State<TimelineCalendar> {
       0,
       widget.days.length - 1,
     );
-    if (start) selectedDay = index;
+    if (start) {
+      selectedDay = index;
+      _rangeHaptics.start();
+      _lastStepHaptic = DateTime.now();
+    }
     // A store can become read-only between the long-press start and the
     // following move updates, or a move can arrive without a live anchor.
     // Without an anchored day there is no range to select, so drop the
     // update instead of asserting on a null day.
     if (selectedDay == null) return;
     final minute = (local.dy / hourHeight * 60 / 15).floor() * 15;
+    final nextMinute = minute.clamp(0, total(selectedDay!) - 15);
+    if (!start && nextMinute != tipMinute) {
+      final now = DateTime.now();
+      if (_lastStepHaptic == null ||
+          now.difference(_lastStepHaptic!) >=
+              const Duration(milliseconds: 100)) {
+        AppHaptics.change();
+        _lastStepHaptic = now;
+      }
+    }
     setState(() {
       if (start) anchorMinute = minute.clamp(0, total(selectedDay!) - 15);
-      tipMinute = minute.clamp(0, total(selectedDay!) - 15);
+      tipMinute = nextMinute;
       pointer = global;
     });
   }
@@ -678,7 +785,7 @@ class _TimelineCalendarState extends State<TimelineCalendar> {
                                   ? null
                                   : (d) {
                                       if (widget.store.readOnly) return;
-                                      HapticFeedback.selectionClick();
+                                      autoScroll?.cancel();
                                       update(
                                         d.globalPosition,
                                         columnWidth,
@@ -721,20 +828,20 @@ class _TimelineCalendarState extends State<TimelineCalendar> {
                                       if (widget.store.readOnly) return;
                                       update(d.globalPosition, columnWidth);
                                     },
-                              onLongPressCancel: () {
-                                autoScroll?.cancel();
-                                setState(() => selectedDay = null);
-                              },
+                              onLongPressCancel: () =>
+                                  _cancelRange(feedback: true),
                               onLongPressEnd: widget.store.readOnly
                                   ? null
                                   : (_) {
-                                      autoScroll?.cancel();
-                                      if (selectedDay == null) return;
+                                      if (selectedDay == null) {
+                                        _cancelRange(feedback: true);
+                                        return;
+                                      }
                                       // The store may turn read-only after the
                                       // drag started; drop the pending range
                                       // without creating anything.
                                       if (widget.store.readOnly) {
-                                        setState(() => selectedDay = null);
+                                        _cancelRange();
                                         return;
                                       }
                                       final day = widget.days[selectedDay!];
@@ -748,7 +855,7 @@ class _TimelineCalendarState extends State<TimelineCalendar> {
                                                 tipMinute!,
                                               ) +
                                               15;
-                                      setState(() => selectedDay = null);
+                                      _completeRange();
                                       widget.onCreate(
                                         day.add(Duration(minutes: first)),
                                         day.add(Duration(minutes: last)),

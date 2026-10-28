@@ -1,10 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'calendar_view.dart';
 import 'domain.dart';
+import 'haptics.dart';
 import 'segmented_strip.dart';
 import 'store.dart';
 
@@ -33,7 +33,8 @@ class PlanningPage extends StatefulWidget {
   State<PlanningPage> createState() => _PlanningPageState();
 }
 
-class _PlanningPageState extends State<PlanningPage> {
+class _PlanningPageState extends State<PlanningPage>
+    with WidgetsBindingObserver, RouteAware {
   static const cellExtent = 54.0;
   static const gridRows = 6;
 
@@ -52,6 +53,62 @@ class _PlanningPageState extends State<PlanningPage> {
     initialScrollOffset:
         PlanningPage.timelineStartHour * PlanningPage.hourHeight,
   );
+  final _dragHaptics = HoldHaptics();
+  ModalRoute<dynamic>? _route;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.store.addListener(_onStoreChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      if (_route != null) appRouteObserver.unsubscribe(this);
+      _route = route;
+      if (route != null) appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PlanningPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) {
+      oldWidget.store.removeListener(_onStoreChanged);
+      widget.store.addListener(_onStoreChanged);
+    }
+  }
+
+  void _onStoreChanged() {
+    if (widget.store.readOnly) _dragHaptics.cancel();
+  }
+
+  void _onTaskDragStarted() {
+    if (!widget.store.readOnly) _dragHaptics.start();
+  }
+
+  void _onTaskDragEnded(DraggableDetails details) {
+    if (widget.store.readOnly) {
+      _dragHaptics.cancel();
+      return;
+    }
+    _dragHaptics.finish(dropped: details.wasAccepted);
+  }
+
+  @override
+  void didPushNext() => _dragHaptics.cancel();
+
+  @override
+  void didPop() => _dragHaptics.cancel();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _dragHaptics.cancel();
+  }
 
   DateTime _currentMonth() {
     final now = widget.store.clock();
@@ -60,6 +117,10 @@ class _PlanningPageState extends State<PlanningPage> {
 
   @override
   void dispose() {
+    widget.store.removeListener(_onStoreChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    appRouteObserver.unsubscribe(this);
+    _dragHaptics.cancel();
     scroll.dispose();
     super.dispose();
   }
@@ -75,6 +136,7 @@ class _PlanningPageState extends State<PlanningPage> {
         ..clear()
         ..addAll(task.plannedDays.map(dayKey));
     });
+    AppHaptics.change();
   }
 
   void savePlan() {
@@ -84,6 +146,7 @@ class _PlanningPageState extends State<PlanningPage> {
       entry.id,
       [for (final key in draft) DateTime.parse(key)],
     );
+    AppHaptics.confirm();
   }
 
   DateTime? _dateAt(Offset local, double cellWidth) {
@@ -110,11 +173,12 @@ class _PlanningPageState extends State<PlanningPage> {
     // 滑动途中同一格会收到多次回调，只有格子状态真的翻转时才刷新并给一次触觉。
     if (paintMode! ? draft.add(key) : draft.remove(key)) {
       setState(() {});
-      HapticFeedback.selectionClick();
+      AppHaptics.change();
     }
   }
 
   void acceptDrop(DragTargetDetails<Entry> details) {
+    if (widget.store.readOnly) return;
     final box = gridKey.currentContext!.findRenderObject() as RenderBox;
     final local = box.globalToLocal(details.offset);
     final minute =
@@ -122,8 +186,6 @@ class _PlanningPageState extends State<PlanningPage> {
             .clamp(0, 24 * 60 - 30)
             .toInt();
     final start = DateTime(day.year, day.month, day.day, 0, minute);
-    // 拖动落定，与列表重排同用 mediumImpact。
-    HapticFeedback.mediumImpact();
     widget.store.setPlannedTime(
       details.data.id,
       start,
@@ -157,7 +219,10 @@ class _PlanningPageState extends State<PlanningPage> {
                   'days' => '日程规划',
                   _ => '小时规划',
                 },
-                onChanged: (value) => setState(() => mode = value),
+                onChanged: (value) {
+                  _dragHaptics.cancel();
+                  setState(() => mode = value);
+                },
               ),
             ),
             Expanded(child: mode == 'days' ? daysMode() : hoursMode()),
@@ -429,6 +494,8 @@ class _PlanningPageState extends State<PlanningPage> {
                               entry: todo,
                               readOnly: widget.store.readOnly,
                               onDetails: () => widget.onDetails(todo),
+                              onDragStarted: _onTaskDragStarted,
+                              onDragEnd: _onTaskDragEnded,
                             ),
                         ],
                       ),
@@ -444,9 +511,12 @@ class _PlanningPageState extends State<PlanningPage> {
                 children: [
                   IconButton(
                     tooltip: '前一天',
-                    onPressed: () => setState(() {
-                      day = DateTime(day.year, day.month, day.day - 1);
-                    }),
+                    onPressed: () {
+                      _dragHaptics.cancel();
+                      setState(() {
+                        day = DateTime(day.year, day.month, day.day - 1);
+                      });
+                    },
                     icon: const Icon(Icons.chevron_left),
                   ),
                   Expanded(
@@ -458,15 +528,21 @@ class _PlanningPageState extends State<PlanningPage> {
                   ),
                   IconButton(
                     tooltip: '后一天',
-                    onPressed: () => setState(() {
-                      day = DateTime(day.year, day.month, day.day + 1);
-                    }),
+                    onPressed: () {
+                      _dragHaptics.cancel();
+                      setState(() {
+                        day = DateTime(day.year, day.month, day.day + 1);
+                      });
+                    },
                     icon: const Icon(Icons.chevron_right),
                   ),
                   TextButton(
                     onPressed: sameDay(day, now)
                         ? null
-                        : () => setState(() => day = dayOf(now)),
+                        : () {
+                            _dragHaptics.cancel();
+                            setState(() => day = dayOf(now));
+                          },
                     child: const Text('今天'),
                   ),
                 ],
@@ -692,11 +768,15 @@ class _TodoCard extends StatelessWidget {
     required this.entry,
     required this.readOnly,
     required this.onDetails,
+    required this.onDragStarted,
+    required this.onDragEnd,
   });
 
   final Entry entry;
   final bool readOnly;
   final VoidCallback onDetails;
+  final VoidCallback onDragStarted;
+  final ValueChanged<DraggableDetails> onDragEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -732,6 +812,9 @@ class _TodoCard extends StatelessWidget {
     if (readOnly) return card;
     return LongPressDraggable<Entry>(
       data: entry,
+      hapticFeedbackOnStart: false,
+      onDragStarted: onDragStarted,
+      onDragEnd: onDragEnd,
       // 让落点偏移等于手指位置，时间轴才能按指尖换算时刻。
       dragAnchorStrategy: pointerDragAnchorStrategy,
       feedback: Material(

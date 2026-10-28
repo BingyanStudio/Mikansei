@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 
 import 'domain.dart';
+import 'haptics.dart';
 import 'store.dart';
 
 /// Apple-Notes style full-page editor for 笔记. Tasks, schedules and homework
@@ -146,7 +146,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       if (widget.store.saveFailed) {
         throw StateError('笔记暂未写入磁盘，请重试保存。');
       }
-      HapticFeedback.lightImpact();
+      AppHaptics.confirm();
       if (mounted) Navigator.pop(context);
     } catch (exception) {
       if (mounted) {

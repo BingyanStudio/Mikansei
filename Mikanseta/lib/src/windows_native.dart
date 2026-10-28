@@ -37,7 +37,7 @@ class WindowsNative {
   static final instance = WindowsNative();
   static const version = String.fromEnvironment(
     'MIKANSETA_VERSION',
-    defaultValue: '0.4.3 (9)',
+    defaultValue: '0.5.3 (16)',
   );
   final Future<Directory> Function() _supportDirectory;
   final WindowsOpenFile _openFile;

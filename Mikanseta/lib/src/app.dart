@@ -8,6 +8,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'domain.dart';
 import 'store.dart';
+import 'haptics.dart';
 import 'cloud_sync.dart';
 import 'local_folder_sync.dart';
 import 'note_editor_page.dart';
@@ -20,7 +21,7 @@ import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
 
-const appVersion = '0.5.2 (15)';
+const appVersion = '0.5.3 (16)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
@@ -43,6 +44,7 @@ class MikansetaApp extends StatelessWidget {
       locale: const Locale('zh', 'CN'),
       supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      navigatorObservers: [appRouteObserver],
       themeMode: switch (store.preferences["appearance"]) {
         "light" => ThemeMode.light,
         "dark" => ThemeMode.dark,
@@ -1006,7 +1008,7 @@ class SearchIntent extends Intent {
 /// 之前这里用 AnimatedList 做插入/离场动画，但那些动画与拖动重排互斥，且
 /// 离场快照会在完成动画期间展示过期内容（0.4.4 的问题）；改用
 /// ReorderableListView 后条目始终直接渲染当前数据，快照问题随之消失。
-class AnimatedEntryList extends StatelessWidget {
+class AnimatedEntryList extends StatefulWidget {
   const AnimatedEntryList({
     super.key,
     required this.entries,
@@ -1025,13 +1027,112 @@ class AnimatedEntryList extends StatelessWidget {
   /// 只在今日与我的清单开启长按拖动排序，其余页面保持纯列表。
   final bool reorderable;
 
+  @override
+  State<AnimatedEntryList> createState() => _AnimatedEntryListState();
+}
+
+class _AnimatedEntryListState extends State<AnimatedEntryList>
+    with WidgetsBindingObserver, RouteAware {
+  final _holdHaptics = HoldHaptics();
+  ModalRoute<dynamic>? _route;
+  int? _dragStartIndex;
+  bool _lastCanReorder = false;
+
+  bool get _canReorder => widget.reorderable && !widget.store.readOnly;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    widget.store.addListener(_onStoreChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != _route) {
+      if (_route != null) appRouteObserver.unsubscribe(this);
+      _route = route;
+      if (route != null) appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AnimatedEntryList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.store != widget.store) {
+      oldWidget.store.removeListener(_onStoreChanged);
+      widget.store.addListener(_onStoreChanged);
+    }
+    if (_lastCanReorder && !_canReorder) _abortDrag();
+  }
+
+  void _onStoreChanged() {
+    if (widget.store.readOnly) _abortDrag();
+  }
+
+  void _abortDrag() {
+    _holdHaptics.cancel();
+    _dragStartIndex = null;
+  }
+
+  void _onReorderStart(int index) {
+    if (!_canReorder) return;
+    _dragStartIndex = index;
+    _holdHaptics.start();
+  }
+
+  void _onReorderEnd(int _) {
+    final start = _dragStartIndex;
+    _dragStartIndex = null;
+    if (start == null) return;
+    if (!_canReorder) {
+      _holdHaptics.cancel();
+      return;
+    }
+    // onReorderEnd means the drag was released; unchanged positions still get
+    // a drop confirmation, while pointer cancellation never reaches this path.
+    _holdHaptics.finish(dropped: true);
+  }
+
+  void _onPointerCancel() => _abortDrag();
+
+  @override
+  void didPushNext() => _abortDrag();
+
+  @override
+  void didPop() => _abortDrag();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) _abortDrag();
+  }
+
+  @override
+  void dispose() {
+    widget.store.removeListener(_onStoreChanged);
+    WidgetsBinding.instance.removeObserver(this);
+    appRouteObserver.unsubscribe(this);
+    _holdHaptics.cancel();
+    super.dispose();
+  }
+
   String group(Entry e) => e.completed
       ? '今日已完成'
-      : e.overdue(now)
+      : e.overdue(widget.now)
       ? '已超时'
       : '未完成';
+
   @override
   Widget build(BuildContext context) {
+    final entries = widget.entries;
+    final now = widget.now;
+    final store = widget.store;
+    final onDetails = widget.onDetails;
+    final showGroups = widget.showGroups;
+    final canReorder = _canReorder;
+    _lastCanReorder = canReorder;
     final scheme = Theme.of(context).colorScheme;
     final rows = <_ListRow>[
       for (var index = 0; index < entries.length; index++) ...[
@@ -1047,27 +1148,30 @@ class AnimatedEntryList extends StatelessWidget {
         _ListRow.entry(entries[index]),
       ],
     ];
-    return ReorderableListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      buildDefaultDragHandles: false,
-      itemCount: rows.length,
-      onReorderItem: (oldIndex, newIndex) => _reorder(rows, oldIndex, newIndex),
-      proxyDecorator: (child, index, animation) => Material(
-        color: Colors.transparent,
-        elevation: 4,
-        borderRadius: BorderRadius.circular(18),
-        child: child,
-      ),
-      itemBuilder: (context, index) {
-        final row = rows[index];
-        final entry = row.entry;
-        if (entry != null) {
-          return ReorderableDelayedDragStartListener(
-            key: ValueKey(entry.id),
-            index: index,
-            child: Padding(
+    return Listener(
+      onPointerUp: (_) => _holdHaptics.stopPulses(),
+      onPointerCancel: (_) => _onPointerCancel(),
+      child: ReorderableListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        buildDefaultDragHandles: false,
+        itemCount: rows.length,
+        onReorderItem: (oldIndex, newIndex) =>
+            _reorder(rows, oldIndex, newIndex),
+        onReorderStart: canReorder ? _onReorderStart : null,
+        onReorderEnd: canReorder ? _onReorderEnd : null,
+        proxyDecorator: (child, index, animation) => Material(
+          color: Colors.transparent,
+          elevation: 4,
+          borderRadius: BorderRadius.circular(18),
+          child: child,
+        ),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final entry = row.entry;
+          if (entry != null) {
+            final tile = Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: EntryTile(
                 entry: entry,
@@ -1075,50 +1179,57 @@ class AnimatedEntryList extends StatelessWidget {
                 store: store,
                 onDetails: () => onDetails(entry),
               ),
-            ),
-          );
-        }
-        final heading = row.heading!;
-        final alert = heading == '已超时';
-        return KeyedSubtree(
-          key: ValueKey('heading-$heading-${row.boundary}'),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(3, 14, 0, 10),
-            child: Row(
-              children: [
-                Text(
-                  heading,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontSize: 13,
-                    letterSpacing: .3,
-                    color: alert ? scheme.error : scheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: alert ? scheme.error : scheme.surfaceContainer,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${entries.where((e) => group(e) == heading).length}',
-                    style: TextStyle(
-                      fontSize: 11,
+            );
+            return canReorder
+                ? ReorderableDelayedDragStartListener(
+                    key: ValueKey(entry.id),
+                    index: index,
+                    child: tile,
+                  )
+                : KeyedSubtree(key: ValueKey(entry.id), child: tile);
+          }
+          final heading = row.heading!;
+          final alert = heading == '已超时';
+          return KeyedSubtree(
+            key: ValueKey('heading-$heading-${row.boundary}'),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(3, 14, 0, 10),
+              child: Row(
+                children: [
+                  Text(
+                    heading,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontSize: 13,
+                      letterSpacing: .3,
+                      color: alert ? scheme.error : scheme.onSurface,
                       fontWeight: FontWeight.w600,
-                      color: alert ? scheme.onError : scheme.onSurfaceVariant,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: alert ? scheme.error : scheme.surfaceContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${entries.where((e) => group(e) == heading).length}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: alert ? scheme.onError : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -1126,10 +1237,9 @@ class AnimatedEntryList extends StatelessWidget {
   /// 同组条目：标题行不计入，落点跨过分组标题时自然夹回本组开头或结尾，
   /// 条目始终留在自己的分组内，按组内新次序写入 sortOrder。
   void _reorder(List<_ListRow> rows, int oldIndex, int newIndex) {
+    if (!_canReorder) return;
     final dragged = rows[oldIndex].entry;
     if (dragged == null) return;
-    // 拖动落定才有的确认感，与规划页拖入时间轴一致。
-    HapticFeedback.mediumImpact();
     final without = List.of(rows)..removeAt(oldIndex);
     var after = 0;
     for (var i = 0; i < newIndex && i < without.length; i++) {
@@ -1139,10 +1249,10 @@ class AnimatedEntryList extends StatelessWidget {
     // after 统计的是“移除被拖条目后”落点之前的同组数量，构造新次序时
     // 也要先把被拖条目从成员里摘出来，避免同一个编号写两次 sortOrder。
     final others = [
-      for (final e in entries)
+      for (final e in widget.entries)
         if (group(e) == group(dragged) && e.id != dragged.id) e.id,
     ];
-    store.reorder([
+    widget.store.reorder([
       ...others.sublist(0, after),
       dragged.id,
       ...others.sublist(after),
@@ -1246,7 +1356,11 @@ class EntryTile extends StatelessWidget {
                   onPressed: store.readOnly
                       ? null
                       : () {
-                          HapticFeedback.mediumImpact();
+                          if (entry.completed) {
+                            AppHaptics.change();
+                          } else {
+                            AppHaptics.confirm();
+                          }
                           store.toggle(entry.id);
                         },
                   icon: Icon(
@@ -1351,7 +1465,7 @@ class EntryTile extends StatelessWidget {
                   onPressed: store.readOnly
                       ? null
                       : () {
-                          HapticFeedback.lightImpact();
+                          AppHaptics.change();
                           store.focus(entry.id);
                         },
                   icon: Icon(
@@ -1432,7 +1546,7 @@ class _InlineChecklist extends StatelessWidget {
                 onChanged: store.readOnly
                     ? null
                     : (_) {
-                        HapticFeedback.selectionClick();
+                        AppHaptics.change();
                         store.toggleStep(entry.id, step.id);
                       },
               ),
@@ -1559,7 +1673,10 @@ class EntryDetails extends StatelessWidget {
                           ),
                           onChanged: store.readOnly
                               ? null
-                              : (_) => store.toggleStep(id, s.id),
+                              : (_) {
+                                  AppHaptics.change();
+                                  store.toggleStep(id, s.id);
+                                },
                         ),
                       ),
                     ],
@@ -1591,14 +1708,24 @@ class EntryDetails extends StatelessWidget {
                           OutlinedButton(
                             onPressed: store.readOnly
                                 ? null
-                                : () => store.toggle(id),
+                                : () {
+                                    if (entry.completed) {
+                                      AppHaptics.change();
+                                    } else {
+                                      AppHaptics.confirm();
+                                    }
+                                    store.toggle(id);
+                                  },
                             child: Text(entry.completed ? '恢复未完成' : '标记完成'),
                           ),
                         if (entry.isTask && !entry.completed)
                           OutlinedButton(
                             onPressed: store.readOnly
                                 ? null
-                                : () => store.focus(id),
+                                : () {
+                                    AppHaptics.change();
+                                    store.focus(id);
+                                  },
                             child: Text(
                               entry.startedAt == null ? '开始计时' : '暂停计时',
                             ),
