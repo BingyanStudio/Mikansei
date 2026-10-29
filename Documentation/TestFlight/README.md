@@ -1,6 +1,6 @@
 # Mikansei iOS · TestFlight 发布交接包
 
-准备日期：2026-10-28  
+准备日期：2026-10-29  
 产品：**原生 Mikansei**，SwiftUI，iPhone / iPad；账号服务也供原生 Mac 版使用
 
 资料目标版本：**0.5.0（11）**
@@ -8,6 +8,24 @@
 反馈邮箱：**kikuchiheinr@qq.com**
 
 ## 给发布者
+
+### 本次 Bingyan 发布包
+
+本次交接沿用 Paul 已建立的发布身份，不需要新建 App Store Connect 应用：
+
+| 项目 | 本包配置 |
+| --- | --- |
+| Team ID | `6PVAPR495F` |
+| 主应用 Bundle ID | `net.bingyan.KikuchiHeinrich.mikansei` |
+| Widgets Bundle ID | `net.bingyan.KikuchiHeinrich.mikansei.widgets` |
+| App Store Connect App ID | `6827965680` |
+| 版本 / 构建号 | `0.5.0 (11)`，主应用与 Widgets 一致 |
+
+解压后可直接打开 `Source/Mikansei.xcodeproj`，或运行包根目录的 `开始签名归档.command`。本包已经接入图标资产目录并指定 `AppIcon`，也保留了现有 Xcode Cloud manifest。归档后脚本会检查缺失图标问题，再打开 Organizer，烦请使用 Bingyan 账号分发上传。
+
+代码来源与远端提交编号见包根目录 `SOURCE_COMMIT.txt`。当前 `main` 仍是较旧版本；如使用现有 Xcode Cloud 标签工作流，请先让标签指向本包对应的源码提交，并核对工作流的标签匹配条件。仅给旧 `main` 打标签不会发布本包的最新代码。签名与 Apple 处理结果以发布者实际操作为准。
+
+以下资料还包含适用于其他团队的通用准备流程；本次交接优先使用上表的既有发布身份。
 
 本交接包包含 TestFlight 文案、审核说明、隐私与支持资料及构建指南。0.5.0（11）已通过 iOS 无签名 Release 归档及 Mac 通用构建，尚未签名、安装、上传或完成云端在线验收。无签名结果不能代替发布者团队的分发归档。
 

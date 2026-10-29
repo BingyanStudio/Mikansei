@@ -9,7 +9,7 @@
 | Platform | iOS |
 | App Name | Mikansei |
 | Primary Language | Chinese (Simplified) |
-| SKU | `MIKANSEI-IOS-001` |
+| SKU | 沿用既有应用记录；首次新建时才使用 `MIKANSEI-IOS-001` |
 | Version / Build | `0.5.0 (11)`（本轮资料目标；上传前核对最终归档） |
 | Minimum iOS Version | iOS 17.0 |
 | TestFlight Group | `Friends Beta` |
@@ -36,9 +36,10 @@
 以下信息涉及实际发布账号，烦请发布者根据自己的 Apple 账号获取或填写；账号凭据由发布者自行保管，无需放进交接包：
 
 - **Team ID：**使用实际签名团队的 Team ID。
-- **App Store Connect Apple ID (App Record ID)：**创建 App 记录后由 Apple 分配；记入发布者自己的构建/发布记录。
+- **本次 Bingyan 发布身份：**Team `6PVAPR495F`；App ID `6827965680`；主 Bundle ID `net.bingyan.KikuchiHeinrich.mikansei`；Widgets Bundle ID `net.bingyan.KikuchiHeinrich.mikansei.widgets`。本包已设置这些值，请继续使用已有应用记录。
+- **App Store Connect Apple ID (App Record ID)：**其他团队首次创建 App 记录后由 Apple 分配；本次沿用上方既有记录。
 - **Beta App Review Contact：**填写发布者本人的真实名、姓、电话号码和邮箱。
-- **App Bundle ID / Widget Extension Bundle ID：**按 `README.md` 的 `BUILD_GUIDE.md`，使用发布者自己的 Team ID 运行构建助手；将 `PREPARED_APP.json` 中主 App 与 Widget extension 的准确标识符填入记录和构建设置。助手默认主标识为 `com.personal.mikansei.beta.<team-id-lowercase>`，Widget 标识为主标识加 `.widgets`。请在自己的团队中确认标识可用。
+- **其他团队首次准备源码时：**按 `BUILD_GUIDE.md` 运行构建助手，将 `PREPARED_APP.json` 中主 App 与 Widget extension 的准确标识符填入记录和构建设置。助手默认主标识为 `com.personal.mikansei.beta.<team-id-lowercase>`，Widget 标识为主标识加 `.widgets`。本次 Bingyan 专用包无需改用默认 Beta ID。
 - 如果生成标识冲突，使用构建助手的自定义 Bundle ID 选项，并按新的 `PREPARED_APP.json` 更新记录；不要直接修改原工程中的 Bundle ID。
 - 使用发布者自己的团队、签名证书/描述文件与 App Store Connect 账号完成归档和上传。
 - 源码中的 Supabase URL 和 public/anon 客户端 key 是公开客户端配置，可以嵌入 App；不要把 service-role key、项目管理密钥、数据库密码或签名私钥放入客户端、交接包或公开资料。服务端 RLS 负责按账号隔离，public key 不代表数据对项目管理员保密。

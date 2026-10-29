@@ -4,6 +4,8 @@
 
 ## 1. 解压源码并准备归档
 
+**2026-10-29 的 Bingyan 专用包已完成工程准备。** 请直接运行包根目录的 `开始签名归档.command`，或打开 `Source/Mikansei.xcodeproj` 归档；沿用 Team `6PVAPR495F`、主 Bundle ID `net.bingyan.KikuchiHeinrich.mikansei` 及其 `.widgets` 扩展。继续使用已有 App Store Connect App `6827965680`。下方“重新生成准备包”的通用命令并非本包必需步骤；如使用该命令，必须显式指定既有 `--bundle-id`。
+
 解压交接 ZIP，进入其中包含 `App/`、`Shared/`、`Widgets/` 和 `Scripts/` 的 **`Source/`** 目录；如果直接使用 Git 仓库，则进入仓库根目录。先在 Xcode 中登录发布者自己的 Apple Account，并确认该账号已加入 Apple Developer Program，且有权访问用于分发的 App Store Connect 团队。账号登录及签名凭据请自行保管，交接过程无需提供这些信息。
 
 从 Apple Developer 账号页面复制发布者团队的真实 10 位 Team ID。此处请使用账号页面显示的 Team ID，以便正确配置签名。然后在上述源码根目录执行：

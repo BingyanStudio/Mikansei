@@ -1,6 +1,6 @@
 # App Store 上传图标错误处理
 
-记录日期：2026-10-28。
+记录日期：2026-10-29。
 
 ## 本次问题
 
@@ -13,6 +13,8 @@
 | ITMS-90713 | 缺少 `CFBundleIconName` |
 
 核对远端 `main` 提交 `1c968a009b5b862ae145a9efe43f7666a21364c8` 时，工程已是 **0.3.1（5）**，其 App target 仍未把 `App/Assets.xcassets` 纳入资源构建，也未指定 `ASSETCATALOG_COMPILER_APPICON_NAME`。旧 Info.plist 使用手写散图声明；这是图标打包配置问题。
+
+2026-10-29 的新交接包使用最新 **0.5.0（11）** 源码，并接入上述 `main` 的 Bingyan iOS 发布身份与 Xcode Cloud manifest。实际交接源码再次通过无签名 Release 归档和独立图标检查，主应用及 Widgets 的 Bundle ID、版本与构建号一致。证据见 [准备记录](PREPARATION_RECORD.md) 与 ZIP 内的 `Evidence/`。本轮未取得签名归档、未上传或打标签；远端旧 `main` 不会因导出 ZIP 自动更新。
 
 `experimental/sync` 中的 0.4.2（10）和 0.5.0（11）已使用图标资产目录。维护者检查实际无签名归档，均可找到 120 × 120、152 × 152 PNG，且 iPhone / iPad 的 `CFBundlePrimaryIcon` 含 `CFBundleIconName=AppIcon`。不能仅凭截图认定较新的交接 ZIP 也缺少图标。
 

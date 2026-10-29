@@ -1,12 +1,25 @@
 # Mikansei TestFlight 交接准备记录
 
-记录日期：2026-10-28
+记录日期：2026-10-29
 
 当前资料目标：原生 Mikansei **0.5.0（11）**，iPhone / iPad；云账号服务也供原生 Mac 版使用。
 
 源码提交：以最终交接 ZIP 根目录的 `SOURCE_COMMIT.txt` 为准。
 
-## 0.5.0（11）本轮资料更新与待确认项
+## 2026-10-29：Bingyan 交接包
+
+- 最新原生源码保留 `0.5.0 (11)`，将 Paul 在 `origin/main` 提交 `1c968a009b5b862ae145a9efe43f7666a21364c8` 中的 iOS 发布设置接入 `experimental/sync`。沿用 Team `6PVAPR495F`、主标识 `net.bingyan.KikuchiHeinrich.mikansei`、扩展标识 `.widgets` 和现有 Xcode Cloud manifest；其他平台的本地安装身份未改。
+- 对最终交接包 `Source/` 使用 Xcode 26.5 执行 Release 无签名归档，退出码 0，`ARCHIVE SUCCEEDED`。两份产物均为 `0.5.0 (11)` 和上述 Bingyan 标识。
+- 独立图标检查通过：`Assets.car` 存在，iPhone / iPad 的 `CFBundlePrimaryIcon.CFBundleIconName` 均为 `AppIcon`，对应 PNG 的真实像素包含 120 × 120 和 152 × 152。
+- 主 App 的公开 Supabase 配置与交接源码一致，Widget 无该配置；交接副本的 49 份 Swift 文件与仓库逐字节一致。Python 脚本通过 3.9 语法检查，归档入口通过 `bash -n` 检查。本轮未运行自动化测试。
+- 归档仍有 `EntryStore.swift:297` 和 `NotificationManager.swift:182` 两处既有 Swift 并发捕获警告；使用 Swift 5 语言模式，不阻断本次编译。
+- 本机另尝试过 Bingyan 自动签名归档，但主应用与 Widget 均返回 `No Account for Team "6PVAPR495F"` 及缺少描述文件。用户提供的 Xcode 团队截图显示 Developer 角色，但 `Certificates, Identifiers & Profiles` 为红叉。没有取得签名归档或完成上传。
+- 交接包包含签名归档入口、图标检查工具、1024 图标、实际产物元数据、来源提交与文件校验清单。由 Paul 使用有签名权限的团队账号继续部署；本轮未创建发布标签。
+- 云账号删除 RPC 仍未部署，邮箱登录与同步仍未在线验收；本轮源码和图标归档检查不代替这些操作。
+
+归档位置（相对 `Mikansei_Project/`）：`Archives/Builds/TestFlightPreparation/2026-10-29-Bingyan-handoff-unsigned/Mikansei.xcarchive`。完整本机日志：`/private/tmp/mikansei-bingyan-handoff-unsigned-20261029.log`。交接包：`Releases/Mikansei/TestFlight/0.5.0+11/Mikansei-TestFlight-Handoff-0.5.0+11-2026-10-29.zip`。
+
+## 2026-10-28：0.5.0（11）资料更新与待确认项
 
 | 项目 | 当前状态 |
 | --- | --- |
