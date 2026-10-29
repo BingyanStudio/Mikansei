@@ -241,6 +241,7 @@ def copy_handoff_files(stage):
         "prepare_testflight.py",
         "supabase_config.py",
         "check_ios_archive_icons.py",
+        "check_xcode_cloud_release.py",
         "repair_ios_icons.py",
     ):
         source = SOURCE_ROOT / "Scripts" / script_name
@@ -260,6 +261,7 @@ def copy_handoff_files(stage):
         "Documentation/supabase-native-account.sql",
         "Configuration/README.md",
         "Configuration/SupabaseClient.example.plist",
+        "Configuration/SupabaseClient.public.plist",
         "Mikanseta/Documentation/SUPABASE_SETUP.md",
         "Mikanseta/Documentation/supabase-schema.sql",
     ):
@@ -269,6 +271,10 @@ def copy_handoff_files(stage):
         destination = stage / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
+
+    cloud_scripts = SOURCE_ROOT / "ci_scripts"
+    if cloud_scripts.is_dir():
+        copy_filtered_tree(cloud_scripts, stage / "ci_scripts")
 
 
 def copy_minimal_source(stage):
@@ -476,6 +482,24 @@ def validate_configured_project(
                 )
 
 
+def copy_matching_cloud_manifest(stage, team, bundle_id):
+    """Keep an existing cloud product binding only for the same release identity."""
+    source_project = load_project_json(SOURCE_ROOT / PROJECT_RELATIVE_PATH / "project.pbxproj")
+    configurations = target_build_settings(source_project, "Mikansei")
+    if team is None or any(
+        settings.get("DEVELOPMENT_TEAM") != team
+        or settings.get("PRODUCT_BUNDLE_IDENTIFIER") != bundle_id
+        for settings in configurations
+    ):
+        return
+    relative = PROJECT_RELATIVE_PATH / "xcshareddata" / "xcodecloud" / "manifest.json"
+    manifest = SOURCE_ROOT / relative
+    if manifest.is_file() and not manifest.is_symlink():
+        destination = stage / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(manifest, destination)
+
+
 def make_archive_command(unsigned, archive_path="Mikansei.xcarchive"):
     command = [
         "xcodebuild",
@@ -668,6 +692,7 @@ def main():
                 version,
                 build_number,
             )
+            copy_matching_cloud_manifest(stage, team, bundle_id)
 
             if arguments.archive or arguments.unsigned_check:
                 command = make_archive_command(

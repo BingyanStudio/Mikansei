@@ -23,6 +23,8 @@
 
 解压后可直接打开 `Source/Mikansei.xcodeproj`，或运行包根目录的 `开始签名归档.command`。本包已经接入图标资产目录并指定 `AppIcon`，也保留了现有 Xcode Cloud manifest。归档后脚本会检查缺失图标问题，再打开 Organizer，烦请使用 Bingyan 账号分发上传。
 
+**Xcode Cloud 请使用本次补齐后的专用包及其新提交。** 公开 Supabase 配置已纳入 Git，post-clone 会自动生成资源，归档后会核对实际图标、配置与版本，无需手工补 Supabase 文件或环境变量。操作步骤见 [XCODE_CLOUD.md](XCODE_CLOUD.md)。此前同日导出的普通交接包未包含这套云构建准备流程。
+
 代码来源与远端提交编号见包根目录 `SOURCE_COMMIT.txt`。当前 `main` 仍是较旧版本；如使用现有 Xcode Cloud 标签工作流，请先让标签指向本包对应的源码提交，并核对工作流的标签匹配条件。仅给旧 `main` 打标签不会发布本包的最新代码。签名与 Apple 处理结果以发布者实际操作为准。
 
 以下资料还包含适用于其他团队的通用准备流程；本次交接优先使用上表的既有发布身份。
@@ -48,6 +50,7 @@ Mikansei 可在不登录时离线使用。本机数据只有在用户主动使�
 | --- | --- |
 | [BUILD_GUIDE.md](BUILD_GUIDE.md) | 准备工程、签名、归档、上传和云账号上线前条件 |
 | [ICON_UPLOAD_FIX.md](ICON_UPLOAD_FIX.md) | ITMS-90022 / 90023 / 90713 图标问题、旧上架工程修补与归档检查 |
+| [XCODE_CLOUD.md](XCODE_CLOUD.md) | 公开配置、云构建自动准备、归档检查与标签发布注意事项 |
 | [SUPABASE_NATIVE.md](../SUPABASE_NATIVE.md) | 原生客户端云账号配置、同步行为与管理员上线步骤 |
 | [APP_STORE_CONNECT_FIELDS.md](APP_STORE_CONNECT_FIELDS.md) | 后台字段逐项填写 |
 | [BETA_DESCRIPTION.txt](BETA_DESCRIPTION.txt) | 可直接粘贴的测试版简介 |

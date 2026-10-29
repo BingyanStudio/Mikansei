@@ -6,7 +6,20 @@
 
 源码提交：以最终交接 ZIP 根目录的 `SOURCE_COMMIT.txt` 为准。
 
-## 2026-10-29：Bingyan 交接包
+## 2026-10-29：Xcode Cloud 专用包补齐
+
+- 较早的普通交接包附有本机生成的公开配置，但原 Git 仓库缺少可用于全新云构建的配置输入。本次将经核验的 publishable 客户端配置保存为版本化的 `Configuration/SupabaseClient.public.plist`；生成资源仍被忽略，云端会自动恢复，不再依赖本机覆盖文件或 Paul 手工填 secrets。
+- 增加可执行 `ci_scripts/ci_post_clone.sh` 和 `ci_post_xcodebuild.sh`，分别准备源码资源、核对实际归档。图标、公开配置、隐私清单、App / Widgets 身份或版本不完整时，明确阻止该构建成功。
+- 从 Git 暂存区导出干净源码，起始不含 `Configuration/SupabaseClient.plist`、两处 `LocalInstall/` 或 `.git`，直接运行 post-clone 成功恢复配置并通过构建前检查。
+- 干净副本使用 Xcode 26.5 / iOS SDK 26.5 完成无签名 Release 归档，退出码 0。App / Widgets 均为 `0.5.0 (11)`，Bingyan 身份保持不变。
+- 设置 Apple 文档中的 archive 环境变量运行同一 post-xcodebuild 入口，检查通过：两种尺寸图标、`AppIcon` 名称、实际版本 / 构建号、两份隐私清单及主应用中的预期公开配置完整。Widget 无客户端配置。新交接包中的源码也通过该归档资源检查。
+- Python 脚本通过 3.9 语法检查；CI 入口执行成功，本机归档入口通过 `bash -n`。本轮未添加或运行自动化测试。
+- 使用公开配置只读访问 Auth 设置返回 HTTP 200，邮箱认证开启；未发送 OTP、登录、访问私人归档或调用删除接口。
+- 无签名编译仍有两处既有 Swift 并发警告。真实云构建签名、标签规则、TestFlight 分发及 Apple 处理尚未确认；账号删除 RPC 仍未部署，真实登录和同步仍未在线验收。
+
+干净源码与归档位于 `Archives/Builds/TestFlightPreparation/2026-10-29-xcode-cloud-clean/`；其中 `post-clone.log`、`post-archive.log` 记录同一 CI 入口的本地执行。完整编译日志为 `/private/tmp/mikansei-xcode-cloud-clean-20261029.log`。新包名为 `Mikansei-TestFlight-XcodeCloud-0.5.0+11-2026-10-29.zip`，以其 `SOURCE_COMMIT.txt` 中的新提交为准，同日较早的普通交接包保留作历史记录。
+
+## 2026-10-29：较早的 Bingyan 普通交接包
 
 - 最新原生源码保留 `0.5.0 (11)`，将 Paul 在 `origin/main` 提交 `1c968a009b5b862ae145a9efe43f7666a21364c8` 中的 iOS 发布设置接入 `experimental/sync`。沿用 Team `6PVAPR495F`、主标识 `net.bingyan.KikuchiHeinrich.mikansei`、扩展标识 `.widgets` 和现有 Xcode Cloud manifest；其他平台的本地安装身份未改。
 - 对最终交接包 `Source/` 使用 Xcode 26.5 执行 Release 无签名归档，退出码 0，`ARCHIVE SUCCEEDED`。两份产物均为 `0.5.0 (11)` 和上述 Bingyan 标识。

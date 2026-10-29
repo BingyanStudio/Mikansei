@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 
 RESOURCE_PATH = Path("Configuration/SupabaseClient.plist")
+PUBLIC_RESOURCE_PATH = Path("Configuration/SupabaseClient.public.plist")
 URL_KEY = "MikanseiSupabaseURL"
 CLIENT_KEY = "MikanseiSupabaseAnonKey"
 
@@ -77,6 +78,10 @@ def load_client_configuration(root):
         path = root / relative
         if path.is_file():
             return validate_client_configuration(read_env(path))
+    public_resource = root / PUBLIC_RESOURCE_PATH
+    if public_resource.is_file():
+        with public_resource.open("rb") as handle:
+            return validate_client_configuration(plistlib.load(handle))
     return None
 
 

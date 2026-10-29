@@ -4,7 +4,9 @@
 
 ## 客户端配置
 
-将 `Configuration/SupabaseClient.example.plist` 复制为同目录下的 `SupabaseClient.plist`，填写项目 HTTPS 根地址与 publishable / anon 客户端密钥。实际文件被 Git 忽略。也可沿用本机 `Mikanseta/LocalInstall/supabase.env`；生成器只读取项目地址与公开客户端密钥。
+仓库已提供版本化的 `Configuration/SupabaseClient.public.plist`，包含与 Mikanseta 相同且经核验的公开 publishable 客户端配置。全新检出即可使用；Xcode Cloud 会在 post-clone 阶段自动生成应用资源，无需人工补文件或设置 Supabase secrets。
+
+本机如需覆盖，可将 `Configuration/SupabaseClient.example.plist` 复制为同目录下的 `SupabaseClient.plist`，填写项目 HTTPS 根地址与 publishable / anon 客户端密钥；也可沿用本机 `Mikanseta/LocalInstall/supabase.env`。本机覆盖文件继续被 Git 忽略，生成器在没有本机覆盖时才使用版本化的公开配置。只允许客户端密钥。
 
 在源码根目录执行：
 
@@ -13,7 +15,7 @@ python3 Scripts/generate_project.py
 python3 Scripts/generate_macos_project.py
 ```
 
-生成器会校验并接入 App 资源。缺少配置时会生成离线工程；清洁检出后需先运行生成器再打开 Xcode。iPhone Widget 不包含客户端配置或账户会话。实际配置随 App 分发，不应包含管理凭据、`service_role`、数据库密码或私钥。
+生成器会校验并接入 App 资源。手工全新检出后先运行生成器再打开 Xcode；Xcode Cloud 的 `ci_scripts/ci_post_clone.sh` 自动完成这一步，并在缺失配置时明确使构建失败。iPhone Widget 不包含客户端配置或账户会话。实际配置随 App 分发，不应包含管理凭据、`service_role`、数据库密码或私钥。云构建入口和归档检查见 [Xcode Cloud 说明](TestFlight/XCODE_CLOUD.md)。
 
 现有 Mikanseta 服务的基础表、RLS 和 Realtime 配置见 [现有配置说明](../Mikanseta/Documentation/SUPABASE_SETUP.md) 与 [基础 schema](../Mikanseta/Documentation/supabase-schema.sql)。已有表的项目不要重复初始化或清空数据。邮箱模板需要提供数字验证码；收不到邮件时由管理员检查邮箱服务、发送额度及 Auth 日志。
 
