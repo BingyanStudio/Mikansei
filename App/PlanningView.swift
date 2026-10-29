@@ -27,6 +27,8 @@ struct PlanningView: View {
     let edit: (Entry) -> Void
     let setPlannedDays: (UUID, [Date]) -> Void
     let setPlannedTime: (UUID, Date, Date) -> Void
+    let restoreFromPlanning: (UUID) -> Void
+    var canEdit = true
     /// Mac 目标传 false：隐藏时间轴拖拽，改用字段编辑。
     var supportsDrag = true
 
@@ -38,7 +40,15 @@ struct PlanningView: View {
     private var board: TaskBoard { TaskBoard(entries: entries, now: now) }
     private var selected: Entry? { entries.first { $0.id == selectedID } }
     /// 横滑选事项：全部未完成事项（含常态，选中后提示走重复规则）。
-    private var candidates: [Entry] { board.open }
+    private var deferredCandidates: [Entry] {
+        entries.filter { $0.isTask && !$0.isCompleted && $0.isInPlanning }
+            .sorted(by: TaskBoard.order)
+    }
+    private var candidates: [Entry] {
+        var byID = Dictionary(uniqueKeysWithValues: board.open.map { ($0.id, $0) })
+        for entry in deferredCandidates { byID[entry.id] = entry }
+        return byID.values.sorted(by: TaskBoard.order)
+    }
 
     var body: some View {
         #if os(macOS)
@@ -53,6 +63,7 @@ struct PlanningView: View {
             VStack(spacing: 0) {
                 PlanningSegment(mode: $mode)
                     .padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 8)
+                deferredSection
                 if mode == .days { daysPane } else { hoursPane }
             }
             .background(PlanningPalette.page)
@@ -62,6 +73,39 @@ struct PlanningView: View {
                     Button("完成") { dismiss() }.accessibilityIdentifier("planning-close")
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var deferredSection: some View {
+        if !deferredCandidates.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("待重新规划 · \(deferredCandidates.count)")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    .padding(.horizontal, 20)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(deferredCandidates) { entry in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Button {
+                                    selectedID = entry.id
+                                    draftDays = entry.plannedDays ?? []
+                                } label: {
+                                    Text(entry.title).font(.caption.weight(.semibold)).lineLimit(2)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }.buttonStyle(.plain)
+                                    .accessibilityLabel("选择待重新规划事项：\(entry.title)")
+                                Button("移回今日聚焦") { restoreFromPlanning(entry.id) }
+                                    .font(.caption).buttonStyle(.bordered)
+                                    .disabled(!canEdit)
+                                    .accessibilityLabel("移回今日聚焦：\(entry.title)")
+                            }
+                            .padding(10)
+                            .background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 12))
+                            .frame(width: 180, alignment: .leading)
+                        }
+                    }.padding(.horizontal, 20)
+                }
+            }.padding(.bottom, 10)
         }
     }
 
@@ -80,7 +124,29 @@ struct PlanningView: View {
                     }.padding(.horizontal, 20)
                 }
                 if let entry = selected {
-                    if entry.isRoutine {
+                    if entry.kind == .schedule {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("日程按执行时段显示", systemImage: "calendar")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
+                            if let start = entry.plannedStart {
+                                Text("开始：\(start.formatted(date: .complete, time: .shortened))")
+                                    .font(.subheadline)
+                                if let end = entry.plannedEnd, end > start {
+                                    Text("结束：\(end.formatted(date: .complete, time: .shortened))")
+                                        .font(.subheadline)
+                                } else {
+                                    Text("没有有效结束时间时，按开始日期归类。")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            Text("只有执行时段覆盖当天的日程才会进入今日聚焦。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            Button("调整日程时间") { dismiss(); edit(entry) }
+                                .buttonStyle(.bordered).disabled(!canEdit)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
+                    } else if entry.isRoutine {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("常态 · 按重复规则自动规划", systemImage: "repeat")
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
@@ -99,7 +165,7 @@ struct PlanningView: View {
                                 Spacer()
                                 Button("保存规划") { setPlannedDays(entry.id, draftDays) }
                                     .buttonStyle(.borderedProminent)
-                                    .disabled(draftDays == (entry.plannedDays ?? []))
+                                    .disabled(!canEdit || draftDays == (entry.plannedDays ?? []))
                                     .accessibilityIdentifier("planning-save")
                             }
                         }.padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
@@ -123,7 +189,10 @@ struct PlanningView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(entry.title).font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.primary).lineLimit(2).multilineTextAlignment(.leading)
-                if let days = entry.plannedDays, !days.isEmpty {
+                if entry.kind == .schedule, let start = entry.plannedStart {
+                    Text(start.formatted(date: .abbreviated, time: .shortened))
+                        .font(.caption2).foregroundStyle(.secondary)
+                } else if let days = entry.plannedDays, !days.isEmpty {
                     Text("已规划 \(days.count) 天").font(.caption2).foregroundStyle(.secondary)
                 }
             }.padding(12).frame(width: 150, alignment: .topLeading)
@@ -147,10 +216,11 @@ struct PlanningView: View {
                 todayColumn.frame(width: 150)
                 Divider()
                 HourDropTimeline(date: now, items: dayItems, now: now, calendar: Calendar.current,
-                                 edit: edit, drop: drop)
+                                 edit: edit, drop: drop, canEdit: canEdit)
             }
         } else {
             MacHourFields(targets: board.today, now: now, setPlannedTime: setPlannedTime)
+                .disabled(!canEdit)
         }
     }
     /// 左列：今天要做、还没有执行时段的待办，可拖入右侧时间轴。
@@ -170,17 +240,7 @@ struct PlanningView: View {
                 Text("今日待办").font(.subheadline.weight(.semibold))
                     .padding(.top, 12).padding(.bottom, 2)
                 ForEach(unscheduledToday) { entry in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(entry.title).font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.primary).lineLimit(3).multilineTextAlignment(.leading)
-                        if let due = entry.dueDate {
-                            Label("DDL " + due.formatted(date: .omitted, time: .shortened), systemImage: "flag")
-                                .font(.caption2).foregroundStyle(PlanningPalette.warm)
-                        }
-                    }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                        .background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 10))
-                        .draggable(entry)
-                        .accessibilityIdentifier("planning-todo-\(entry.id)")
+                    todoCard(entry)
                 }
                 if unscheduledToday.isEmpty {
                     Text("今天的待办都已有时段。").font(.caption).foregroundStyle(.secondary)
@@ -188,6 +248,19 @@ struct PlanningView: View {
                 Spacer(minLength: 0)
             }.padding(.horizontal, 12)
         }
+    }
+    @ViewBuilder private func todoCard(_ entry: Entry) -> some View {
+        let card = VStack(alignment: .leading, spacing: 4) {
+            Text(entry.title).font(.caption.weight(.semibold))
+                .foregroundStyle(Color.primary).lineLimit(3).multilineTextAlignment(.leading)
+            if let due = entry.dueDate {
+                Label("DDL " + due.formatted(date: .omitted, time: .shortened), systemImage: "flag")
+                    .font(.caption2).foregroundStyle(PlanningPalette.warm)
+            }
+        }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 10))
+            .accessibilityIdentifier("planning-todo-\(entry.id)")
+        if canEdit { card.draggable(entry) } else { card }
     }
 }
 
@@ -201,6 +274,7 @@ private struct HourDropTimeline: View {
     let edit: (Entry) -> Void
     /// 落点已对齐到 15 分钟。
     let drop: (Entry, Date) -> Void
+    let canEdit: Bool
     private let hourHeight: CGFloat = 64
     @State private var hoveringHour: Int?
 
@@ -245,7 +319,7 @@ private struct HourDropTimeline: View {
         }
     }
     private func receive(_ payload: [Entry], minuteOffset: Double) -> Bool {
-        guard let entry = payload.first,
+        guard canEdit, let entry = payload.first,
               let start = CalendarTimelineLayout.start(on: date, minuteOffset: minuteOffset, calendar: calendar) else { return false }
         #if canImport(UIKit)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()

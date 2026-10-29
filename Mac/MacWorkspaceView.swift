@@ -73,6 +73,10 @@ struct MacWorkspaceView: View {
                                         Button("编辑") { editing = entry }
                                     }
                                     if entry.isTask { Button(entry.isCompleted ? "重新打开" : "完成") { store.toggle(entry.id) } }
+                                    if page == .today && entry.isTask && !entry.isCompleted && !entry.isInPlanning {
+                                        Button("移到规划") { store.moveToPlanning(entry.id) }
+                                            .disabled(store.readOnly)
+                                    }
                                     Button("删除", role: .destructive) { store.delete(entry.id) }
                                 }
                             }
@@ -125,6 +129,8 @@ struct MacWorkspaceView: View {
                          },
                          setPlannedDays: { store.setPlannedDays($0, $1) },
                          setPlannedTime: { store.setPlannedTime($0, start: $1, end: $2) },
+                         restoreFromPlanning: { store.restoreFromPlanning($0) },
+                         canEdit: !store.readOnly,
                          supportsDrag: false)
         }
         .sheet(item: $editing) { entry in MacEntryEditor(entry: entry).environmentObject(store) }

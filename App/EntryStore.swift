@@ -169,10 +169,25 @@ final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
     }
     @discardableResult
     func save(_ draft: Entry) -> Bool {
-        let entry = draft.normalized()
+        var entry = draft.normalized()
         guard !entry.title.isEmpty else { return false }
         var next = entries
-        let wasCompleted = next.first(where: { $0.id == entry.id })?.isCompleted ?? false
+        let previous = next.first(where: { $0.id == entry.id })
+        let wasCompleted = previous?.isCompleted ?? false
+        if let previous, previous.isInPlanning, entry.isInPlanning {
+            let oldPlan = previous.normalized(at: previous.updatedAt)
+            let startChanged = oldPlan.plannedStart != entry.plannedStart
+            let endChanged = oldPlan.plannedEnd != entry.plannedEnd
+            let allDayChanged = oldPlan.plannedAllDay != entry.plannedAllDay
+            let hasNewDays = !(entry.plannedDays ?? []).isEmpty && oldPlan.plannedDays != entry.plannedDays
+            let hasValidNewTime = entry.plannedStart.map { start in
+                (entry.plannedEnd.map { $0 > start } ?? startChanged) &&
+                    (startChanged || endChanged || allDayChanged)
+            } ?? false
+            if hasNewDays || hasValidNewTime {
+                entry.isInPlanning = false
+            }
+        }
         if let index = next.firstIndex(where: { $0.id == entry.id }) { next[index] = entry }
         else { next.append(entry) }
         // Provider-backed recurring occurrences advance from their source; one-off links may still have a local routine.
@@ -196,6 +211,7 @@ final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
     func setPlannedDays(_ id: UUID, _ days: [Date]) -> Bool {
         guard var entry = entries.first(where: { $0.id == id }), entry.isTask else { return false }
         entry.plannedDays = days.isEmpty ? nil : days
+        if !days.isEmpty { entry.isInPlanning = false }
         return save(entry) // save 走 normalized()，负责去重、取整天序并提交。
     }
     /// 规划的执行时段；kind 不变，显式时间会取消全天。
@@ -205,6 +221,21 @@ final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
         entry.plannedStart = start
         entry.plannedEnd = end
         entry.plannedAllDay = false
+        entry.isInPlanning = false
+        return save(entry)
+    }
+    @discardableResult
+    func moveToPlanning(_ id: UUID) -> Bool {
+        guard !readOnly, var entry = entries.first(where: { $0.id == id }),
+              entry.isTask, !entry.isCompleted, !entry.isInPlanning else { return false }
+        entry.isInPlanning = true
+        return save(entry)
+    }
+    @discardableResult
+    func restoreFromPlanning(_ id: UUID) -> Bool {
+        guard !readOnly, var entry = entries.first(where: { $0.id == id }),
+              entry.isTask, entry.isInPlanning else { return false }
+        entry.isInPlanning = false
         return save(entry)
     }
     /// 拖动排序：按给定顺序写 sortOrder 0..n，单次 commit。

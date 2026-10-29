@@ -1,5 +1,13 @@
 # 验证记录
 
+## 今日聚焦移入规划与日程日期筛选 · 2026-10-29
+
+- `git diff --check` 通过。
+- **macOS 无签名构建**：Xcode 26.5，scheme `MikanseiMac`、Release、`generic/platform=macOS`，退出码 0，`BUILD SUCCEEDED`；构建包含 arm64 与 x86_64。仅有既有的 `MacWorkspaceView.swift:305` 冗余 `_ =` 警告（两架构各一条）及 AppIntents 元数据提示。日志 `/private/tmp/mikansei-focus-mac-review-20261029.log`。
+- **iOS 与内嵌 Widget 无签名构建**：scheme `Mikansei`、Debug、`generic/platform=iOS`，在正常宿主权限下重跑后退出码 0，`BUILD SUCCEEDED`，主应用及 `MikanseiWidgets` 目标完整构建通过。日志 `/private/tmp/mikansei-focus-ios-review-20261029.log`。保留两处既有 Swift 并发捕获警告，本轮未为消除警告改动无关业务代码。
+- **初次受限构建**：沙盒内的 `Mikansei` 与独立 `MikanseiWidgets` scheme 曾退出码 65；日志同时包含 CoreSimulator 的 `Operation not permitted`、连接失效及资产编译“找不到 runtime”。日志保留为 `/private/tmp/mikansei-focus-ios-build.log` 和 `/private/tmp/mikansei-focus-widgets-build.log`；不将这些初次失败推断为机器缺少 SDK 或源码无法编译。独立 Widget scheme 未另行在宿主权限下重跑，以上成功结果来自主应用包含扩展的整体构建。
+- 未运行测试；未做真机交互验收；未上传新版 TestFlight；版本号与 tag 未变。
+
 ## TestFlight 发布与账号删除接口 · 2026-10-29
 
 - `v0.5.0` 指向 `ba2ecf1`，Xcode Cloud `Internal TestFlight Build` 整体成功，正式归档 0 errors / 3 warnings。

@@ -103,6 +103,20 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace, CloudSyncWorkspa
         var entry = input.normalized(); entry.updatedAt = Date()
         guard !entry.title.isEmpty else { return }
         let previous = entries.first { $0.id == entry.id }
+        if let previous, previous.isInPlanning, entry.isInPlanning {
+            let oldPlan = previous.normalized(at: previous.updatedAt)
+            let startChanged = oldPlan.plannedStart != entry.plannedStart
+            let endChanged = oldPlan.plannedEnd != entry.plannedEnd
+            let allDayChanged = oldPlan.plannedAllDay != entry.plannedAllDay
+            let hasNewDays = !(entry.plannedDays ?? []).isEmpty && oldPlan.plannedDays != entry.plannedDays
+            let hasValidNewTime = entry.plannedStart.map { start in
+                (entry.plannedEnd.map { $0 > start } ?? startChanged) &&
+                    (startChanged || endChanged || allDayChanged)
+            } ?? false
+            if hasNewDays || hasValidNewTime {
+                entry.isInPlanning = false
+            }
+        }
         if let i = entries.firstIndex(where: { $0.id == entry.id }) { entries[i] = entry } else { entries.append(entry) }
         if entry.isCompleted && previous?.isCompleted != true && entry.allowsLocalSuccessorGeneration,
            !entries.contains(where: { $0.previousOccurrenceID == entry.id }), let next = entry.nextOccurrence() {
@@ -123,12 +137,26 @@ final class MacWorkspaceStore: ObservableObject, SyncWorkspace, CloudSyncWorkspa
     func setPlannedDays(_ id: UUID, _ days: [Date]) {
         guard !readOnly, var entry = entries.first(where: { $0.id == id }), entry.isTask else { return }
         entry.plannedDays = days.isEmpty ? nil : days
+        if !days.isEmpty { entry.isInPlanning = false }
         save(entry)
     }
     /// 规划的执行时段；kind 不变，显式时间会取消全天。
     func setPlannedTime(_ id: UUID, start: Date, end: Date) {
         guard !readOnly, var entry = entries.first(where: { $0.id == id }), entry.isTask, end > start else { return }
         entry.plannedStart = start; entry.plannedEnd = end; entry.plannedAllDay = false
+        entry.isInPlanning = false
+        save(entry)
+    }
+    func moveToPlanning(_ id: UUID) {
+        guard !readOnly, var entry = entries.first(where: { $0.id == id }),
+              entry.isTask, !entry.isCompleted, !entry.isInPlanning else { return }
+        entry.isInPlanning = true
+        save(entry)
+    }
+    func restoreFromPlanning(_ id: UUID) {
+        guard !readOnly, var entry = entries.first(where: { $0.id == id }),
+              entry.isTask, entry.isInPlanning else { return }
+        entry.isInPlanning = false
         save(entry)
     }
     /// 拖动排序：按给定顺序写 sortOrder 0..n，单次 persist。

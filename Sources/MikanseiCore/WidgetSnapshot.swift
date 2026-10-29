@@ -10,7 +10,10 @@ public struct WidgetSnapshot: Codable {
         version = 1
         savedAt = now
         let board = TaskBoard(entries: entries, now: now, calendar: calendar)
-        tasks = (board.open + board.finishedToday).map(TaskSummary.init)
+        var seen = Set<UUID>()
+        tasks = (board.open + board.focus + board.finishedToday)
+            .filter { !$0.isInPlanning && seen.insert($0.id).inserted }
+            .map(TaskSummary.init)
     }
 
     public func board(at date: Date, calendar: Calendar = .current) -> TaskBoard {
@@ -18,7 +21,7 @@ public struct WidgetSnapshot: Codable {
     }
     public func focusedTask(at date: Date = Date(), calendar: Calendar = .current) -> Entry? {
         let board = board(at: date, calendar: calendar)
-        let entries = board.open + board.finishedToday
+        let entries = (board.open + board.finishedToday).filter { !$0.isInPlanning }
         if let active = entries.filter({ !$0.isCompleted && $0.startedAt != nil }).max(by: { $0.startedAt! < $1.startedAt! }) {
             return active
         }
@@ -26,7 +29,7 @@ public struct WidgetSnapshot: Codable {
     }
     /// 最近的规划时段：开始时间在未来 60 分钟内的最早未完成任务，供锁屏倒计时使用。
     public func nextPlannedBlock(at date: Date = Date()) -> Entry? {
-        tasks.filter { !$0.isCompleted && $0.plannedStart.map { $0 > date && $0 <= date.addingTimeInterval(3600) } == true }
+        tasks.filter { !$0.isCompleted && !$0.isInPlanning && $0.plannedStart.map { $0 > date && $0 <= date.addingTimeInterval(3600) } == true }
             .min { ($0.plannedStart ?? .distantFuture) < ($1.plannedStart ?? .distantFuture) }?.entry
     }
 
@@ -40,6 +43,7 @@ public struct WidgetSnapshot: Codable {
         public let plannedEnd: Date?
         public let plannedAllDay: Bool
         public let isCompleted: Bool
+        public let isInPlanning: Bool
         public let completedAt: Date?
         public let createdAt: Date
         public let startedAt: Date?
@@ -48,7 +52,7 @@ public struct WidgetSnapshot: Codable {
 
         init(_ entry: Entry) {
             id = entry.id; title = String(entry.title.prefix(160)); kind = entry.kind
-            priority = entry.priority; dueDate = entry.dueDate; plannedStart = entry.plannedStart; plannedEnd = entry.plannedEnd; plannedAllDay = entry.plannedAllDay; isCompleted = entry.isCompleted
+            priority = entry.priority; dueDate = entry.dueDate; plannedStart = entry.plannedStart; plannedEnd = entry.plannedEnd; plannedAllDay = entry.plannedAllDay; isCompleted = entry.isCompleted; isInPlanning = entry.isInPlanning
             completedAt = entry.completedAt; createdAt = entry.createdAt; startedAt = entry.startedAt
             elapsedSeconds = entry.elapsedSeconds; updatedAt = entry.updatedAt
         }
@@ -56,12 +60,13 @@ public struct WidgetSnapshot: Codable {
             var value = Entry(id: id, title: title, kind: kind, priority: priority, dueDate: dueDate,
                               isCompleted: isCompleted, completedAt: completedAt, createdAt: createdAt, updatedAt: updatedAt)
             value.plannedStart = plannedStart; value.plannedEnd = plannedEnd; value.plannedAllDay = plannedAllDay
+            value.isInPlanning = isInPlanning
             value.startedAt = startedAt
             value.elapsedSeconds = elapsedSeconds
             return value
         }
         private enum CodingKeys: String, CodingKey {
-            case id, title, kind, priority, dueDate, isCompleted, completedAt, createdAt, startedAt, elapsedSeconds, updatedAt, plannedStart, plannedEnd, plannedAllDay
+            case id, title, kind, priority, dueDate, isCompleted, isInPlanning, completedAt, createdAt, startedAt, elapsedSeconds, updatedAt, plannedStart, plannedEnd, plannedAllDay
         }
         public init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -72,6 +77,7 @@ public struct WidgetSnapshot: Codable {
             plannedEnd = try c.decodeIfPresent(Date.self, forKey: .plannedEnd)
             plannedAllDay = try c.decodeIfPresent(Bool.self, forKey: .plannedAllDay) ?? false
             isCompleted = try c.decode(Bool.self, forKey: .isCompleted)
+            isInPlanning = try c.decodeIfPresent(Bool.self, forKey: .isInPlanning) ?? false
             completedAt = try c.decodeIfPresent(Date.self, forKey: .completedAt)
             createdAt = try c.decode(Date.self, forKey: .createdAt)
             startedAt = try c.decodeIfPresent(Date.self, forKey: .startedAt)

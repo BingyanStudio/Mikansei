@@ -216,7 +216,7 @@ public enum CloudArchiveCodec {
         "routineOccurrenceID", "startedAt", "elapsedSeconds", "calendarEvent",
         "plannedStart", "plannedEnd", "plannedAllDay", "reminderDelivery",
         "reminderAnchor", "reminderSound", "snoozeMinutes", "sortOrder",
-        "plannedDays"
+        "plannedDays", "isInPlanning"
     ]
     private static let courseFields: Set<String> = [
         "id", "name", "weekday", "startMinutes", "endMinutes", "location",

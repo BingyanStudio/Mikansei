@@ -193,6 +193,7 @@ struct TodayView: View {
     @Binding var page: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showPlanning = false
+    @State private var pendingPlanningEdit: Entry?
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let board = TaskBoard(entries: store.entries, now: context.date)
@@ -223,24 +224,33 @@ struct TodayView: View {
                 }
             }.background(Theme.background).navigationTitle("日程")
                 .navigationBarTitleDisplayMode(page == 2 ? .inline : .large)
-                .sheet(isPresented: $showPlanning) {
-                    PlanningView(entries: store.entries, now: context.date, edit: edit,
+                .sheet(isPresented: $showPlanning, onDismiss: presentPendingPlanningEdit) {
+                    PlanningView(entries: store.entries, now: context.date, edit: { entry in
+                                     pendingPlanningEdit = entry
+                                     showPlanning = false
+                                 },
                                  setPlannedDays: { store.setPlannedDays($0, $1) },
-                                 setPlannedTime: { store.setPlannedTime($0, start: $1, end: $2) })
+                                 setPlannedTime: { store.setPlannedTime($0, start: $1, end: $2) },
+                                 restoreFromPlanning: { _ = store.restoreFromPlanning($0) },
+                                 canEdit: !store.readOnly)
                 }
         }
     }
     /// 今日聚焦：分组滚动列表；长按卡片拖到同组另一张卡上即组内排序（写 sortOrder）。
     private func focusList(_ board: TaskBoard, now: Date) -> some View {
+        let focus = board.focus
+        let overdueIDs = Set(board.overdue.map(\.id))
+        let todayIDs = Set(board.focusToday.map(\.id))
+        let finishedIDs = Set(board.finishedToday.map(\.id))
         let groups: [(title: String, entries: [Entry], color: Color, movable: Bool)] = [
-            ("已超时", board.overdue, .red, true),
-            ("今天要做", board.today, Theme.accent, true),
-            ("随时可做", board.unplannedOrPast, .secondary, true),
-            ("今日已完成", board.finishedToday, Theme.accent, false)
+            ("已超时", focus.filter { overdueIDs.contains($0.id) }, .red, true),
+            ("今天要做", focus.filter { todayIDs.contains($0.id) && !overdueIDs.contains($0.id) }, Theme.accent, true),
+            ("随时可做", focus.filter { !overdueIDs.contains($0.id) && !todayIDs.contains($0.id) && !$0.isCompleted }, .secondary, true),
+            ("今日已完成", focus.filter { finishedIDs.contains($0.id) }, Theme.accent, false)
         ]
         return ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                if board.focus.isEmpty {
+                if focus.isEmpty {
                     EmptyCard(symbol: "sun.max", title: "今天可以从容一点", message: "给今天安排一件小事，或继续你的无日期清单。", actionTitle: "添加待办") { add(.task) }
                         .padding(.horizontal, 20).padding(.vertical, 8)
                 } else {
@@ -250,6 +260,9 @@ struct TodayView: View {
                         ForEach(group.entries) { entry in
                             EntryDragRow(entry: entry, group: group.entries, movable: group.movable,
                                          onDrop: reorderWithin,
+                                         onMoveToPlanning: !store.readOnly && group.movable && !entry.isCompleted
+                                            ? { _ = store.moveToPlanning(entry.id) } : nil,
+                                         reduceMotion: reduceMotion,
                                          content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now, showsContextMenu: false) })
                                 .padding(.horizontal, 20).padding(.vertical, 8)
                         }
@@ -269,6 +282,11 @@ struct TodayView: View {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         store.reorder(ids)
         return true
+    }
+    private func presentPendingPlanningEdit() {
+        guard let entry = pendingPlanningEdit else { return }
+        pendingPlanningEdit = nil
+        DispatchQueue.main.async { edit(entry) }
     }
     @ViewBuilder private func agenda(_ board: TaskBoard, now: Date) -> some View {
         let dated = board.open.flatMap { entry -> [AgendaOccurrence] in
@@ -414,9 +432,11 @@ struct EntryDragRow<Content: View>: View {
     let movable: Bool
     /// 返回是否完成了移动，作为 drop 接收结果。
     let onDrop: (Entry, Entry, [Entry]) -> Bool
+    var onMoveToPlanning: (() -> Void)? = nil
+    var reduceMotion = false
     @ViewBuilder var content: () -> Content
     @State private var targeted = false
-    var body: some View {
+    @ViewBuilder private var dragEnabledContent: some View {
         let card = content()
             .overlay {
                 if targeted {
@@ -424,17 +444,97 @@ struct EntryDragRow<Content: View>: View {
                         .allowsHitTesting(false)
                 }
             }
-        Group {
-            if movable {
-                card.draggable(entry)
-                    .dropDestination(for: Entry.self) { payload, _ in
-                        guard let dragged = payload.first else { return false }
-                        return onDrop(dragged, entry, group)
-                    } isTargeted: { targeted = $0 }
-            } else {
-                card
-            }
+        if movable {
+            card.draggable(entry)
+                .dropDestination(for: Entry.self) { payload, _ in
+                    guard let dragged = payload.first else { return false }
+                    return onDrop(dragged, entry, group)
+                } isTargeted: { targeted = $0 }
+        } else {
+            card
         }
+    }
+    @ViewBuilder var body: some View {
+        if let onMoveToPlanning {
+            FocusSwipeRow(action: onMoveToPlanning, reduceMotion: reduceMotion) {
+                dragEnabledContent
+            }
+        } else {
+            dragEnabledContent
+        }
+    }
+}
+
+/// A horizontal action layer that does not replace the containing ScrollView or
+/// the row's native long-press drag/drop behavior.
+private struct FocusSwipeRow<Content: View>: View {
+    private enum Direction { case horizontal, vertical }
+    private let actionWidth: CGFloat = 132
+    private let fullSwipeDistance: CGFloat = 220
+    let action: () -> Void
+    let reduceMotion: Bool
+    @ViewBuilder let content: () -> Content
+    @State private var offset: CGFloat = 0
+    @State private var dragStartOffset: CGFloat = 0
+    @State private var direction: Direction?
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Button(action: performAction) {
+                Label("移到规划", systemImage: "calendar.badge.clock")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(Theme.accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 18))
+            }
+            .buttonStyle(.plain)
+            .frame(width: actionWidth)
+            .opacity(offset < -8 ? 1 : 0)
+            .accessibilityHidden(offset == 0)
+
+            content()
+                .offset(x: offset)
+                .contentShape(Rectangle())
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 14)
+                        .onChanged { value in
+                            let dx = value.translation.width
+                            let dy = value.translation.height
+                            if direction == nil {
+                                direction = abs(dx) > abs(dy) ? .horizontal : .vertical
+                                dragStartOffset = offset
+                            }
+                            guard direction == .horizontal else { return }
+                            offset = min(0, max(-actionWidth, dragStartOffset + dx))
+                        }
+                        .onEnded { value in
+                            let endedDirection = direction
+                            direction = nil
+                            guard endedDirection == .horizontal else { return }
+                            if dragStartOffset + value.translation.width <= -fullSwipeDistance {
+                                performAction()
+                            } else {
+                                setOffset(offset <= -actionWidth / 2 ? -actionWidth : 0)
+                            }
+                        }
+                )
+        }
+        .clipped()
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(named: Text("移到规划")) { performAction() }
+    }
+
+    private func performAction() {
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
+        setOffset(0)
+        action()
+    }
+
+    private func setOffset(_ value: CGFloat) {
+        if reduceMotion { offset = value }
+        else { withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) { offset = value } }
     }
 }
 

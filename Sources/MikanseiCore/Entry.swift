@@ -128,6 +128,8 @@ public struct Entry: Identifiable, Codable, Equatable {
     public var sortOrder: Int? = nil
     /// 规划的执行日期（按天），与 plannedStart 区间并列参与“今天要做”判定。
     public var plannedDays: [Date]? = nil
+    /// 已从今日聚焦移入规划页；持续保留，直到用户手动恢复或重新安排。
+    public var isInPlanning = false
 
     public init(id: UUID = UUID(), title: String = "", body: String = "",
                 kind: EntryKind = .task, category: String = "",
@@ -208,6 +210,16 @@ public struct Entry: Identifiable, Codable, Equatable {
         updatedAt = now
     }
     public var attentionDate: Date? { kind == .schedule ? plannedStart : [dueDate, plannedStart].compactMap { $0 }.min() }
+    /// Schedules belong to a day only while their execution interval covers it.
+    /// Missing or invalid ends fall back to the start's local day.
+    public func scheduleOccurs(on date: Date, calendar: Calendar = .current) -> Bool {
+        guard kind == .schedule, let start = plannedStart,
+              let day = calendar.dateInterval(of: .day, for: date) else { return false }
+        guard let end = plannedEnd, end > start else {
+            return calendar.isDate(start, inSameDayAs: date)
+        }
+        return start < day.end && end > day.start
+    }
     public var reminderReferenceDate: Date? { kind == .schedule || reminderAnchor == .execution ? plannedStart ?? dueDate : dueDate ?? plannedStart }
     public var reminderDate: Date? {
         guard isTask, !isCompleted, let dueDate = reminderReferenceDate, let reminder else { return nil }
@@ -266,6 +278,7 @@ public struct Entry: Identifiable, Codable, Equatable {
             result.repeatRule = .never
             result.startedAt = nil
             result.elapsedSeconds = 0
+            result.isInPlanning = false
         } else {
             if kind == .schedule {
                 result.dueDate = nil
@@ -299,6 +312,7 @@ public struct Entry: Identifiable, Codable, Equatable {
         next.startedAt = nil
         next.elapsedSeconds = 0
         next.calendarEvent = nil
+        next.isInPlanning = false
         next.checklist = checklist.map { ChecklistItem(title: $0.title) }
         return next
     }
@@ -307,7 +321,7 @@ public struct Entry: Identifiable, Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case id, title, body, kind, category, priority, checklist, dueDate, reminder,
              isCompleted, completedAt, createdAt, updatedAt, platform, location,
-             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, routineSeriesID, routineOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes, sortOrder, plannedDays
+             estimatedMinutes, source, repeatRule, repeatIntervalDays, repeatWeekdays, repeatIntervalMonths, repeatDates, repeatAnchorDate, reminderPattern, previousOccurrenceID, routineSeriesID, routineOccurrenceID, startedAt, elapsedSeconds, calendarEvent, plannedStart, plannedEnd, plannedAllDay, reminderDelivery, reminderAnchor, reminderSound, snoozeMinutes, sortOrder, plannedDays, isInPlanning
     }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -353,6 +367,7 @@ public struct Entry: Identifiable, Codable, Equatable {
         plannedAllDay = try c.decodeIfPresent(Bool.self, forKey: .plannedAllDay) ?? false
         sortOrder = try c.decodeIfPresent(Int.self, forKey: .sortOrder)
         plannedDays = try c.decodeIfPresent([Date].self, forKey: .plannedDays)
+        isInPlanning = try c.decodeIfPresent(Bool.self, forKey: .isInPlanning) ?? false
         reminderDelivery = try c.decodeIfPresent(ReminderDelivery.self, forKey: .reminderDelivery) ?? .popup
         reminderAnchor = try c.decodeIfPresent(ReminderAnchor.self, forKey: .reminderAnchor) ?? .deadline
         reminderSound = try c.decodeIfPresent(ReminderSound.self, forKey: .reminderSound) ?? .system
@@ -502,11 +517,13 @@ public struct TaskBoard {
     public let now: Date
     public let calendar: Calendar
     private let openEntries: [Entry]
+    private let focusOpenEntries: [Entry]
     public init(entries: [Entry], now: Date = Date(), calendar: Calendar = .current) {
         self.entries = entries
         self.now = now
         self.calendar = calendar
         self.openEntries = Self.frontierOpenEntries(entries, calendar: calendar)
+        self.focusOpenEntries = Self.frontierOpenEntries(entries, prioritizingSchedulesOn: now, calendar: calendar)
     }
     public var open: [Entry] { openEntries }
     public var routines: [Entry] {
@@ -546,7 +563,31 @@ public struct TaskBoard {
         let start = calendar.startOfDay(for: now)
         return open.filter { entry in !entry.isOverdue(at: now) && !todayIDs.contains(entry.id) && (entry.attentionDate == nil || entry.attentionDate! < start) }
     }
-    public var focus: [Entry] { overdue + today + unplannedOrPast + finishedToday }
+    public var focusToday: [Entry] {
+        focusOpenEntries.filter { entry in
+            guard !entry.isOverdue(at: now) else { return false }
+            if entry.kind == .schedule { return entry.scheduleOccurs(on: now, calendar: calendar) }
+            let day = calendar.startOfDay(for: now)
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day)!
+            return entry.dueDate.map { calendar.isDate($0, inSameDayAs: now) } == true ||
+                (entry.plannedStart.map { $0 < tomorrow } == true && entry.plannedEnd.map { $0 > day } == true) ||
+                entry.plannedDays?.contains { calendar.isDate($0, inSameDayAs: now) } == true
+        }
+    }
+    public var focus: [Entry] {
+        let focusOverdue = focusOpenEntries.filter { $0.isOverdue(at: now) }
+        let currentDayEntries = focusToday
+        let focusTodayIDs = Set(currentDayEntries.map(\.id))
+        let dayStart = calendar.startOfDay(for: now)
+        let focusUnplannedOrPast = focusOpenEntries.filter { entry in
+            entry.kind != .schedule && !entry.isOverdue(at: now) && !focusTodayIDs.contains(entry.id) &&
+                (entry.attentionDate == nil || entry.attentionDate! < dayStart)
+        }
+        let focusFinishedToday = finishedToday.filter {
+            $0.kind != .schedule || $0.scheduleOccurs(on: now, calendar: calendar)
+        }
+        return (focusOverdue + currentDayEntries + focusUnplannedOrPast + focusFinishedToday).filter { !$0.isInPlanning }
+    }
     public var completedToday: Int { finishedToday.count }
 
     private struct CalendarSeriesKey: Hashable {
@@ -568,7 +609,11 @@ public struct TaskBoard {
     }
 
     /// Lists expose one actionable point per routine while retaining every source occurrence in `entries`.
-    private static func frontierOpenEntries(_ entries: [Entry], calendar: Calendar) -> [Entry] {
+    private static func frontierOpenEntries(
+        _ entries: [Entry],
+        prioritizingSchedulesOn date: Date? = nil,
+        calendar: Calendar
+    ) -> [Entry] {
         let tasks = entries.filter(\.isTask)
         guard !tasks.isEmpty else { return [] }
 
@@ -638,6 +683,14 @@ public struct TaskBoard {
                 return !ids.contains(previous)
             }
             let candidates = roots.isEmpty ? members : roots
+            // Calendar providers can deliver recurring occurrences as independent
+            // records. Prefer today's actual schedule so an older occurrence cannot
+            // mask it in the focus board.
+            if let date,
+               let current = members.filter({ $0.scheduleOccurs(on: date, calendar: calendar) })
+                    .min(by: { frontierOrder($0, $1, calendar: calendar) }) {
+                return current
+            }
             return candidates.min { lhs, rhs in
                 frontierOrder(lhs, rhs, calendar: calendar)
             }

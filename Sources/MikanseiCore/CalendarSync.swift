@@ -197,7 +197,7 @@ public enum CalendarImport {
     public static func canClean(_ entry: Entry, selectedIDs: Set<String>) -> Bool {
         guard let link = entry.calendarEvent, !selectedIDs.contains(link.event.identity.calendarID),
               link.wasAutomaticallyImported == true || (link.wasAutomaticallyImported == nil && CalendarSelection(id: link.event.identity.calendarID, title: link.event.identity.calendarTitle, sourceTitle: link.event.identity.sourceTitle).isReferenceCalendar),
-              !entry.isCompleted, !entry.isRoutine, entry.checklist.isEmpty, entry.elapsedSeconds == 0,
+              !entry.isCompleted, !entry.isInPlanning, !entry.isRoutine, entry.checklist.isEmpty, entry.elapsedSeconds == 0,
               entry.startedAt == nil, entry.reminder == nil, entry.priority == .normal, entry.source.isEmpty,
               entry.reminderSound == .system, entry.snoozeMinutes == 5, entry.reminderPattern == .single else { return false }
         let imported = link.event.draft(timing: link.timing, now: entry.createdAt)
