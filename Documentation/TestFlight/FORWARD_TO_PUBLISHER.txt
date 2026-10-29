@@ -1,13 +1,5 @@
-Paul 您好，想再麻烦您协助构建并上传 Mikansei TestFlight。这份是补齐了 Xcode Cloud 流程的新包，请以本包及 SOURCE_COMMIT.txt 中的新提交为准。
+Paul 您好，感谢您此前配置好 Xcode Cloud 发布流程。
 
-这次交接的是最新原生版本 0.5.0（11），主应用和小组件沿用您设置的 Bingyan Team、Bundle ID 及已有 App Store Connect 应用。工程已接入 AppIcon 资产目录，修复了之前缺少 120×120、152×152 图标和 CFBundleIconName 的配置；包内附有本地无签名归档的检查记录。
+这次已修复 AppIcon 资源与声明，并补齐 Git 仓库中的公开客户端配置及云构建脚本。我这边已自行推送 v0.5.0 标签，触发您设置的 Internal TestFlight Build，云端构建成功，现已通过 TestFlight 下载 0.5.0（Build 5）。后续版本会沿用这套流程维护和发布。
 
-这次已把公开 Supabase 客户端配置纳入 Git，并增加了 Xcode Cloud 的 post-clone 准备和归档检查脚本，不需要您再手工补配置文件或设置 Supabase secrets。现有 Team、Bundle ID、App 记录和 Xcode Cloud manifest 均继续沿用。
-
-烦请您按现有工作流的标签规则，将标签指向 SOURCE_COMMIT.txt 中的新提交，继续运行原来的 Internal TestFlight Build。当前 main 仍是较旧版本，仅给旧 main 打标签不会包含本包修复。详细步骤在 Source/Documentation/TestFlight/XCODE_CLOUD.md；实际构建号以 Xcode Cloud 管理结果为准。
-
-补充说明：本版带有可选邮箱云账号，离线功能无需登录。云账号的登录、同步尚未完成在线验收，账号删除接口也还待 Supabase 管理员部署；相关 SQL 和说明已附在 Source/Documentation 中，烦请先作为内部构建核对，不必立即开放外部云功能测试。
-
-我这边目前还缺团队的证书和描述文件访问权限，所以尚未完成签名上传；包中不包含签名私钥或后台管理凭据。如有需要补充或调整的地方，我会继续配合处理。
-
-感谢您的支持，辛苦您了！
+Supabase 账号删除接口也已部署并核对权限，真实邮箱登录、同步和删除流程还会继续用测试账号验收。此次无需再麻烦您代构建；后续如遇团队权限或工作流配置问题，再向您请教。谢谢您！

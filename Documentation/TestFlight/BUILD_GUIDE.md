@@ -1,5 +1,7 @@
 # Mikansei iOS TestFlight 交接指南
 
+> Bingyan 当前已配置 Cloud 发布，本次已分发 0.5.0（Build 5）。日常发版优先阅读 [Xcode Cloud 说明](XCODE_CLOUD.md)；下文保留通用准备助手及本机手工归档方法，适用于需要这些路径的发布者。
+
 本指南用于发布者使用自己的 Apple Developer 账号，为原生 iOS App 生成并上传 TestFlight build。项目要求 Xcode 26+（含 iOS 26 SDK 或更新版本），本次维护环境为 26.5；macOS 需满足所选 Xcode 版本的官方系统要求。脚本使用 Python 3.9+ 标准库。请先确认 Xcode 已安装 iOS 平台组件，并核对随版本更新的 [Xcode SDK 与系统要求](https://developer.apple.com/xcode/system-requirements/)。
 
 ## 1. 解压源码并准备归档
@@ -59,7 +61,7 @@ open ../Prepared-Mikansei/Mikansei.xcarchive
 
 源码使用经过验证的公开 Supabase 客户端配置。项目地址和 public/anon key 可嵌入客户端，不属于管理凭据；RLS 策略负责账号隔离。严禁将 service-role key、项目管理密钥、数据库密码、签名证书私钥放入客户端或交接包。
 
-如要启用或审核云账号功能，请先阅读[原生云账号配置说明](../SUPABASE_NATIVE.md)。账号认证、共享归档表及其 RLS 复用现有 Supabase 项目；首次请求验证码时，新邮箱可自动创建账号，完成验证码验证后才能登录。开放测试前请确认邮箱 OTP 投递和同步设置。App 内账号删除另需有权限的项目管理员部署[原生账号 SQL](../supabase-native-account.sql)；其中的 `mikansei_delete_account` RPC 只根据当前登录用户 `auth.uid()` 删除自己的 Auth 用户及共享归档，不接受调用者传入目标用户。该 SQL/RPC 当前尚未部署，因此 App 内删除功能暂不可用。本轮未真实发送验证码、登录、同步或删除。云功能审核还需发布者与管理员协商审核者可访问的邮箱和验证码方式；不能使用发布者私人邮箱，也不能假定 OTP 对审核者可达。
+如要启用或审核云账号功能，请先阅读[原生云账号配置说明](../SUPABASE_NATIVE.md)。账号认证、共享归档表及其 RLS 复用现有 Supabase 项目；首次请求验证码时，新邮箱可自动创建账号，完成验证码验证后才能登录。开放测试前请确认邮箱 OTP 投递和同步设置。App 内账号删除依赖[原生账号 SQL](../supabase-native-account.sql)；其中的 `mikansei_delete_account` RPC 只根据当前登录用户 `auth.uid()` 删除自己的 Auth 用户及共享归档，不接受调用者传入目标用户。该 SQL/RPC 已于 2026-10-29 部署到共用项目并核对权限，真实删除流程尚未端到端验收。本轮未真实发送验证码、登录、同步或删除。云功能审核还需发布者与管理员协商审核者可访问的邮箱和验证码方式；不能使用发布者私人邮箱，也不能假定 OTP 对审核者可达。
 
 ## 7. 无签名编译检查（仅维护者）
 

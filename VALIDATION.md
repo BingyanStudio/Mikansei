@@ -1,5 +1,13 @@
 # 验证记录
 
+## TestFlight 发布与账号删除接口 · 2026-10-29
+
+- `v0.5.0` 指向 `ba2ecf1`，Xcode Cloud `Internal TestFlight Build` 整体成功，正式归档 0 errors / 3 warnings。
+- 用户确认已下载，TestFlight 截图显示冰岩科技、0.5.0（Build 5）及“打开”。源码构建号为 11，实际云分发号为 5；未据此宣称实际启动和关键功能已验收。
+- Supabase 共用项目的 `mikansei_delete_account()` 已部署（远端迁移 `20261029055013`），函数定义、EXECUTE 权限、归档 RLS、读写授权及 ON DELETE CASCADE 外键已核对。部署没有删除用户，未读取私人归档，未进行真实 OTP、登录、同步或删除验收。
+- Advisor 对本接口有意授予 authenticated 的 SECURITY DEFINER 执行权限报告 0029，范围与原因已记录；未虚报零告警。没有运行新增测试或测试套件。
+- [详细证据与历史记录](Documentation/TestFlight/PREPARATION_RECORD.md)；[新手上线复盘](Documentation/TestFlight/RELEASE_WALKTHROUGH_ZH.md)。下方内容保留各阶段当时状态。
+
 ## App Store 图标上传修补 · 0.3.1 (6) 派生包 · 2026-10-28
 
 - **用户反馈**：Apple 上传邮件针对 0.3.1 (4)、`net.bingyan.KikuchiHeinrich.mikansei`，报缺少 120 × 120、152 × 152 图标及 `CFBundleIconName`。

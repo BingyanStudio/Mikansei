@@ -26,7 +26,7 @@
 
 云数据通过 HTTPS 传输，但没有端到端加密。不要声称项目管理员无法读取已存储内容。Supabase 处理认证请求和安全日志；日志、备份及保留周期依服务方配置和政策。
 
-账户删除使用 `mikansei_delete_account` RPC，SQL 脚本位于 [`Documentation/supabase-native-account.sql`](../supabase-native-account.sql)。函数仅凭当前认证用户 `auth.uid()` 确定删除对象，不接收调用者指定的目标账号。它会删除共享 Auth 用户及其云归档，影响 Mikansei 和 Mikanseta 登录。当前 Supabase Auth 与共享归档表已存在；仅此删除 RPC 的 SQL 尚未部署，故不要声称 App 内删除已可用。本轮未实际验证邮件投递、登录、同步或删除。
+账户删除使用 `mikansei_delete_account` RPC，SQL 脚本位于 [`Documentation/supabase-native-account.sql`](../supabase-native-account.sql)。函数仅凭当前认证用户 `auth.uid()` 确定删除对象，不接收调用者指定的目标账号。它会删除共享 Auth 用户及其云归档，影响 Mikansei 和 Mikanseta 登录。当前 Supabase Auth 与共享归档表已存在；删除 RPC 已于 2026-10-29 部署并核对权限，尚未执行真实账号删除验收。本轮未实际验证邮件投递、登录、同步或删除。
 
 其他设备的离线副本不会自动清除，既有 JWT 可能在到期前仍有效。Supabase 备份和安全日志依服务提供方规则保留。登出会保留本机与服务端归档。
 
@@ -56,7 +56,7 @@
 | 日历、通知、AlarmKit | `App/CalendarSyncManager.swift`、`App/NotificationManager.swift`、`App/NativeAlarmScheduler.swift` |
 | Widgets 隐私声明 | `Widgets/PrivacyInfo.xcprivacy` |
 
-管理员对 Auth 配置的只读检查返回 HTTP 200，`external.email=true`、`disable_signup=false`。Supabase Auth 和共享归档表已存在；该配置检查不代表已实际发送邮件、登录或同步。当前仅删除 RPC 的 SQL 尚待项目管理员授权部署；本轮未对真实邮箱、设备或在线账号执行验收。
+管理员对 Auth 配置的只读检查返回 HTTP 200，`external.email=true`、`disable_signup=false`。Supabase Auth 和共享归档表已存在；该配置检查不代表已实际发送邮件、登录或同步。删除 RPC 已于 2026-10-29 部署并核对权限；用户提供 TestFlight 安装截图，但本轮未对真实邮箱登录、在线同步或删除流程执行验收。
 
 ## Apple 官方核对入口
 

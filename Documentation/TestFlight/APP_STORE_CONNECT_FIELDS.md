@@ -53,7 +53,7 @@ App Store Connect 只为主应用创建一条 App 记录并选择 `bundle_id`。
 - **Feedback Email：**`kikuchiheinr@qq.com`。
 - **Beta App Review Information → Sign-in required：**No（本机核心功能无需登录；云账号同步为可选功能且需要邮箱 OTP）。不要描述成所有功能都无需登录。
 - **Beta App Review Information → Contact：**填写本文件前述发布者真实审核联系人。
-- **Beta App Review Information → Notes：**按审核语言使用 `REVIEW_NOTES_EN.txt` 或 `REVIEW_NOTES_ZH.txt`。审核本机功能建议先不登录。若希望审核云功能，请发布者先准备审核者可访问的专用邮箱和可用验证码投递方式；没有密码，也不能假定审核者可以访问发布者私人邮箱或一定能收到 OTP。Supabase Auth 与共享归档表已存在；本轮未在线验收邮件投递、登录或同步，账号删除 RPC 尚未部署。
+- **Beta App Review Information → Notes：**按审核语言使用 `REVIEW_NOTES_EN.txt` 或 `REVIEW_NOTES_ZH.txt`。审核本机功能建议先不登录。若希望审核云功能，请发布者先准备审核者可访问的专用邮箱和可用验证码投递方式；没有密码，也不能假定审核者可以访问发布者私人邮箱或一定能收到 OTP。Supabase Auth 与共享归档表已存在；本轮未在线验收邮件投递、登录或同步，账号删除 RPC 已于 2026-10-29 部署并核对权限，真实删除流程尚未验收。
 - **External Testing Group：**创建 `Friends Beta`。构建处理完成且所需 TestFlight Beta Review 完成后，再邀请外部测试者。
 - **Privacy Policy URL / Support URL：**使用上方公开链接。
 
@@ -61,9 +61,9 @@ App Store Connect 只为主应用创建一条 App 记录并选择 `bundle_id`。
 
 截至 2026 年 10 月 28 日，Apple 上传构建要求 Xcode 26 或更新版本，并使用 iOS 26 SDK 或更新版本。项目所有者本机为 Xcode 26.5；归档前仍须确认发布者构建环境选择的 Xcode 和 SDK。
 
-本轮 `0.5.0 (11)` 已通过 iOS 无签名 Release 归档及 Mac 通用构建。此前记录的 `0.4.2 (10)` 属于历史结果。本资料不包含已签名归档或 IPA，也不表示签名、安装、上传、云端在线验收或 Beta Review 已成功。上传前以实际分发归档中的版本和构建号为准。
+源码 `0.5.0 (11)` 已通过 iOS 无签名 Release 归档及 Mac 通用构建；之后 `v0.5.0` 触发的 Xcode Cloud 工作流成功，用户已提供实际 **0.5.0（Build 5）** 的 TestFlight 安装截图。此前 `0.4.2 (10)` 属于历史结果。本资料不包含已签名归档或 IPA；真实云功能、外部 Beta Review 与正式 App Store 上架尚未确认。后台字段中的构建号应填写实际分发值。
 
-开放云账号测试前，请确认现有归档表的 RLS 和邮箱 OTP 邮件投递，并准备审核者可访问的测试邮箱。App 内账号删除须由项目管理员授权并部署 [原生云账号 SQL](../supabase-native-account.sql)，其中的 `mikansei_delete_account` RPC 当前尚未部署；部署前不要声称应用内删除可用。正式提交 App Store 时再准备商店截图即可；本 TestFlight 交接不要求先准备正式商店截图、定价或 App 内购买。
+开放云账号测试前，请确认现有归档表的 RLS 和邮箱 OTP 邮件投递，并准备审核者可访问的测试邮箱。App 内账号删除依赖 [原生云账号 SQL](../supabase-native-account.sql)，其中的 `mikansei_delete_account` RPC 已于 2026-10-29 部署并核对权限；仍需用无重要资料的专用账号完成真实删除验收。正式提交 App Store 时再准备商店截图即可；本 TestFlight 交接不要求先准备正式商店截图、定价或 App 内购买。
 
 ## Apple 官方说明
 

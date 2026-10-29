@@ -14,8 +14,8 @@ as $function$
 declare
   requesting_user uuid := auth.uid();
 begin
-  if requesting_user is null
-     or coalesce(auth.role(), '') <> 'authenticated' then
+  -- 角色权限由下方 EXECUTE 授权限制；身份来自已验证 JWT 的 auth.uid()。
+  if requesting_user is null then
     raise exception 'Authentication required' using errcode = '28000';
   end if;
 
@@ -28,8 +28,8 @@ begin
 end;
 $function$;
 
-revoke all on function public.mikansei_delete_account() from public;
-revoke all on function public.mikansei_delete_account() from anon;
+revoke all on function public.mikansei_delete_account()
+  from public, anon, authenticated, service_role;
 grant execute on function public.mikansei_delete_account() to authenticated;
 
 comment on function public.mikansei_delete_account() is

@@ -25,7 +25,9 @@ python3 Scripts/generate_macos_project.py
 
 接口没有目标用户参数，通过 `auth.uid()` 确定调用者，只允许 `authenticated` 执行。用户在 App 两次确认后调用，删除本人 `auth.users` 记录，现有表的外键级联删除其云归档。不要使用管理员密钥代替客户端调用。
 
-当前仓库包含 SQL 与客户端调用；是否已部署以项目管理记录为准。不要通过删除真实用户来验证部署。发布 TestFlight 前，管理员应确认接口和权限，并用专用审核账号完成登录、同步及删除流程。
+已于 2026-10-29 部署到共用项目 `hososgkljshpeqksfdgk`，远端迁移记录为 `20261029055013`。目录查询确认函数无参数、空 search_path，authenticated 可调用，anon/PUBLIC/service_role 无执行授权；归档表 RLS、读写授权和级联外键均已核对。未调用真实删除，未读取私人归档。详见 [执行记录](TestFlight/PREPARATION_RECORD.md)。
+
+该函数有意使用 SECURITY DEFINER 删除当前调用者的 Auth 用户，因此 Advisor 0029 会提示已登录者可以执行高权限函数；已按无参数、仅本人、固定 search_path 和最小执行授权检查，没有将该提醒隐瞒为零警告。真实邮箱登录、同步和删除流程仍需用无重要资料的专用测试账号验收。
 
 删除不会清除设备本地副本或导出的备份；已有访问令牌可能在过期前仍有效，后续刷新会失败。此行为在 App 确认文案和隐私资料中说明。
 

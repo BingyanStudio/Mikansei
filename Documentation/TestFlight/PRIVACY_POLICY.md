@@ -49,7 +49,7 @@ iCloud Drive 文件夹同步与邮箱云账号是两项独立功能。你主动�
 
 退出账号只会清除此设备保存的账号会话，并停止本设备的云同步；退出不会删除本机数据或服务端归档。卸载 App 通常会移除本机数据容器，但不一定删除导出文件、文件夹同步副本、系统日历事件、服务端账号归档、设备或云端备份。
 
-App 内的“删除云端账户”功能须待项目管理员部署 `mikansei_delete_account` RPC 后才可用。SQL 脚本位于 [`Documentation/supabase-native-account.sql`](../supabase-native-account.sql)，该函数只允许当前已认证用户删除自己的账号，不接受用户指定其他账号。当前该 RPC 尚未部署；在部署前，可通过 **kikuchiheinr@qq.com** 联系项目维护者提出删除请求。
+App 内的“删除云端账户”调用 `mikansei_delete_account` RPC。接口已于 2026-10-29 部署并核对执行权限，真实账号删除流程尚未端到端验收。SQL 脚本位于 [`Documentation/supabase-native-account.sql`](../supabase-native-account.sql)，函数只允许当前已认证用户删除自己的账号，不接受用户指定其他账号。如操作失败，可通过 **kikuchiheinr@qq.com** 联系项目维护者提出删除请求。
 
 部署并成功执行删除后，Supabase Auth 用户及其 Mikansei / Mikanseta 共用的云归档会删除。其他设备将无法正常刷新登录状态或继续写入该归档；既有登录令牌可能在到期前仍有效，不能据此认为其他设备已立即登出。其他设备上的本地副本不会自动清除。服务提供方可能依据其规则保留备份和安全日志。删除服务端账号不等于删除这些设备或服务商保留的所有副本。
 

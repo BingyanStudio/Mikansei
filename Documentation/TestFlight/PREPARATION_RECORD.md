@@ -1,10 +1,43 @@
-# Mikansei TestFlight 交接准备记录
+# Mikansei TestFlight 发布与准备记录
 
 记录日期：2026-10-29
 
-当前资料目标：原生 Mikansei **0.5.0（11）**，iPhone / iPad；云账号服务也供原生 Mac 版使用。
+实际 TestFlight 成品：原生 Mikansei **0.5.0（Build 5）**，源码构建号为 11；iPhone / iPad，云账号服务也供原生 Mac 版使用。
 
-源码提交：以最终交接 ZIP 根目录的 `SOURCE_COMMIT.txt` 为准。
+发布源码：`v0.5.0` 指向 `ba2ecf1`。历史交接 ZIP 的来源另见各包根目录 `SOURCE_COMMIT.txt`。
+
+## 2026-10-29：发布完成与服务端部署
+
+本节是当前结果；下方各节按当时的进度保留，早期“未上传／未部署”记录不代表当前状态。
+
+| 项目 | 实际结果与证据 |
+| --- | --- |
+| 发布来源 | `experimental/sync`，提交 `ba2ecf1a30b094e5c86dd66e8ba95d309c3b3ece` |
+| 发布标签 | annotated tag `v0.5.0` 已推送，指向上述提交；后续文档提交不改写标签 |
+| Xcode Cloud | `Internal TestFlight Build`，build ID `0179c066-1198-4db1-8f01-d592b2ab4f3b` |
+| 时间（北京时间） | 12:54:06 开始，13:05:34 归档完成，13:05:46 整体工作流成功 |
+| 正式归档检查 | GitHub Check Run `123274415418`：success，0 errors，3 warnings |
+| 旧临时检查 | `123271026399` 曾残留 in_progress；以正式检查和整体工作流为准 |
+| TestFlight 成品 | **0.5.0（Build 5）**，冰岩科技，2026-10-29 发布，6.3 MB；用户确认下载且截图显示“打开” |
+| 构建号差异 | 源码为 11，Xcode Cloud 最终为 5；不将源码构建号冒充成品构建号 |
+| 后台读取边界 | App Store Connect 网页读取超时；分发与安装依据用户确认及截图，没有独立读到所有后台字段 |
+| 注销接口 | `public.mikansei_delete_account()` 已部署；远端迁移 `20261029055013` / `mikansei_self_service_account_deletion` |
+| 权限检查 | 函数无参数，目标仅 `auth.uid()`，空 search_path；仅 authenticated（及数据库所有者）可执行，anon/PUBLIC/service_role 无执行授权 |
+| 归档隔离 | `mikanseta_archives` 已启用 RLS；authenticated 读写授权存在，本人规则同时限制 USING/WITH CHECK；外键 ON DELETE CASCADE 已确认 |
+| 未进行的操作 | 未读取私人归档行，未发送真实 OTP、登录、同步、调用真实删除或验证实际启动；未确认外部测试公开链接或正式 App Store 发布 |
+
+部署只创建函数及权限，没有删除任何账号。去除旧 SQL 的 `auth.role()` 判断，改由 EXECUTE 授权与非空 `auth.uid()` 共同限制；客户端 RPC 名称与参数不变，不需要因此重新打包。
+
+服务端 Security Advisor 新增的 0029 提醒来自此接口有意授予 authenticated 的 SECURITY DEFINER 执行权限：删除 Auth 用户需要服务端权限，函数已限制为无参数、仅本人、空 search_path。该提醒保留，没有禁用扫描或虚报零警告。其他既有的 `rls_auto_enable()` 执行权限提醒、密码泄漏保护提醒及归档策略 initplan 性能提醒，记录后未修改共享服务配置。
+
+- [0029 函数执行权限说明](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
+- [0028 匿名函数执行权限说明](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable)
+- [密码保护说明](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+- [RLS initplan 性能说明](https://supabase.com/docs/guides/database/database-linter?lint=0003_auth_rls_initplan)
+
+本机证据位于项目工作区 `Archives/Builds/TestFlightPreparation/2026-10-29-xcode-cloud-run/`：正式 GitHub 检查、workflow 状态、`release-progress.json`、TestFlight 截图和 `supabase-account-rpc-deployment.json`。证据产物没有提交进源码仓库。
+
+面向新手的完整复盘见 [上线全流程详解](RELEASE_WALKTHROUGH_ZH.md)。后续正常发版可继续使用已有 Cloud 流程，无需每次请 Paul 代构建。此前根据本机证书限制建议继续交接，是 AI 的判断错误。
 
 ## 2026-10-29：Xcode Cloud 专用包补齐
 
