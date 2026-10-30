@@ -43,3 +43,9 @@
 
 新版实际处理并出现在 TestFlight 后，在 iPhone 打开 **TestFlight → Mikansei → 更新**，更新既有 Mikansei 安装，不安装新的 Beta App。发布者应核对 TestFlight 显示的实际 build 后再通知用户。若用户想另留个人备份，可在更新前从“我的 → 数据与备份”自行导出 JSON；本记录不要求向外提供备份。
 
+## 后续 Xcode Cloud 结果 · 2026-10-30
+
+随后核对提交 `0c4f9575239c56582c2c01755aafb2ec54202a90` 的全部 check runs，发现正式 Xcode Cloud check `124123904848` 已于 2026-10-30 14:39:58 UTC（上海时间 22:39:58）完成并成功，结果为 0 errors、3 个既有 warnings。该提交的 commit status `Mikansei | Internal TestFlight Build` 也为 `success`，description 为 `succeeded`。[查看 Cloud build](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37)。
+
+旧 check `124121262794` 仍显示 `in_progress`，是同一 action 的残留记录，不能单独用它判断整体结果。以上确认 Xcode Cloud workflow 成功；TestFlight 界面仍未核实实际构建号、处理完成或用户可下载状态。源码 build `12` 不代表实际 Cloud / TestFlight build number。
+

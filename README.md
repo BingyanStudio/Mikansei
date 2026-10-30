@@ -12,7 +12,7 @@
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
-当前源码发布目标为 **0.6.0 (12)**；本地 iOS App + Widgets 与 Mac 无签名 Release 构建已通过。`v0.6.0` annotated tag 已推送，Xcode Cloud 的 Internal TestFlight Build 已启动，但 iOS Archive 步骤仍在进行，尚未确认签名、上传、TestFlight 处理或可更新状态。源码 build 12 不代表实际 TestFlight 构建号；最新进度见 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录，因此该修正不在已核实的安装版本中。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
+当前源码发布准备目标为 **0.6.1 (13)**；源码稳定后已重新生成 iOS / Mac 工程，iOS App + Widgets 与 Mac universal 无签名 Release 构建均通过。尚未运行测试、进行真机拖动 / 触感验收或上传 0.6.1 TestFlight。上一版 `0.6.0 (12)` 的 Xcode Cloud Internal TestFlight Build 已在提交 `0c4f9575239c56582c2c01755aafb2ec54202a90` 上成功：正式 check `124123904848` 于 2026-10-30 22:39:58（上海时间）完成，0 errors、3 个既有 warnings，提交状态为 `succeeded`。旧 check `124121262794` 仍残留 `in_progress`，不代表整体工作流未完成。Xcode Cloud 成功不等于 TestFlight 已处理或可下载；实际 TestFlight 构建号尚未在界面核实，不能从源码 build 13 推断。[查看 Cloud build](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**。进度见 [0.6.1 发布记录](Documentation/RELEASE_0.6.1.md) 和 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
 另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.5.3 (16)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 
@@ -26,6 +26,7 @@
 - **清晰选项**：类型、视图切换使用实色选中态；可点击选项使用更清楚的文字与自适应深浅色强调色。
 - **低成本录入**：点击 `+`，输入一句话就能保存；今天、明天快捷截止时间；详细字段按需展开。
 - **Checklist**：事项与笔记都能拆成小步骤；首页默认展开未完成步骤，可折叠、直接新增、勾选并查看进度。
+- **待办卡片排序（0.6.1 目标）**：长按卡片本体的拖动区域并拿起整张卡片；不增加独立抓手列。输入框继续支持文本编辑与选择。拖动预览中，其他卡片自然让位并留下插入空位，不高亮目标卡，也不显示系统复制加号；放下后按空位排序，取消后保持原顺序。子项勾选与左滑操作仍可用。真实拖动开始和结束时提供触感反馈；边缘自动滚动需在 60 Hz 和 120 Hz 屏幕验收。源码实现已完成，设备交互验证待完成。
 - **日程**：以开始时间为核心，输入持续分钟数或全天的天数，自动计算结束时间；默认闹钟、按开始时间提醒，不作为逾期 DDL。
 - **具体信息**：作业科目、优先级、DDL、平台、地点、预计耗时、消息原文。
 - **一次性 / routine 提醒**：按设定时间提醒；常态是独立标签，可加在待办和日程上；支持每天、每周多选星期、每两周、每月（缺日取月末）、自定义间隔，以及跨月点选不规律日期。完成后生成下一次，未完成的 routine 也会按后续周期提醒。
@@ -90,7 +91,7 @@ ICS / CSV 仍保留受限导入入口；ICS 支持范围和未支持的复杂调
 - 使用本地摘要，不发送任务到服务器，不包含备注、平台、群消息或 Checklist 正文。锁屏只显示前三件，完整列表在 App 内。
 - 苹果限制单次实时活动最长 8 小时；本版没有服务器推送来重启活动或在 App 未运行时刷新任务列表。日期跨天后旧卡片提示更新，回到 App 更新今日内容。系统实时活动权限需开启。
 
-设置页版本从安装包读取；当前工程目标为 **0.6.0 (12)**，iPhone、Widgets 与 Mac 目标保持一致。该目标尚未上传 TestFlight；安装包的实际版本以 TestFlight 中显示的构建为准。
+设置页版本从安装包读取；当前工程准备目标为 **0.6.1 (13)**，iPhone、Widgets 与 Mac 的无签名 Release 产物版本字段一致。源码构建通过不代表已完成真机验收或 TestFlight 上传；实际云端构建号以 TestFlight 显示为准，不能从源码 build 13 推断。
 
 ## 清单和日历的分工
 

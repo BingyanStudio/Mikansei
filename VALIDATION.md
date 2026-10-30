@@ -1,5 +1,16 @@
 # 验证记录
 
+## 0.6.1（13）源码候选准备 · 首次准备 2026-10-30，最终构建 2026-10-31
+
+- 脚本新工程默认版本目标与现有 iOS App / Widgets、Mac 工程版本字段已改为 `0.6.1 (13)`；Team 与 Bundle Identifier 未改。
+- 拖动源码稳定后已重新生成两端工程；iOS App + Widgets 与 Mac universal 无签名 Release 构建均 `BUILD SUCCEEDED`。iOS 最终增量构建于 2026-10-31 完成。本轮未运行测试。卡片本体长按、整卡 lift 预览、悬停让位 / 插入空位、无目标高亮或复制加号、取消不改顺序、输入框编辑 / 选择、子项操作 / 左滑，以及 60 / 120 Hz 边缘滚动均待真机验收。
+- iOS App、Widget 与 Mac App 最终产物版本字段均为 `0.6.1 / 13`。iOS Team `6PVAPR495F` 与 Bundle ID `net.bingyan.KikuchiHeinrich.mikansei`、`net.bingyan.KikuchiHeinrich.mikansei.widgets`，以及 Mac Bundle ID `com.personal.mikansei.macOS` 均保留原值；Mac 原有手动 ad-hoc 签名配置保留。
+- **iOS Release**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，`generic/platform=iOS`，无签名，App + Widgets `BUILD SUCCEEDED`。最终日志 `/private/tmp/mikansei-0.6.1-13-ios-build-final.log`；产物 `/private/tmp/mikansei-0.6.1-13-ios-derived/Build/Products/Release-iphoneos/`。
+- **Mac universal Release**：Xcode 26.5 / macOS SDK 26.5，scheme `MikanseiMac`，`ARCHS=x86_64 arm64`、`ONLY_ACTIVE_ARCH=NO`，`generic/platform=macOS`，无签名，`BUILD SUCCEEDED`；`lipo` 确认 `x86_64 arm64`。日志 `/private/tmp/mikansei-0.6.1-13-mac-build.log`；产物 `/private/tmp/mikansei-0.6.1-13-mac-derived/Build/Products/Release/`。
+- 编译警告：保留 `EntryStore.swift:328` 的 `WidgetSnapshot` Sendable 捕获警告与 `NotificationManager.swift:182` 的 `[AnyHashable: Any]` Sendable 捕获警告（Swift 6 语言模式会升级为错误）；Mac AppIntents 元数据步骤跳过（未找到 `AppIntents.framework`）。
+- 未做 iPhone / Mac 实机交互验收，未确认拿起 / 放下触感；本版未确认上传 TestFlight 或可下载状态。
+- 上一版 `0.6.0 (12)` 的 Xcode Cloud Internal TestFlight Build 正式 check `124123904848` 于 2026-10-30 22:39:58（上海时间）完成并成功，0 errors、3 个既有 warnings；commit status 为 `succeeded`。旧 check `124121262794` 仍为 `in_progress`，但属于残留记录。TestFlight 界面未核实实际构建号、处理完成或可下载状态；不能从源码 build 13 推断云端构建号。0.6.1 发布跟踪需同时检查该提交的全部 check runs 与 commit status。详见 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md) 的后续结果说明。
+
 ## 0.6.0（12）源码候选 · 2026-10-30
 
 - iOS 与 Mac 工程已重新生成；App、Widgets 与 Mac 目标版本均为 `0.6.0 (12)`。由 `PlistBuddy` 核对最终 iOS App、内嵌 Widget 与 Mac App 产物的版本字段；原 Team 与 Bundle ID 保留。
