@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct EditingSession: Identifiable {
     let id = UUID()
@@ -190,6 +191,7 @@ struct TodayView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showPlanning = false
     @State private var pendingPlanningEdit: Entry?
+    @StateObject private var dragReorder = EntryDragReorderState()
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let board = TaskBoard(entries: store.entries, now: context.date)
@@ -231,8 +233,9 @@ struct TodayView: View {
                                  canEdit: !store.readOnly)
                 }
         }
+        .onDisappear { dragReorder.cancelActiveSession(reduceMotion: reduceMotion) }
     }
-    /// 今日聚焦：分组滚动列表；长按卡片右侧抓手可在同组内排序（写 sortOrder）。
+    /// 今日聚焦：分组滚动列表；长按整张卡片可在同组内排序。
     private func focusList(_ board: TaskBoard, now: Date) -> some View {
         let focus = board.focus
         let overdueIDs = Set(board.overdue.map(\.id))
@@ -250,16 +253,15 @@ struct TodayView: View {
                     EmptyCard(symbol: "sun.max", title: "今天可以从容一点", message: "给今天安排一件小事，或继续你的无日期清单。", actionTitle: "添加待办") { add(.task) }
                         .padding(.horizontal, 20).padding(.vertical, 8)
                 } else {
-                    if !store.readOnly {
-                    Text("长按卡片右侧“拖动”抓手排序；拖到列表上 / 下边缘可自动滚动。")
-                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 8)
-                    }
                     ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
                         SectionLabel(title: group.title, count: group.entries.count, color: group.color)
                             .padding(.horizontal, 20)
-                        ForEach(group.entries) { entry in
-                            EntryDragRow(entry: entry, group: group.entries, movable: group.movable && !store.readOnly,
+                        let groupID = "focus:\(group.title)"
+                        ForEach(dragReorder.displayedEntries(group.entries, groupID: groupID)) { entry in
+                            EntryDragRow(entry: entry, group: group.entries, groupID: groupID, reorderState: dragReorder,
+                                         movable: group.movable && !store.readOnly,
                                          onDrop: reorderWithin,
+                                         onReorderCommit: commitReorder,
                                          onMoveToPlanning: !store.readOnly && group.movable && !entry.isCompleted
                                             ? { _ = store.moveToPlanning(entry.id) } : nil,
                                          reduceMotion: reduceMotion,
@@ -282,6 +284,10 @@ struct TodayView: View {
         guard let targetIndex = ids.firstIndex(of: target.id) else { return false }
         ids.insert(id, at: targetIndex + (after ? 1 : 0))
         return store.reorder(ids)
+    }
+    private func commitReorder(_ ids: [UUID]) -> Bool {
+        if reduceMotion { return store.reorder(ids) }
+        return withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) { store.reorder(ids) }
     }
     private func presentPendingPlanningEdit() {
         guard let entry = pendingPlanningEdit else { return }
@@ -339,6 +345,7 @@ struct TasksView: View {
     @State private var showCompleted = false
     @State private var category = ""
     @State private var now = Date()
+    @StateObject private var dragReorder = EntryDragReorderState()
     private var categories: [String] { Array(Set(store.entries.filter(\.isTask).map(\.category).filter { !$0.isEmpty })).sorted() }
     private var filtered: [Entry] {
         let board = TaskBoard(entries: store.entries, now: now)
@@ -375,10 +382,6 @@ struct TasksView: View {
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    if !showCompleted && !visibleEntries.isEmpty && !store.readOnly {
-                        Text("长按卡片右侧“拖动”抓手排序；拖到列表上 / 下边缘可自动滚动。")
-                            .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 8)
-                    }
                     listBody(visibleEntries)
                 }.padding(.top, 4).padding(.bottom, 16)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visibleEntries.map(\.id))
@@ -389,6 +392,7 @@ struct TasksView: View {
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
             .onAppear { now = Date() }
             .onChange(of: scenePhase) { _, phase in if phase == .active { now = Date() } }
+            .onDisappear { dragReorder.cancelActiveSession(reduceMotion: reduceMotion) }
     }
     @ViewBuilder private func listBody(_ visibleEntries: [Entry]) -> some View {
         if visibleEntries.isEmpty {
@@ -400,16 +404,20 @@ struct TasksView: View {
         } else if showCompleted {
             SectionLabel(title: "历史记录", count: visibleEntries.count, color: Theme.accent).padding(.horizontal, 20)
             ForEach(visibleEntries) { entry in
-                EntryDragRow(entry: entry, group: [], movable: false, onDrop: reorderWithin,
+                EntryDragRow(entry: entry, group: [], groupID: "history", reorderState: dragReorder,
+                             movable: false, onDrop: reorderWithin, onReorderCommit: commitReorder,
                              content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now) })
                     .padding(.horizontal, 20).padding(.vertical, 8)
             }
         } else {
             ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
                 SectionLabel(title: group.title, count: group.entries.count, color: group.color).padding(.horizontal, 20)
-                ForEach(group.entries) { entry in
-                    EntryDragRow(entry: entry, group: group.entries, movable: group.movable && !store.readOnly,
+                let groupID = "tasks:\(group.title)"
+                ForEach(dragReorder.displayedEntries(group.entries, groupID: groupID)) { entry in
+                    EntryDragRow(entry: entry, group: group.entries, groupID: groupID, reorderState: dragReorder,
+                                 movable: group.movable && !store.readOnly,
                                  onDrop: reorderWithin,
+                                 onReorderCommit: commitReorder,
                                  content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now, showsContextMenu: false) })
                         .padding(.horizontal, 20).padding(.vertical, 8)
                 }
@@ -427,52 +435,58 @@ struct TasksView: View {
         ids.insert(id, at: targetIndex + (after ? 1 : 0))
         return store.reorder(ids)
     }
+
+    private func commitReorder(_ ids: [UUID]) -> Bool {
+        if reduceMotion { return store.reorder(ids) }
+        return withAnimation(.spring(response: 0.3, dampingFraction: 0.86)) { store.reorder(ids) }
+    }
 }
 
-/// 拖动排序行：长按右侧抓手，将卡片放到同组另一张卡上；边缘区域会滚动列表。
+/// 整卡拖动排序行：同组拖动时，源卡变成插入占位，其他卡片随位置变化让位。
 struct EntryDragRow<Content: View>: View {
     @EnvironmentObject private var store: EntryStore
     let entry: Entry
     let group: [Entry]
+    let groupID: String
+    @ObservedObject var reorderState: EntryDragReorderState
     let movable: Bool
     /// 返回是否完成了移动，作为 drop 接收结果。
     let onDrop: (Entry, Entry, [Entry], Bool) -> Bool
+    let onReorderCommit: ([UUID]) -> Bool
     var onMoveToPlanning: (() -> Void)? = nil
     var reduceMotion = false
     @ViewBuilder var content: () -> Content
-    @State private var targeted = false
     @State private var rowHeight: CGFloat = 0
+    @State private var dragSessionActive = false
+    @State private var hostedContentSize: CGSize?
     private var canDrag: Bool { movable && !store.readOnly }
+    private var isInsertionPlaceholder: Bool { reorderState.isPlaceholder(entryID: entry.id, groupID: groupID) }
 
     @ViewBuilder private var rowContent: some View {
-        let card = content().overlay {
-            if targeted {
-                RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.accent, lineWidth: 2)
-                    .allowsHitTesting(false)
-            }
+        let card = content()
+        let draggableCard = EntryCardDragSource(entry: entry, isEnabled: canDrag, isDragging: $dragSessionActive,
+                                                isPlaceholder: isInsertionPlaceholder,
+                                                onSessionChange: { active in
+                                                    if active {
+                                                        reorderState.begin(entryID: entry.id, groupID: groupID, ids: group.map(\.id))
+                                                    } else {
+                                                        DispatchQueue.main.async {
+                                                            reorderState.endSession(entryID: entry.id, groupID: groupID, reduceMotion: reduceMotion)
+                                                        }
+                                                    }
+                                                },
+                                                measuredContentSize: $hostedContentSize) {
+            card.frame(maxWidth: .infinity)
         }
-        HStack(alignment: .center, spacing: 8) {
+        Group {
             if let onMoveToPlanning {
-                FocusSwipeRow(action: onMoveToPlanning, reduceMotion: reduceMotion) {
-                    card.frame(maxWidth: .infinity)
-                }
-                .frame(maxWidth: .infinity)
+                FocusSwipeRow(action: onMoveToPlanning, reduceMotion: reduceMotion, dragSessionActive: $dragSessionActive) {
+                    if canDrag { draggableCard } else { card.frame(maxWidth: .infinity) }
+                }.frame(maxWidth: .infinity)
+            } else if canDrag {
+                draggableCard
             } else {
                 card.frame(maxWidth: .infinity)
-            }
-            if canDrag {
-                EntryDragHandle(entry: entry)
-                    .frame(width: 48, height: 52)
-                    .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10))
-                    .overlay(alignment: .bottom) {
-                        Text("拖动").font(.caption2).foregroundStyle(.secondary).padding(.bottom, 3)
-                            .allowsHitTesting(false)
-                    }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("拖动排序：\(entry.title)")
-                    .accessibilityHint("长按此抓手拖动排序，也可以使用上移或下移操作。")
-                    .accessibilityAction(named: Text("上移")) { moveForAccessibility(by: -1) }
-                    .accessibilityAction(named: Text("下移")) { moveForAccessibility(by: 1) }
             }
         }
         .background {
@@ -486,13 +500,29 @@ struct EntryDragRow<Content: View>: View {
     }
 
     var body: some View {
-        if canDrag {
-            rowContent.dropDestination(for: Entry.self) { payload, location in
-                guard !store.readOnly, let dragged = payload.first else { return false }
-                return onDrop(dragged, entry, group, location.y >= rowHeight / 2)
-            } isTargeted: { targeted = $0 }
-        } else {
-            rowContent
+        Group {
+            if canDrag {
+                rowContent
+                    .accessibilityElement(children: .contain)
+                    .accessibilityHint("长按整张卡片拖动排序，也可以使用上移或下移操作。")
+                    .accessibilityAction(named: Text("上移")) { moveForAccessibility(by: -1) }
+                    .accessibilityAction(named: Text("下移")) { moveForAccessibility(by: 1) }
+                    .onDrop(of: [UTType.data], delegate: EntryRowReorderDropDelegate(
+                        entryID: entry.id,
+                        groupID: groupID,
+                        rowHeight: max(rowHeight, hostedContentSize?.height ?? 0),
+                        canDrop: !store.readOnly,
+                        reduceMotion: reduceMotion,
+                        state: reorderState,
+                        currentGroupIDs: group.map(\.id),
+                        onCommit: onReorderCommit
+                    ))
+            } else {
+                rowContent
+            }
+        }
+        .onChange(of: group.map(\.id)) { _, ids in
+            reorderState.cancelIfGroupChanged(groupID: groupID, currentIDs: ids, reduceMotion: reduceMotion)
         }
     }
 
@@ -507,13 +537,149 @@ struct EntryDragRow<Content: View>: View {
     }
 }
 
-/// A horizontal action layer that leaves the row's drag handle separate from swipe recognition.
+@MainActor
+final class EntryDragReorderState: ObservableObject {
+    @Published private(set) var activeEntryID: UUID?
+    @Published private(set) var activeGroupID: String?
+    @Published private(set) var previewOrder: [UUID] = []
+    private var originalOrder: [UUID] = []
+    private var dropCommitted = false
+
+    func displayedEntries(_ entries: [Entry], groupID: String) -> [Entry] {
+        let currentIDs = entries.map(\.id)
+        guard activeGroupID == groupID, originalOrder == currentIDs,
+              previewOrder.count == currentIDs.count, Set(previewOrder) == Set(currentIDs) else { return entries }
+        let entriesByID = Dictionary(uniqueKeysWithValues: entries.map { ($0.id, $0) })
+        let displayed = previewOrder.compactMap { entriesByID[$0] }
+        return displayed.count == entries.count ? displayed : entries
+    }
+
+    func isActive(in groupID: String) -> Bool { activeEntryID != nil && activeGroupID == groupID }
+
+    func isPlaceholder(entryID: UUID, groupID: String) -> Bool {
+        activeEntryID == entryID && activeGroupID == groupID
+    }
+
+    func begin(entryID: UUID, groupID: String, ids: [UUID]) {
+        guard activeEntryID == nil, ids.contains(entryID) else { return }
+        activeEntryID = entryID
+        activeGroupID = groupID
+        originalOrder = ids
+        previewOrder = ids
+        dropCommitted = false
+    }
+
+    func movePlaceholder(to targetID: UUID, after: Bool, in groupID: String, reduceMotion: Bool) {
+        guard activeGroupID == groupID, let sourceID = activeEntryID,
+              sourceID != targetID, let sourceIndex = previewOrder.firstIndex(of: sourceID) else { return }
+        var next = previewOrder
+        next.remove(at: sourceIndex)
+        guard let targetIndex = next.firstIndex(of: targetID) else { return }
+        next.insert(sourceID, at: targetIndex + (after ? 1 : 0))
+        guard next != previewOrder else { return }
+        if reduceMotion { previewOrder = next }
+        else { withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) { previewOrder = next } }
+    }
+
+    func proposedOrder(in groupID: String) -> [UUID]? {
+        guard isActive(in: groupID), previewOrder.count == originalOrder.count,
+              Set(previewOrder) == Set(originalOrder) else { return nil }
+        return previewOrder
+    }
+
+    func matchesCurrentGroup(groupID: String, currentIDs: [UUID]) -> Bool {
+        isActive(in: groupID) && originalOrder == currentIDs &&
+            previewOrder.count == currentIDs.count && Set(previewOrder) == Set(currentIDs)
+    }
+
+    func cancelIfGroupChanged(groupID: String, currentIDs: [UUID], reduceMotion: Bool) {
+        guard let entryID = activeEntryID, activeGroupID == groupID,
+              !matchesCurrentGroup(groupID: groupID, currentIDs: currentIDs) else { return }
+        endSession(entryID: entryID, groupID: groupID, reduceMotion: reduceMotion)
+    }
+
+    func markDropCommitted(in groupID: String) {
+        guard isActive(in: groupID) else { return }
+        dropCommitted = true
+    }
+
+    func endSession(entryID: UUID, groupID: String, reduceMotion: Bool) {
+        guard activeEntryID == entryID, activeGroupID == groupID else { return }
+        let shouldRestore = !dropCommitted
+        let clear = {
+            if shouldRestore { self.previewOrder = self.originalOrder }
+            self.activeEntryID = nil
+            self.activeGroupID = nil
+            self.previewOrder = []
+            self.originalOrder = []
+            self.dropCommitted = false
+        }
+        if reduceMotion { clear() } else { withAnimation { clear() } }
+    }
+
+    func cancelActiveSession(reduceMotion: Bool) {
+        guard let entryID = activeEntryID, let groupID = activeGroupID else { return }
+        endSession(entryID: entryID, groupID: groupID, reduceMotion: reduceMotion)
+    }
+}
+
+private struct EntryRowReorderDropDelegate: DropDelegate {
+    let entryID: UUID
+    let groupID: String
+    let rowHeight: CGFloat
+    let canDrop: Bool
+    let reduceMotion: Bool
+    let state: EntryDragReorderState
+    let currentGroupIDs: [UUID]
+    let onCommit: ([UUID]) -> Bool
+
+    func validateDrop(info: DropInfo) -> Bool {
+        guard canDrop else { return false }
+        guard state.matchesCurrentGroup(groupID: groupID, currentIDs: currentGroupIDs) else {
+            state.cancelIfGroupChanged(groupID: groupID, currentIDs: currentGroupIDs, reduceMotion: reduceMotion)
+            return false
+        }
+        return true
+    }
+
+    func dropEntered(info: DropInfo) {
+        guard validateDrop(info: info) else { return }
+        updatePreview(at: info.location)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard validateDrop(info: info) else { return DropProposal(operation: .forbidden) }
+        updatePreview(at: info.location)
+        return DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard validateDrop(info: info) else { return false }
+        updatePreview(at: info.location)
+        guard let finalOrder = state.proposedOrder(in: groupID),
+              Set(finalOrder) == Set(currentGroupIDs), finalOrder.count == currentGroupIDs.count else {
+            state.cancelIfGroupChanged(groupID: groupID, currentIDs: currentGroupIDs, reduceMotion: reduceMotion)
+            return false
+        }
+        let committed = onCommit(finalOrder)
+        if committed { state.markDropCommitted(in: groupID) }
+        return committed
+    }
+
+    private func updatePreview(at location: CGPoint) {
+        guard canDrop else { return }
+        state.movePlaceholder(to: entryID, after: location.y >= rowHeight / 2, in: groupID, reduceMotion: reduceMotion)
+    }
+}
+
+/// A horizontal action layer that resets and yields while a native card drag is active.
 private struct FocusSwipeRow<Content: View>: View {
     private enum Direction { case horizontal, vertical }
     private let actionWidth: CGFloat = 132
     private let fullSwipeDistance: CGFloat = 220
     let action: () -> Void
     let reduceMotion: Bool
+    @Binding var dragSessionActive: Bool
     @ViewBuilder let content: () -> Content
     @State private var offset: CGFloat = 0
     @State private var dragStartOffset: CGFloat = 0
@@ -539,6 +705,7 @@ private struct FocusSwipeRow<Content: View>: View {
                 .simultaneousGesture(
                     DragGesture(minimumDistance: 14)
                         .onChanged { value in
+                            guard !dragSessionActive else { return }
                             let dx = value.translation.width
                             let dy = value.translation.height
                             if direction == nil {
@@ -549,6 +716,12 @@ private struct FocusSwipeRow<Content: View>: View {
                             offset = min(0, max(-actionWidth, dragStartOffset + dx))
                         }
                         .onEnded { value in
+                            guard !dragSessionActive else {
+                                offset = 0
+                                dragStartOffset = 0
+                                direction = nil
+                                return
+                            }
                             let endedDirection = direction
                             direction = nil
                             guard endedDirection == .horizontal else { return }
@@ -561,11 +734,18 @@ private struct FocusSwipeRow<Content: View>: View {
                 )
         }
         .clipped()
+        .onChange(of: dragSessionActive) { _, active in
+            guard active else { return }
+            offset = 0
+            dragStartOffset = 0
+            direction = nil
+        }
         .accessibilityElement(children: .contain)
         .accessibilityAction(named: Text("移到规划")) { performAction() }
     }
 
     private func performAction() {
+        guard !dragSessionActive else { return }
         #if canImport(UIKit)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif

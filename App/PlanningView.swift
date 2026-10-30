@@ -296,17 +296,14 @@ struct PlanningView: View {
             .background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 10))
             .accessibilityIdentifier("planning-todo-\(entry.id)")
         #if canImport(UIKit)
-        if canEdit {
-            HStack(spacing: 4) {
-                card.layoutPriority(1)
-                EntryDragHandle(entry: entry)
-                    .frame(width: 32, height: 32)
-            }
+        if canEdit && supportsDrag {
+            EntryCardDragSource(entry: entry) { card }
+                .accessibilityHint("长按事项卡片可拖入下方时间轴。")
         } else {
             card
         }
         #else
-        if canEdit { card.draggable(entry) } else { card }
+        if canEdit && supportsDrag { card.draggable(entry) } else { card }
         #endif
     }
 }
