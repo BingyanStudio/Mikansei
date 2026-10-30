@@ -9,6 +9,8 @@ from supabase_config import write_client_resource
 ROOT = Path(__file__).resolve().parents[1]
 client_configuration = write_client_resource(ROOT)
 PROJECT = ROOT / "Mikansei.xcodeproj"
+DEFAULT_MARKETING_VERSION = "0.6.0"
+DEFAULT_BUILD_NUMBER = "12"
 PROJECT.mkdir(exist_ok=True)
 previous_objects = {}
 if (PROJECT / "project.pbxproj").exists():
@@ -116,7 +118,7 @@ app_settings = {
     "INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad": "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight",
     "TARGETED_DEVICE_FAMILY": "1,2", "SUPPORTED_PLATFORMS": "iphoneos iphonesimulator",
     "SUPPORTS_MACCATALYST": "NO",
-    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": "0.5.0", "CURRENT_PROJECT_VERSION": "11",
+    "CODE_SIGN_STYLE": "Automatic", "MARKETING_VERSION": DEFAULT_MARKETING_VERSION, "CURRENT_PROJECT_VERSION": DEFAULT_BUILD_NUMBER,
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/Frameworks", "SWIFT_EMIT_LOC_STRINGS": "YES",
 }
 widget_settings = {

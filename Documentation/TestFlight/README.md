@@ -1,6 +1,6 @@
 # Mikansei iOS · TestFlight 发布资料
 
-更新日期：2026-10-29。实际已分发版本：**0.5.0（Build 5）**。反馈邮箱：**kikuchiheinr@qq.com**。
+更新日期：2026-10-30。上次核实的已分发版本：**0.5.0（Build 5）**。反馈邮箱：**kikuchiheinr@qq.com**。
 
 ## 当前结果
 
@@ -9,6 +9,12 @@
 - 公开 Supabase 客户端配置已纳入 Git；Cloud 自动准备资源并检查成品图标、版本、配置与隐私清单。
 - `mikansei_delete_account()` 已部署并通过目录及权限检查。真实邮箱投递、登录、同步和注销流程尚未端到端验收。
 - 本次完成 TestFlight 测试版发布；外部测试公开链接和正式 App Store 上架状态未确认。
+
+## 0.6.0（12）源码候选状态
+
+0.6.0（12）是当前源码目标，已重新生成 iOS 与 Mac 工程，并完成 iOS App + Widgets Release 和 Mac Release universal 的无签名构建。它尚未上传 TestFlight、尚未发布，也未做真实设备 / 系统日历交互验收；完整范围和构建日志位置见 [0.6.0 发布记录](../RELEASE_0.6.0.md)。上次核实的 TestFlight 安装截图为 0.5.0（Build 5）；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录。
+
+新版出现在 TestFlight 后，在 iPhone 的 TestFlight App 中打开现有 **Mikansei** 页面并点“更新”，更新已安装应用；无需安装另一份 Beta App。上传前后仍应核对 TestFlight 显示的版本号、构建号和实际处理状态。
 
 新手先读 **[上线全流程详解](RELEASE_WALKTHROUGH_ZH.md)**；技术记录见 [PREPARATION_RECORD.md](PREPARATION_RECORD.md)。
 

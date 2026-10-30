@@ -1,6 +1,6 @@
 # 原生 Mikansei：隐私与分发资料依据
 
-核对日期：2026-10-28。适用原生 Mikansei iOS App、Widgets 和云账号服务；原生 Mac 客户端使用同一云账号项目。
+核对日期：2026-10-30。适用原生 Mikansei iOS App、Widgets 和云账号服务；原生 Mac 客户端使用同一云账号项目。
 
 ## App Store Connect App Privacy
 
@@ -25,6 +25,8 @@
 云账号可选，邮箱 OTP 登录成功并经用户确认合并后开始同步；同一 Auth 用户在 `mikanseta_archives` 中对应一条共享归档。Mikansei 与 Mikanseta 共用该项目和数据记录。首次请求验证码时，新邮箱可自动创建账号，完成验证码验证后才能登录。客户端使用 public/anon 客户端配置；该公开 key 可嵌入 App，不是管理凭据。数据隔离由服务端 RLS 等策略承担，公开 key 本身不阻止获授权项目管理员访问数据。
 
 云数据通过 HTTPS 传输，但没有端到端加密。不要声称项目管理员无法读取已存储内容。Supabase 处理认证请求和安全日志；日志、备份及保留周期依服务方配置和政策。
+
+冰岩课表导入是用户主动启用的独立接口：用户提供的课表只读 API Key 会发送给冰岩每日课表 API；如用户选择保存在设备中，Key 使用不可同步的 ThisDeviceOnly 钥匙串项目，不进入 Supabase 归档或 Mikansei JSON 备份。用户手动选择的每日课表 JSON 在本机预览和导入，App 不读取或复制 CLI 已保存的授权。导入的课程和日程属于本机用户内容，只有在用户启用相应账号或文件夹同步后才会同步。App Privacy 声明应继续按可选云账号、最终归档字段及服务方实际处理核对。
 
 账户删除使用 `mikansei_delete_account` RPC，SQL 脚本位于 [`Documentation/supabase-native-account.sql`](../supabase-native-account.sql)。函数仅凭当前认证用户 `auth.uid()` 确定删除对象，不接收调用者指定的目标账号。它会删除共享 Auth 用户及其云归档，影响 Mikansei 和 Mikanseta 登录。当前 Supabase Auth 与共享归档表已存在；删除 RPC 已于 2026-10-29 部署并核对权限，尚未执行真实账号删除验收。本轮未实际验证邮件投递、登录、同步或删除。
 

@@ -10,7 +10,7 @@
 | App Name | Mikansei |
 | Primary Language | Chinese (Simplified) |
 | SKU | 沿用既有应用记录；首次新建时才使用 `MIKANSEI-IOS-001` |
-| Version / Build | `0.5.0 (11)`（本轮资料目标；上传前核对最终归档） |
+| Version / Build | `0.6.0 (12)`（源码候选目标；尚未上传，上传前核对最终归档） |
 | Minimum iOS Version | iOS 17.0 |
 | TestFlight Group | `Friends Beta` |
 | Feedback Email | `kikuchiheinr@qq.com` |
@@ -49,7 +49,7 @@ App Store Connect 只为主应用创建一条 App 记录并选择 `bundle_id`。
 ## TestFlight 文案与审核信息
 
 - **Beta App Description：**从 `BETA_DESCRIPTION.txt` 复制简体中文正文；英文版本使用 `BETA_DESCRIPTION_EN.txt`。
-- **What to Test：**为 `0.5.0 (11)` 从 `WHAT_TO_TEST.txt` 复制简体中文正文；英文版本使用 `WHAT_TO_TEST_EN.txt`。每份文件均可单独粘贴。
+- **What to Test：**待 `0.6.0 (12)` 实际上传并核对后，使用 `WHAT_TO_TEST.txt` 或 `WHAT_TO_TEST_EN.txt` 中对应语言正文；当前文件明确标注候选版本尚未上传。
 - **Feedback Email：**`kikuchiheinr@qq.com`。
 - **Beta App Review Information → Sign-in required：**No（本机核心功能无需登录；云账号同步为可选功能且需要邮箱 OTP）。不要描述成所有功能都无需登录。
 - **Beta App Review Information → Contact：**填写本文件前述发布者真实审核联系人。
@@ -62,6 +62,8 @@ App Store Connect 只为主应用创建一条 App 记录并选择 `bundle_id`。
 截至 2026 年 10 月 28 日，Apple 上传构建要求 Xcode 26 或更新版本，并使用 iOS 26 SDK 或更新版本。项目所有者本机为 Xcode 26.5；归档前仍须确认发布者构建环境选择的 Xcode 和 SDK。
 
 源码 `0.5.0 (11)` 已通过 iOS 无签名 Release 归档及 Mac 通用构建；之后 `v0.5.0` 触发的 Xcode Cloud 工作流成功，用户已提供实际 **0.5.0（Build 5）** 的 TestFlight 安装截图。此前 `0.4.2 (10)` 属于历史结果。本资料不包含已签名归档或 IPA；真实云功能、外部 Beta Review 与正式 App Store 上架尚未确认。后台字段中的构建号应填写实际分发值。
+
+当前 `0.6.0 (12)` 源码目标已通过 iOS App + Widgets Release 构建及 Mac universal Release 构建，均为无签名构建；未运行测试、未做真实设备功能验收，也未上传 TestFlight。上一次已核实的 TestFlight 安装版本仍为 **0.5.0（Build 5）**；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录。不要把源码目标写成已分发版本；实际后台字段以最终归档及 TestFlight 显示为准。构建日志路径见 [0.6.0 发布记录](../RELEASE_0.6.0.md)。
 
 开放云账号测试前，请确认现有归档表的 RLS 和邮箱 OTP 邮件投递，并准备审核者可访问的测试邮箱。App 内账号删除依赖 [原生云账号 SQL](../supabase-native-account.sql)，其中的 `mikansei_delete_account` RPC 已于 2026-10-29 部署并核对权限；仍需用无重要资料的专用账号完成真实删除验收。正式提交 App Store 时再准备商店截图即可；本 TestFlight 交接不要求先准备正式商店截图、定价或 App 内购买。
 

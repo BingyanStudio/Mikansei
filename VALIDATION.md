@@ -1,5 +1,14 @@
 # 验证记录
 
+## 0.6.0（12）源码候选 · 2026-10-30
+
+- iOS 与 Mac 工程已重新生成；App、Widgets 与 Mac 目标版本均为 `0.6.0 (12)`。由 `PlistBuddy` 核对最终 iOS App、内嵌 Widget 与 Mac App 产物的版本字段；原 Team 与 Bundle ID 保留。
+- **iOS Release**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，generic iOS destination，`CODE_SIGNING_ALLOWED=NO`，App + `MikanseiWidgets` 一起 `BUILD SUCCEEDED`。最终源码（包括 drag edge-scroll 帧率修正和无效 drag delegate 回调清理）日志：`/private/tmp/mikansei-0.6.0-12-ios-build-final3.log`。产物在 `/private/tmp/mikansei-0.6.0-12-ios-derived/Build/Products/Release-iphoneos/`。
+- **Mac universal Release**：Xcode 26.5 / macOS SDK 26.5，scheme `MikanseiMac`，`ARCHS=x86_64 arm64`、`ONLY_ACTIVE_ARCH=NO`、`CODE_SIGNING_ALLOWED=NO`，`BUILD SUCCEEDED`；`lipo -archs` 确认输出同时含 `x86_64 arm64`。日志：`/private/tmp/mikansei-0.6.0-12-mac-build-final.log`。产物在 `/private/tmp/mikansei-0.6.0-12-mac-derived/Build/Products/Release/`。
+- iOS 保留 `EntryStore` 的 WidgetSnapshot 与 `NotificationManager` 字典捕获 Sendable 警告；Mac 有不依赖 AppIntents framework 的元数据提取提示。它们未阻止无签名构建。
+- 未运行自动化测试；未做 iPhone / Mac 实机 UI、触感、日历权限或冰岩 API 联机验收；未签名、安装、上传或发布 TestFlight。`0.6.0 (12)` 仍是源码候选版本。
+- 上次核实的 TestFlight 安装截图显示 `0.5.0 (Build 5)`；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录。该记录不代表已核实 App Store Connect 的当前最新构建。
+
 ## 今日聚焦移入规划与日程日期筛选 · 2026-10-29
 
 - `git diff --check` 通过。

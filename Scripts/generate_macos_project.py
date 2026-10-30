@@ -7,6 +7,8 @@ from supabase_config import write_client_resource
 ROOT = Path(__file__).resolve().parents[1]
 client_configuration = write_client_resource(ROOT)
 PROJECT = ROOT / "MikanseiMac.xcodeproj"
+DEFAULT_MARKETING_VERSION = "0.6.0"
+DEFAULT_BUILD_NUMBER = "12"
 PROJECT.mkdir(exist_ok=True)
 previous_objects = {}
 if (PROJECT / "project.pbxproj").exists():
@@ -48,7 +50,7 @@ settings = {
     "CLANG_ENABLE_MODULES": "YES", "PRODUCT_NAME": "Mikansei", "PRODUCT_BUNDLE_IDENTIFIER": "com.personal.mikansei.macOS",
     "INFOPLIST_FILE": "Mac/Info.plist", "GENERATE_INFOPLIST_FILE": "NO",
     "CODE_SIGN_STYLE": "Manual", "CODE_SIGN_IDENTITY": "-", "CODE_SIGN_ENTITLEMENTS": "Mac/MikanseiMac.entitlements",
-    "MARKETING_VERSION": "0.5.0", "CURRENT_PROJECT_VERSION": "11", "COMBINE_HIDPI_IMAGES": "YES",
+    "MARKETING_VERSION": DEFAULT_MARKETING_VERSION, "CURRENT_PROJECT_VERSION": DEFAULT_BUILD_NUMBER, "COMBINE_HIDPI_IMAGES": "YES",
     "LD_RUNPATH_SEARCH_PATHS": "$(inherited) @executable_path/../Frameworks",
 }
 for name in ["Debug", "Release"]:
