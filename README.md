@@ -12,7 +12,7 @@
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
-当前源码发布目标为 **0.6.0 (12)**，尚未发布；工程生成和无签名 Release 构建记录见 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录，因此该修正不在已核实的安装版本中。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
+当前源码发布目标为 **0.6.0 (12)**；本地 iOS App + Widgets 与 Mac 无签名 Release 构建已通过。`v0.6.0` annotated tag 已推送，Xcode Cloud 的 Internal TestFlight Build 已启动，但 iOS Archive 步骤仍在进行，尚未确认签名、上传、TestFlight 处理或可更新状态。源码 build 12 不代表实际 TestFlight 构建号；最新进度见 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录，因此该修正不在已核实的安装版本中。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
 另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.5.3 (16)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 

@@ -6,8 +6,9 @@
 - **iOS Release**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，generic iOS destination，`CODE_SIGNING_ALLOWED=NO`，App + `MikanseiWidgets` 一起 `BUILD SUCCEEDED`。最终源码（包括 drag edge-scroll 帧率修正和无效 drag delegate 回调清理）日志：`/private/tmp/mikansei-0.6.0-12-ios-build-final3.log`。产物在 `/private/tmp/mikansei-0.6.0-12-ios-derived/Build/Products/Release-iphoneos/`。
 - **Mac universal Release**：Xcode 26.5 / macOS SDK 26.5，scheme `MikanseiMac`，`ARCHS=x86_64 arm64`、`ONLY_ACTIVE_ARCH=NO`、`CODE_SIGNING_ALLOWED=NO`，`BUILD SUCCEEDED`；`lipo -archs` 确认输出同时含 `x86_64 arm64`。日志：`/private/tmp/mikansei-0.6.0-12-mac-build-final.log`。产物在 `/private/tmp/mikansei-0.6.0-12-mac-derived/Build/Products/Release/`。
 - iOS 保留 `EntryStore` 的 WidgetSnapshot 与 `NotificationManager` 字典捕获 Sendable 警告；Mac 有不依赖 AppIntents framework 的元数据提取提示。它们未阻止无签名构建。
-- 未运行自动化测试；未做 iPhone / Mac 实机 UI、触感、日历权限或冰岩 API 联机验收；未签名、安装、上传或发布 TestFlight。`0.6.0 (12)` 仍是源码候选版本。
+- 未运行自动化测试；未做 iPhone / Mac 实机 UI、触感、日历权限或冰岩 API 联机验收。本地构建未签名或安装；Cloud / TestFlight 状态见下条。`0.6.0 (12)` 仍是源码候选版本。
 - 上次核实的 TestFlight 安装截图显示 `0.5.0 (Build 5)`；提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录。该记录不代表已核实 App Store Connect 的当前最新构建。
+- **GitHub / Xcode Cloud 后续状态**：`experimental/sync` 的远端 SHA 已核实为 `0c4f9575239c56582c2c01755aafb2ec54202a90`；annotated tag `v0.6.0` 的远端对象为 `6cfd87525d299bf5ae77d56303cb188ebf86aea7`，指向同一提交。Tag 已触发 Xcode Cloud check `124121262794`（`Mikansei | Internal TestFlight Build | Archive - iOS`；[Cloud build details](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37/action/0aa50a67-e1e2-4603-ac71-5834d49abe12)）。截至 2026-10-30 晚间的 7 次监测均为 `in_progress`、`conclusion=null`、没有 annotations。尚不能据此声称 Cloud 归档、签名、上传或 TestFlight 处理已成功；云端 build number 未知，不能从源码 `12` 推断。App Store Connect UI 读取超时，未能核实 TestFlight 处理或外部测试状态。
 
 ## 今日聚焦移入规划与日程日期筛选 · 2026-10-29
 

@@ -4,7 +4,9 @@
 
 ## 发布状态
 
-`0.6.0 (12)` 是当前源码发布目标。iOS 和 Mac 工程已重新生成，两端 Release 无签名构建成功；此版本尚未签名、上传 TestFlight 或发布。没有运行测试，也没有完成 iPhone / Mac 设备交互验收。是否为 App Store Connect 当前最新 build 未核实。
+`0.6.0 (12)` 是当前源码发布目标。iOS 和 Mac 工程已重新生成，两端 Release 无签名构建成功；未运行测试，也没有完成 iPhone / Mac 设备交互验收。`experimental/sync` 已推送到 `0c4f9575239c56582c2c01755aafb2ec54202a90`，annotated tag `v0.6.0` 已推送并指向该提交（tag object `6cfd87525d299bf5ae77d56303cb188ebf86aea7`）。
+
+该 tag 已触发 Xcode Cloud `Mikansei | Internal TestFlight Build | Archive - iOS`。Check run `124121262794` 在 2026-10-30 晚间最近 7 次状态读取均为 `in_progress`、`conclusion=null`、无 annotations；[查看 Cloud build](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37/action/0aa50a67-e1e2-4603-ac71-5834d49abe12)。因此目前还不能确认 Cloud 归档已完成、签名上传成功、TestFlight 已处理或用户可更新。源码工程 build number `12` 不等于实际 Cloud / TestFlight build number；后者尚未知。App Store Connect 的 TestFlight 界面读取超时，未能核实处理状态或外部测试可用性。
 
 上次核实的 TestFlight 安装截图显示 `0.5.0 (Build 5)`。提交 `9bb9c94` 没有后续 Xcode Cloud 构建记录，因此这次 schedule focus 修正不在该已核实的构建中。不要把本地源码目标描述成已分发版本。
 
