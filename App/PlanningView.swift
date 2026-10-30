@@ -295,7 +295,19 @@ struct PlanningView: View {
         }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             .background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 10))
             .accessibilityIdentifier("planning-todo-\(entry.id)")
+        #if canImport(UIKit)
+        if canEdit {
+            HStack(spacing: 4) {
+                card.layoutPriority(1)
+                EntryDragHandle(entry: entry)
+                    .frame(width: 32, height: 32)
+            }
+        } else {
+            card
+        }
+        #else
         if canEdit { card.draggable(entry) } else { card }
+        #endif
     }
 }
 
@@ -356,9 +368,6 @@ private struct HourDropTimeline: View {
     private func receive(_ payload: [Entry], minuteOffset: Double) -> Bool {
         guard canEdit, let entry = payload.first,
               let start = CalendarTimelineLayout.start(on: date, minuteOffset: minuteOffset, calendar: calendar) else { return false }
-        #if canImport(UIKit)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        #endif
         drop(entry, start)
         return true
     }
@@ -569,6 +578,7 @@ private struct PlanningMonthPicker: View {
     private func cell(_ day: Date, inMonth: Bool) -> some View {
         let selected = dates.contains { calendar.isDate($0, inSameDayAs: day) }
         let isToday = calendar.isDate(day, inSameDayAs: today)
+        let todayOutlineColor: Color = selected ? PlanningPalette.onAccent : Color.red
         return VStack(spacing: 0) {
             Text("\(calendar.component(.day, from: day))")
                 .font(.subheadline.weight(selected || isToday ? .semibold : .regular))
@@ -581,7 +591,7 @@ private struct PlanningMonthPicker: View {
             .background(selected ? PlanningPalette.accent : Color.clear, in: RoundedRectangle(cornerRadius: 8))
             .overlay {
                 RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(isToday ? (selected ? PlanningPalette.onAccent : Color.red), lineWidth: isToday ? 1 : 0)
+                    .strokeBorder(isToday ? todayOutlineColor : Color.clear, lineWidth: isToday ? 1 : 0)
                     .padding(1)
             }
             .opacity(inMonth ? 1 : 0.4)

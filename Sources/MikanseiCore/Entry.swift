@@ -536,7 +536,7 @@ public struct TaskBoard {
     }
     public var overdue: [Entry] { open.filter { $0.isOverdue(at: now) } }
     public var today: [Entry] {
-        return open.filter { entry in
+        return focusOpenEntries.filter { entry in
             guard !entry.isOverdue(at: now) else { return false }
             if entry.kind == .schedule { return entry.scheduleOccurs(on: now, calendar: calendar) }
             let day = calendar.startOfDay(for: now)

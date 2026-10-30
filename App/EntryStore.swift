@@ -358,7 +358,7 @@ final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
     }
 
     /// Import course calendar rows and their matching in-app schedule entries atomically.
-    /// `source` is a stable importer key with the `bingyan.schedule:` prefix.
+    /// `source` is a deterministic content-hash identity with the `bingyan.schedule:` prefix.
     @discardableResult
     func importCourseSchedules(_ imported: [Course], schedules: [Entry]) -> Bool {
         guard !readOnly else { return false }

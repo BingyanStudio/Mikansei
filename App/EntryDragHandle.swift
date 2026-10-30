@@ -83,10 +83,6 @@ final class EntryDragHandleView: UIView, UIDragInteractionDelegate {
         stopEdgeScrolling()
     }
 
-    func dragInteraction(_ interaction: UIDragInteraction, sessionDidEnd session: UIDragSession) {
-        stopEdgeScrolling()
-    }
-
     private var nearestScrollView: UIScrollView? {
         var candidate = superview
         while let view = candidate {
@@ -114,7 +110,7 @@ final class EntryDragHandleView: UIView, UIDragInteractionDelegate {
         return nil
     }
 
-    @objc private func scrollAtEdges() {
+    @objc private func scrollAtEdges(_ link: CADisplayLink) {
         guard let session = activeSession, let scrollView = activeScrollView else {
             stopEdgeScrolling()
             return
@@ -123,16 +119,18 @@ final class EntryDragHandleView: UIView, UIDragInteractionDelegate {
         let visibleTop = scrollView.contentOffset.y + scrollView.adjustedContentInset.top
         let visibleBottom = scrollView.contentOffset.y + scrollView.bounds.height - scrollView.adjustedContentInset.bottom
         let edgeDistance: CGFloat = 72
-        let edgeSpeed: CGFloat = 18
+        let frameStep = CGFloat(min(max(link.targetTimestamp - link.timestamp, 1.0 / 240.0), 1.0 / 15.0))
+        let edgeSpeedPerSecond: CGFloat = 18 * 60
+        let minimumSpeedPerSecond: CGFloat = 2 * 60
         var delta: CGFloat = 0
 
         if location.x >= scrollView.bounds.minX && location.x <= scrollView.bounds.maxX {
             if location.y < visibleTop + edgeDistance {
                 let strength = min(1, max(0, (visibleTop + edgeDistance - location.y) / edgeDistance))
-                delta = -max(2, edgeSpeed * strength)
+                delta = -max(minimumSpeedPerSecond, edgeSpeedPerSecond * strength) * frameStep
             } else if location.y > visibleBottom - edgeDistance {
                 let strength = min(1, max(0, (location.y - (visibleBottom - edgeDistance)) / edgeDistance))
-                delta = max(2, edgeSpeed * strength)
+                delta = max(minimumSpeedPerSecond, edgeSpeedPerSecond * strength) * frameStep
             }
         }
         guard delta != 0 else { return }
