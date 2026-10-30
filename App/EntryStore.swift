@@ -357,6 +357,37 @@ final class EntryStore: ObservableObject, SyncWorkspace, CloudSyncWorkspace {
         return commit(entries, courses: next)
     }
 
+    /// Import course calendar rows and their matching in-app schedule entries atomically.
+    /// `source` is a stable importer key with the `bingyan.schedule:` prefix.
+    @discardableResult
+    func importCourseSchedules(_ imported: [Course], schedules: [Entry]) -> Bool {
+        guard !readOnly else { return false }
+        var nextCourses = courses
+        for course in imported where course.isValid {
+            let exists = nextCourses.contains {
+                $0.name == course.name && $0.weekday == course.weekday &&
+                $0.startMinutes == course.startMinutes && $0.endMinutes == course.endMinutes &&
+                Calendar.current.isDate($0.firstDate, inSameDayAs: course.firstDate) &&
+                Calendar.current.isDate($0.lastDate, inSameDayAs: course.lastDate)
+            }
+            if !exists { nextCourses.append(course) }
+        }
+
+        let sourcePrefix = "bingyan.schedule:"
+        var knownIDs = Set(entries.map(\.id))
+        var knownScheduleSources = Set(entries.filter { $0.source.hasPrefix(sourcePrefix) }.map(\.source))
+        var nextEntries = entries
+        for candidate in schedules where candidate.kind == .schedule && candidate.source.hasPrefix(sourcePrefix) {
+            guard let start = candidate.plannedStart, let end = candidate.plannedEnd, end > start else { continue }
+            let schedule = candidate.normalized()
+            guard !schedule.title.isEmpty, knownIDs.insert(schedule.id).inserted,
+                  knownScheduleSources.insert(schedule.source).inserted else { continue }
+            nextEntries.append(schedule)
+        }
+        guard nextEntries != entries || nextCourses != courses else { return true }
+        return commit(nextEntries, courses: nextCourses)
+    }
+
     private static func calendarViewExamples(now: Date = Date()) -> [Entry] {
         let calendar = Calendar.current
         let day = calendar.startOfDay(for: now)

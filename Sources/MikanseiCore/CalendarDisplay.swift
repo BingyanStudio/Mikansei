@@ -22,8 +22,11 @@ public enum CalendarDisplay {
         var items: [CalendarDisplayItem] = []
         let successors = Entry.successorDates(in: entries)
         for entry in entries where entry.isTask && (showCompleted || !entry.isCompleted) {
-            var occurrences = [entry]
-            if entry.allowsLocalSuccessorGeneration && !entry.isCompleted {
+            var occurrences: [Entry]
+            if entry.isCalendarBackedRoutine {
+                // Source providers already materialize each occurrence; project the stored instance as-is.
+                occurrences = [entry]
+            } else if entry.allowsLocalSuccessorGeneration && !entry.isCompleted {
                 let base = entry.recurrenceReferenceDate ?? day.start
                 let startOffset = entry.plannedStart?.timeIntervalSince(base) ?? 0
                 let endOffset = entry.plannedEnd?.timeIntervalSince(base) ?? 0
@@ -31,6 +34,8 @@ public enum CalendarDisplay {
                 let to = min(day.end.addingTimeInterval(-min(0, startOffset)), successors[entry.id] ?? .distantFuture)
                 let dates = entry.occurrenceDates(in: from..<max(from, to), calendar: calendar)
                 occurrences = dates.map { entry.occurrence(at: $0, calendar: calendar) }
+            } else {
+                occurrences = [entry]
             }
             for occurrence in occurrences {
                 if let start = occurrence.plannedStart, let end = occurrence.plannedEnd,

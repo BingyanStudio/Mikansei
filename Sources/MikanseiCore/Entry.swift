@@ -161,7 +161,11 @@ public struct Entry: Identifiable, Codable, Equatable {
     }
 
     public var isTask: Bool { kind != .note }
-    public var isRoutine: Bool { isTask && repeatRule != .never }
+    /// Routines include locally defined rules and source-managed calendar series.
+    /// Provider occurrences remain individual entries for completion and checklist state.
+    public var isRoutine: Bool { isLocalRoutine || isCalendarBackedRoutine }
+    public var isLocalRoutine: Bool { isTask && repeatRule != .never }
+    public var isCalendarBackedRoutine: Bool { isTask && (isRecurringCalendarOccurrence || isProviderRoutineSeries) }
     /// EventKit records a stable series event identifier plus a nonempty original occurrence.
     /// The full calendar/source scope avoids merging the same ICS identifier in copied calendars.
     public var isRecurringCalendarOccurrence: Bool {
@@ -178,10 +182,11 @@ public struct Entry: Identifiable, Codable, Equatable {
         return mechanism.caseInsensitiveCompare("calendar") == .orderedSame
     }
     public var allowsLocalSuccessorGeneration: Bool {
-        isRoutine && !isRecurringCalendarOccurrence && !isProviderRoutineSeries
+        isLocalRoutine && !isRecurringCalendarOccurrence && !isProviderRoutineSeries
     }
     public var repeatDays: Int { repeatRule == .custom ? max(1, repeatIntervalDays) : repeatRule.days }
     public var repeatLabel: String {
+        if isCalendarBackedRoutine { return "日历来源重复" }
         if repeatRule == .dates { return "已选 \(Set(repeatDates.map { Calendar.current.startOfDay(for: $0) }).count) 天" }
         if repeatRule == .monthly { return "每 \(repeatIntervalMonths) 月" }
         if repeatRule == .weekly && !repeatWeekdays.isEmpty {
@@ -286,7 +291,7 @@ public struct Entry: Identifiable, Codable, Equatable {
                 result.reminderPattern = .single
             }
             if result.attentionDate == nil { result.reminder = nil; result.repeatRule = .never }
-            if result.isRoutine && result.repeatAnchorDate == nil { result.repeatAnchorDate = result.recurrenceReferenceDate }
+            if result.isLocalRoutine && result.repeatAnchorDate == nil { result.repeatAnchorDate = result.recurrenceReferenceDate }
         }
         result.snoozeMinutes = [5, 10, 15].contains(snoozeMinutes) ? snoozeMinutes : 5
         result.updatedAt = now
@@ -531,12 +536,14 @@ public struct TaskBoard {
     }
     public var overdue: [Entry] { open.filter { $0.isOverdue(at: now) } }
     public var today: [Entry] {
-        let day = calendar.startOfDay(for: now)
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: day)!
         return open.filter { entry in
-            !entry.isOverdue(at: now) && (entry.dueDate.map { calendar.isDate($0, inSameDayAs: now) } == true ||
+            guard !entry.isOverdue(at: now) else { return false }
+            if entry.kind == .schedule { return entry.scheduleOccurs(on: now, calendar: calendar) }
+            let day = calendar.startOfDay(for: now)
+            let tomorrow = calendar.date(byAdding: .day, value: 1, to: day)!
+            return entry.dueDate.map { calendar.isDate($0, inSameDayAs: now) } == true ||
                 (entry.plannedStart.map { $0 < tomorrow } == true && entry.plannedEnd.map { $0 > day } == true) ||
-                entry.plannedDays?.contains { calendar.isDate($0, inSameDayAs: now) } == true)
+                entry.plannedDays?.contains { calendar.isDate($0, inSameDayAs: now) } == true
         }
     }
     public var upcoming: [Entry] {

@@ -36,6 +36,16 @@ public struct CalendarEventIdentity: Codable, Equatable, Hashable {
          (!(knownCalendarIDs.contains(calendarID) && knownCalendarIDs.contains(other.calendarID)) &&
           calendarTitle == other.calendarTitle && sourceTitle == other.sourceTitle))
     }
+    /// Provider-backed identity shared by every occurrence in one source calendar series.
+    /// The local EventKit identifier is intentionally omitted so separate devices converge.
+    public var routineSeriesID: String? {
+        guard !occurrence.isEmpty, !calendarID.isEmpty, !eventID.isEmpty,
+              let data = try? JSONSerialization.data(
+                withJSONObject: ["calendar", "", calendarID, eventID],
+                options: [.withoutEscapingSlashes]
+              ) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
 }
 
 public struct CalendarEventRecord: Codable, Equatable {
@@ -65,6 +75,10 @@ public struct CalendarEventRecord: Codable, Equatable {
         entry.reminder = nil
         entry.location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         entry.platform = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !identity.occurrence.isEmpty {
+            entry.routineSeriesID = identity.routineSeriesID
+            entry.routineOccurrenceID = identity.occurrence
+        }
         let minutes = Int(min(1441, max(0, ceil(end.timeIntervalSince(start) / 60))))
         if !isAllDay && (1...1440).contains(minutes) { entry.estimatedMinutes = minutes }
         return entry
@@ -164,6 +178,12 @@ public enum CalendarImport {
                 if next.plannedEnd == previous.plannedEnd { next.plannedEnd = incoming.plannedEnd }
                 if next.plannedAllDay == previous.plannedAllDay { next.plannedAllDay = incoming.plannedAllDay }
                 if next.estimatedMinutes == previous.estimatedMinutes { next.estimatedMinutes = incoming.estimatedMinutes }
+                if let seriesID = event.identity.routineSeriesID {
+                    if next.routineSeriesID == nil { next.routineSeriesID = seriesID }
+                    if next.isProviderRoutineSeries && next.routineOccurrenceID == nil {
+                        next.routineOccurrenceID = event.identity.occurrence
+                    }
+                }
                 next.calendarEvent = CalendarEventLink(event: event, timing: settings.timing, wasAutomaticallyImported: link.wasAutomaticallyImported)
                 if next != original {
                     next.updatedAt = now
@@ -197,7 +217,7 @@ public enum CalendarImport {
     public static func canClean(_ entry: Entry, selectedIDs: Set<String>) -> Bool {
         guard let link = entry.calendarEvent, !selectedIDs.contains(link.event.identity.calendarID),
               link.wasAutomaticallyImported == true || (link.wasAutomaticallyImported == nil && CalendarSelection(id: link.event.identity.calendarID, title: link.event.identity.calendarTitle, sourceTitle: link.event.identity.sourceTitle).isReferenceCalendar),
-              !entry.isCompleted, !entry.isInPlanning, !entry.isRoutine, entry.checklist.isEmpty, entry.elapsedSeconds == 0,
+              !entry.isCompleted, !entry.isInPlanning, !entry.isLocalRoutine, entry.checklist.isEmpty, entry.elapsedSeconds == 0,
               entry.startedAt == nil, entry.reminder == nil, entry.priority == .normal, entry.source.isEmpty,
               entry.reminderSound == .system, entry.snoozeMinutes == 5, entry.reminderPattern == .single else { return false }
         let imported = link.event.draft(timing: link.timing, now: entry.createdAt)

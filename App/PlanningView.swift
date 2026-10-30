@@ -124,7 +124,37 @@ struct PlanningView: View {
                     }.padding(.horizontal, 20)
                 }
                 if let entry = selected {
-                    if entry.kind == .schedule {
+                    if entry.isCalendarBackedRoutine {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("常态 · 日历来源重复", systemImage: "repeat")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
+                            Text("重复规律由来源日历管理；每次都保留独立的完成状态与清单，无需逐次规划。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            if let start = entry.plannedStart {
+                                Text("本次：\(start.formatted(date: .complete, time: .shortened))" +
+                                     (entry.plannedEnd.map { $0 > start ? " — \($0.formatted(date: .omitted, time: .shortened))" : "" } ?? ""))
+                                    .font(.subheadline)
+                            } else if let due = entry.dueDate {
+                                Text("本次截止：\(due.formatted(date: .complete, time: .shortened))")
+                                    .font(.subheadline)
+                            }
+                            Button("编辑本次日历事项") { dismiss(); edit(entry) }
+                                .buttonStyle(.bordered).disabled(!canEdit)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
+                    } else if entry.isRoutine {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Label("常态 · 按重复规则自动规划", systemImage: "repeat")
+                                .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
+                            Text("「\(entry.title)」的发生日期由重复规则决定，无需逐日涂色。")
+                                .font(.subheadline).foregroundStyle(.secondary)
+                            // 先收起规划页再开编辑器，避免同一处两个 sheet 抢展示位。
+                            Button("打开编辑器") { dismiss(); edit(entry) }.buttonStyle(.bordered)
+                        }.frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
+                            .padding(.horizontal, 20)
+                    } else if entry.kind == .schedule {
                         VStack(alignment: .leading, spacing: 10) {
                             Label("日程按执行时段显示", systemImage: "calendar")
                                 .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
@@ -146,20 +176,9 @@ struct PlanningView: View {
                         }.frame(maxWidth: .infinity, alignment: .leading)
                             .padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
                             .padding(.horizontal, 20)
-                    } else if entry.isRoutine {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Label("常态 · 按重复规则自动规划", systemImage: "repeat")
-                                .font(.subheadline.weight(.semibold)).foregroundStyle(PlanningPalette.accent)
-                            Text("「\(entry.title)」的发生日期由重复规则决定，无需逐日涂色。")
-                                .font(.subheadline).foregroundStyle(.secondary)
-                            // 先收起规划页再开编辑器，避免同一处两个 sheet 抢展示位。
-                            Button("打开编辑器") { dismiss(); edit(entry) }.buttonStyle(.bordered)
-                        }.frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16).background(PlanningPalette.card, in: RoundedRectangle(cornerRadius: 18))
-                            .padding(.horizontal, 20)
                     } else {
                         VStack(spacing: 14) {
-                            PlanningMonthPicker(dates: $draftDays, initialDate: now)
+                            PlanningMonthPicker(dates: $draftDays, initialDate: now, today: now)
                             HStack {
                                 Text("所选日子会进入「今天要做」。").font(.caption).foregroundStyle(.secondary)
                                 Spacer()
@@ -189,9 +208,13 @@ struct PlanningView: View {
             VStack(alignment: .leading, spacing: 5) {
                 Text(entry.title).font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.primary).lineLimit(2).multilineTextAlignment(.leading)
-                if entry.kind == .schedule, let start = entry.plannedStart {
+                if entry.isCalendarBackedRoutine {
+                    Text("常态 · 来源日历重复").font(.caption2).foregroundStyle(PlanningPalette.accent)
+                } else if entry.kind == .schedule, let start = entry.plannedStart {
                     Text(start.formatted(date: .abbreviated, time: .shortened))
                         .font(.caption2).foregroundStyle(.secondary)
+                } else if entry.isRoutine {
+                    Text("常态 · \(entry.repeatLabel)").font(.caption2).foregroundStyle(PlanningPalette.accent)
                 } else if let days = entry.plannedDays, !days.isEmpty {
                     Text("已规划 \(days.count) 天").font(.caption2).foregroundStyle(.secondary)
                 }
@@ -211,16 +234,28 @@ struct PlanningView: View {
     // MARK: - 小时规划
 
     @ViewBuilder private var hoursPane: some View {
-        if supportsDrag {
-            HStack(alignment: .top, spacing: 0) {
-                todayColumn.frame(width: 150)
-                Divider()
-                HourDropTimeline(date: now, items: dayItems, now: now, calendar: Calendar.current,
-                                 edit: edit, drop: drop, canEdit: canEdit)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Label(now.formatted(date: .complete, time: .omitted), systemImage: "calendar")
+                    .font(.subheadline.weight(.semibold))
+                Text("今天")
+                    .font(.caption.weight(.bold)).foregroundStyle(.red)
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(Color.red.opacity(0.1), in: Capsule())
+                Spacer()
             }
-        } else {
-            MacHourFields(targets: board.today, now: now, setPlannedTime: setPlannedTime)
-                .disabled(!canEdit)
+            .padding(.horizontal, 12).padding(.top, 6)
+            if supportsDrag {
+                HStack(alignment: .top, spacing: 0) {
+                    todayColumn.frame(width: 150)
+                    Divider()
+                    HourDropTimeline(date: now, items: dayItems, now: now, calendar: Calendar.current,
+                                     edit: edit, drop: drop, canEdit: canEdit)
+                }
+            } else {
+                MacHourFields(targets: board.today, now: now, setPlannedTime: setPlannedTime)
+                    .disabled(!canEdit)
+            }
         }
     }
     /// 左列：今天要做、还没有执行时段的待办，可拖入右侧时间轴。
@@ -485,15 +520,17 @@ private struct PlanningMonthPicker: View {
     @Binding var dates: [Date]
     @State private var month = Date()
     @State private var painting: Painting?
+    private let today: Date
     enum Painting { case add, remove }
     private let rowHeight: CGFloat = 40
     private let rowGap: CGFloat = 6
     private let columnGap: CGFloat = 2
     private var calendar: Calendar { var value = Calendar.current; value.firstWeekday = 2; return value }
 
-    init(dates: Binding<[Date]>, initialDate: Date) {
+    init(dates: Binding<[Date]>, initialDate: Date, today: Date) {
         _dates = dates
         _month = State(initialValue: initialDate)
+        self.today = today
     }
     var body: some View {
         VStack(spacing: 12) {
@@ -508,7 +545,7 @@ private struct PlanningMonthPicker: View {
             }
             HStack { ForEach(["一", "二", "三", "四", "五", "六", "日"], id: \.self) { Text($0).font(.caption).frame(maxWidth: .infinity) } }
             grid
-            Text("点按切换，滑动连续涂色，可跨月。已选 \(dates.count) 天。")
+            Text("今天标记为「今」；所选日期填充主题色。点按切换或滑动涂色，已选 \(dates.count) 天。")
                 .font(.caption).foregroundStyle(.secondary)
         }.accessibilityIdentifier("planning-month-picker")
     }
@@ -531,16 +568,28 @@ private struct PlanningMonthPicker: View {
     }
     private func cell(_ day: Date, inMonth: Bool) -> some View {
         let selected = dates.contains { calendar.isDate($0, inSameDayAs: day) }
-        return Text("\(calendar.component(.day, from: day))")
-            .font(.subheadline.weight(selected ? .semibold : .regular))
+        let isToday = calendar.isDate(day, inSameDayAs: today)
+        return VStack(spacing: 0) {
+            Text("\(calendar.component(.day, from: day))")
+                .font(.subheadline.weight(selected || isToday ? .semibold : .regular))
+            if isToday {
+                Text("今").font(.system(size: 8, weight: .bold)).lineLimit(1)
+            }
+        }
             .frame(maxWidth: .infinity, minHeight: rowHeight)
             .foregroundStyle(selected ? PlanningPalette.onAccent : Color.primary)
             .background(selected ? PlanningPalette.accent : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+            .overlay {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isToday ? (selected ? PlanningPalette.onAccent : Color.red), lineWidth: isToday ? 1 : 0)
+                    .padding(1)
+            }
             .opacity(inMonth ? 1 : 0.4)
             .contentShape(Rectangle())
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(day.formatted(.dateTime.year().month().day()))
+            .accessibilityLabel(day.formatted(.dateTime.year().month().day()) + (isToday ? "，今天" : ""))
             .accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityHint(isToday ? "今天；点按或滑动可切换规划选择。" : "点按或滑动可切换规划选择。")
             .accessibilityIdentifier("planning-day-\(Int(day.timeIntervalSince1970))")
     }
     /// 网格固定 7 列、行高 rowHeight，按落点换算行列即可命中；起手那天决定本次是涂还是擦。

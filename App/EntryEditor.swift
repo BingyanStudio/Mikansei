@@ -181,11 +181,15 @@ struct EntryEditor: View {
                             Label(draft.plannedAllDay ? "全天安排" : "执行时段", systemImage: "calendar")
                             Text("\(Theme.dateLabel(start)) — \(Theme.dateLabel(draft.plannedAllDay ? end.addingTimeInterval(-1) : end))").font(.subheadline)
                         }
-                        Button(draft.calendarEvent == nil ? "保存并安排到苹果日历" : "保存并编辑日历日程", systemImage: "calendar.badge.plus") {
+                        Button(draft.calendarEvent == nil ? "保存并安排到苹果日历" : draft.isCalendarBackedRoutine ? "保存并编辑本次日历事项" : "保存并编辑日历日程", systemImage: "calendar.badge.plus") {
                             Task { await saveToCalendar() }
                         }.disabled(!canSave || draft.repeatRule != .never).accessibilityIdentifier("plan-in-calendar")
                     } header: { Text("实际安排 · 可选") } footer: {
-                        Text(draft.isRoutine ? "常态在 Mikansei 中按规则重复。苹果日历来源的重复事件按每一次分别同步，避免双重重复。" : "按开始时间和持续时间保存日程即可；需要同步到苹果日历时再点此按钮。DDL 待办不必安排执行时段。")
+                        Text(draft.isCalendarBackedRoutine
+                             ? "重复规律由来源日历管理；此处可写回本次日历事项，不会为每次事件生成本地副本。"
+                             : draft.isLocalRoutine
+                                ? "常态在 Mikansei 中按本地重复规则生成后续事项。"
+                                : "按开始时间和持续时间保存日程即可；需要同步到苹果日历时再点此按钮。DDL 待办不必安排执行时段。")
                     }
                     if !isNew {
                         Section {
@@ -301,18 +305,18 @@ struct EntryEditor: View {
     }
     private var routineSection: some View {
         Section {
-            if draft.calendarEvent?.event.identity.occurrence.isEmpty == false {
-                Label("常态 · 苹果日历重复", systemImage: "repeat")
-                Text("重复规律由苹果日历管理，每次日程分别同步；在苹果日历中修改规律。")
+            if draft.isCalendarBackedRoutine {
+                Label("常态 · 日历来源重复", systemImage: "repeat")
+                Text("发生规律由来源日历管理；Mikansei 保留本次完成状态与 Checklist。系列重复规则请在来源日历中修改。")
                     .font(.caption).foregroundStyle(.secondary)
             } else {
-                Toggle("常态（Routine）", isOn: Binding(get: { draft.isRoutine }, set: { enabled in
+                Toggle("常态（Routine）", isOn: Binding(get: { draft.isLocalRoutine }, set: { enabled in
                     draft.repeatRule = enabled ? .daily : .never
                     if enabled && candidate.recurrenceReferenceDate == nil { hasDueDate = true }
                     draft.repeatAnchorDate = nil
                     if enabled { draft.reminderPattern = .single }
                 })).accessibilityIdentifier("routine-enabled")
-                if draft.isRoutine {
+                if draft.isLocalRoutine {
                     Picker("发生规律", selection: $draft.repeatRule) {
                         ForEach(RepeatRule.allCases.filter { $0 != .never }) { Text($0.title).tag($0) }
                     }.clearOptionText().accessibilityIdentifier("routine-rule")
@@ -341,7 +345,9 @@ struct EntryEditor: View {
                 }
             }
         } header: { Text("标签") } footer: {
-            Text("常态可加在待办或日程上。完成当前事项后生成下一次，步骤和计时重新开始；日历会展示后续日期，点选可编辑常态规则。")
+            Text(draft.isCalendarBackedRoutine
+                 ? "日历来源的常态按每次分别同步；可保存并编辑本次日历事项，系列规律仍在来源日历管理。"
+                 : "常态可加在待办或日程上。完成当前事项后生成下一次，步骤和计时重新开始；日历会展示后续日期，点选可编辑常态规则。")
         }
     }
     private var reminderSection: some View {

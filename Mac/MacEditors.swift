@@ -40,15 +40,29 @@ struct MacEntryEditor: View {
                     TextField("处理平台", text: $draft.platform)
                     TextField("地点", text: $draft.location)
                     TextField("预计分钟", value: $draft.estimatedMinutes, format: .number)
-                    Picker("常态", selection: $draft.repeatRule) { ForEach(RepeatRule.allCases) { Text($0.title).tag($0) } }
-                    if draft.repeatRule == .custom { Stepper("每 \(draft.repeatIntervalDays) 天", value: $draft.repeatIntervalDays, in: 1...365) }
-                    if draft.repeatRule == .monthly { Stepper("每 \(draft.repeatIntervalMonths) 月", value: $draft.repeatIntervalMonths, in: 1...12) }
-                    if draft.repeatRule == .weekly {
-                        HStack { ForEach(1...7, id: \.self) { day in Toggle(["一", "二", "三", "四", "五", "六", "日"][day - 1], isOn: Binding(get: { draft.repeatWeekdays.contains(day) }, set: { on in draft.repeatWeekdays.removeAll { $0 == day }; if on { draft.repeatWeekdays.append(day) } })).toggleStyle(.button) } }
-                    }
-                    if draft.repeatRule == .dates {
-                        HStack { DatePicker("选日", selection: $repeatDate, displayedComponents: .date); Button("加入") { draft.repeatDates.append(repeatDate) } }
-                        ForEach(Array(draft.repeatDates.enumerated()), id: \.offset) { index, date in HStack { Text(date, style: .date); Spacer(); Button("移除") { draft.repeatDates.remove(at: index) } } }
+                    if draft.isCalendarBackedRoutine {
+                        Section("常态") {
+                            Label("日历来源重复", systemImage: "repeat")
+                            Text("发生规律由来源日历管理；这里保留每次事项的完成状态与 Checklist。请在来源日历中修改系列规律。")
+                                .font(.caption).foregroundStyle(.secondary)
+                            if let link = draft.calendarEvent {
+                                LabeledContent("来源日历", value: link.event.identity.calendarTitle)
+                                LabeledContent("账号", value: link.event.identity.sourceTitle)
+                            }
+                        }
+                    } else {
+                        Picker("常态", selection: $draft.repeatRule) { ForEach(RepeatRule.allCases) { Text($0.title).tag($0) } }
+                        if draft.isLocalRoutine {
+                            if draft.repeatRule == .custom { Stepper("每 \(draft.repeatIntervalDays) 天", value: $draft.repeatIntervalDays, in: 1...365) }
+                            if draft.repeatRule == .monthly { Stepper("每 \(draft.repeatIntervalMonths) 月", value: $draft.repeatIntervalMonths, in: 1...12) }
+                            if draft.repeatRule == .weekly {
+                                HStack { ForEach(1...7, id: \.self) { day in Toggle(["一", "二", "三", "四", "五", "六", "日"][day - 1], isOn: Binding(get: { draft.repeatWeekdays.contains(day) }, set: { on in draft.repeatWeekdays.removeAll { $0 == day }; if on { draft.repeatWeekdays.append(day) } })).toggleStyle(.button) } }
+                            }
+                            if draft.repeatRule == .dates {
+                                HStack { DatePicker("选日", selection: $repeatDate, displayedComponents: .date); Button("加入") { draft.repeatDates.append(repeatDate) } }
+                                ForEach(Array(draft.repeatDates.enumerated()), id: \.offset) { index, date in HStack { Text(date, style: .date); Spacer(); Button("移除") { draft.repeatDates.remove(at: index) } } }
+                            }
+                        }
                     }
                     if draft.attentionDate != nil {
                         Toggle("提醒", isOn: Binding(get: { draft.reminder != nil }, set: { draft.reminder = $0 ? .atTime : nil }))
