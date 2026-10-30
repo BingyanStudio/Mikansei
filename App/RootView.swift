@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct EditingSession: Identifiable {
     let id = UUID()
@@ -25,7 +26,6 @@ struct RootView: View {
     @State private var editing: EditingSession?
     @State private var noteEditing: EditingSession?
     @State private var settings = false
-    @State private var messageImport = false
     @State private var tab = AppTab.tasks
     @AppStorage("schedulePage") private var todayPage = 0
     @State private var todayNavigationID = UUID()
@@ -63,7 +63,7 @@ struct RootView: View {
             }
         }
         .overlay {
-            if editing == nil && noteEditing == nil && !settings && !messageImport, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
+            if editing == nil && noteEditing == nil && !settings, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
         }
         .sheet(item: $editing, onDismiss: applyPendingRoute) { session in EntryEditor(entry: session.entry, isNew: session.isNew) }
         // Notes edit on a full Apple-Notes style page instead of a sheet.
@@ -71,11 +71,10 @@ struct RootView: View {
             NoteEditorView(entry: session.entry, isNew: session.isNew)
         }
         .sheet(isPresented: $settings, onDismiss: applyPendingRoute) { NavigationStack { SettingsView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { settings = false } } } } }
-        .sheet(isPresented: $messageImport, onDismiss: applyPendingRoute) { MessageImportView() }
         .onOpenURL { url in
             guard let route = AppRoute(url: url) else { return }
             // Preserve an existing unsaved draft; the widget destination opens after its sheet closes.
-            if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = route }
+            if editing != nil || noteEditing != nil || settings { pendingRoute = route }
             else { open(route) }
         }
         .alert("操作未完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
@@ -108,13 +107,13 @@ struct RootView: View {
         }
         .onReceive(notifications.$openedEntryID) { id in
             if let id, let entry = store.entries.first(where: { $0.id == id }) {
-                if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = .entry(id) } else { edit(entry) }
+                if editing != nil || noteEditing != nil || settings { pendingRoute = .entry(id) } else { edit(entry) }
             }
             if id != nil { notifications.openedEntryID = nil }
         }
         .onReceive(notifications.$openedRoute) { route in
             if let route {
-                if editing != nil || noteEditing != nil || settings || messageImport { pendingRoute = route } else { open(route) }
+                if editing != nil || noteEditing != nil || settings { pendingRoute = route } else { open(route) }
             }
             if route != nil { notifications.openedRoute = nil }
         }
@@ -131,9 +130,6 @@ struct RootView: View {
     }
     @ToolbarContentBuilder private var addToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) { Button("设置", systemImage: "gearshape") { settings = true } }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button("从消息添加", systemImage: "text.badge.plus") { messageImport = true }.disabled(store.readOnly)
-        }
         ToolbarItem(placement: .topBarTrailing) {
             Button { add(tab == .today ? .schedule : tab == .notes ? .note : .task) } label: {
                 Image(systemName: "plus").font(.title3.weight(.medium)).frame(width: 36, height: 36)
@@ -223,7 +219,7 @@ struct TodayView: View {
                     focusList(board, now: context.date)
                 }
             }.background(Theme.background).navigationTitle("日程")
-                .navigationBarTitleDisplayMode(page == 2 ? .inline : .large)
+                .navigationBarTitleDisplayMode(.inline)
                 .sheet(isPresented: $showPlanning, onDismiss: presentPendingPlanningEdit) {
                     PlanningView(entries: store.entries, now: context.date, edit: { entry in
                                      pendingPlanningEdit = entry
@@ -236,7 +232,7 @@ struct TodayView: View {
                 }
         }
     }
-    /// 今日聚焦：分组滚动列表；长按卡片拖到同组另一张卡上即组内排序（写 sortOrder）。
+    /// 今日聚焦：分组滚动列表；长按卡片右侧抓手可在同组内排序（写 sortOrder）。
     private func focusList(_ board: TaskBoard, now: Date) -> some View {
         let focus = board.focus
         let overdueIDs = Set(board.overdue.map(\.id))
@@ -254,11 +250,15 @@ struct TodayView: View {
                     EmptyCard(symbol: "sun.max", title: "今天可以从容一点", message: "给今天安排一件小事，或继续你的无日期清单。", actionTitle: "添加待办") { add(.task) }
                         .padding(.horizontal, 20).padding(.vertical, 8)
                 } else {
+                    if !store.readOnly {
+                    Text("长按卡片右侧“拖动”抓手排序；拖到列表上 / 下边缘可自动滚动。")
+                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 8)
+                    }
                     ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
                         SectionLabel(title: group.title, count: group.entries.count, color: group.color)
                             .padding(.horizontal, 20)
                         ForEach(group.entries) { entry in
-                            EntryDragRow(entry: entry, group: group.entries, movable: group.movable,
+                            EntryDragRow(entry: entry, group: group.entries, movable: group.movable && !store.readOnly,
                                          onDrop: reorderWithin,
                                          onMoveToPlanning: !store.readOnly && group.movable && !entry.isCompleted
                                             ? { _ = store.moveToPlanning(entry.id) } : nil,
@@ -273,15 +273,15 @@ struct TodayView: View {
         }
     }
     /// 拖拽落点：把拖拽卡移到目标卡的位置（限同一分组），按组内新顺序写 sortOrder。
-    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry]) -> Bool {
+    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry], after: Bool) -> Bool {
         guard dragged.id != target.id,
               let from = group.firstIndex(where: { $0.id == dragged.id }),
-              let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
+              group.contains(where: { $0.id == target.id }) else { return false }
         var ids = group.map(\.id)
-        ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        store.reorder(ids)
-        return true
+        let id = ids.remove(at: from)
+        guard let targetIndex = ids.firstIndex(of: target.id) else { return false }
+        ids.insert(id, at: targetIndex + (after ? 1 : 0))
+        return store.reorder(ids)
     }
     private func presentPendingPlanningEdit() {
         guard let entry = pendingPlanningEdit else { return }
@@ -375,11 +375,16 @@ struct TasksView: View {
             }.padding(.horizontal, 20).padding(.top, 12).padding(.bottom, 12)
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
+                    if !showCompleted && !visibleEntries.isEmpty && !store.readOnly {
+                        Text("长按卡片右侧“拖动”抓手排序；拖到列表上 / 下边缘可自动滚动。")
+                            .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 20).padding(.vertical, 8)
+                    }
                     listBody(visibleEntries)
                 }.padding(.top, 4).padding(.bottom, 16)
                     .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: visibleEntries.map(\.id))
             }
         }.background(Theme.background).navigationTitle("待办")
+            .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $query, prompt: "搜索事项、平台或地点")
             .onReceive(Timer.publish(every: 60, on: .main, in: .common).autoconnect()) { now = $0 }
             .onAppear { now = Date() }
@@ -403,7 +408,7 @@ struct TasksView: View {
             ForEach(groups.filter { !$0.entries.isEmpty }, id: \.title) { group in
                 SectionLabel(title: group.title, count: group.entries.count, color: group.color).padding(.horizontal, 20)
                 ForEach(group.entries) { entry in
-                    EntryDragRow(entry: entry, group: group.entries, movable: group.movable,
+                    EntryDragRow(entry: entry, group: group.entries, movable: group.movable && !store.readOnly,
                                  onDrop: reorderWithin,
                                  content: { EntryCard(entry: entry, edit: { edit(entry) }, now: now, showsContextMenu: false) })
                         .padding(.horizontal, 20).padding(.vertical, 8)
@@ -412,61 +417,97 @@ struct TasksView: View {
         }
     }
     /// 拖拽落点：把拖拽卡移到目标卡的位置（限同一分组），按组内新顺序写 sortOrder。
-    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry]) -> Bool {
+    private func reorderWithin(_ dragged: Entry, _ target: Entry, _ group: [Entry], after: Bool) -> Bool {
         guard dragged.id != target.id,
               let from = group.firstIndex(where: { $0.id == dragged.id }),
-              let to = group.firstIndex(where: { $0.id == target.id }) else { return false }
+              group.contains(where: { $0.id == target.id }) else { return false }
         var ids = group.map(\.id)
-        ids.move(fromOffsets: IndexSet(integer: from), toOffset: to)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        store.reorder(ids)
-        return true
+        let id = ids.remove(at: from)
+        guard let targetIndex = ids.firstIndex(of: target.id) else { return false }
+        ids.insert(id, at: targetIndex + (after ? 1 : 0))
+        return store.reorder(ids)
     }
 }
 
-/// 拖动排序行：长按卡片拖到同组另一张卡上，落点卡让位并按组内新顺序写 sortOrder。
-/// （List.onMove 在 iOS 26 模拟器上会把内容尺寸翻倍并冻结滚动，这里用拖放实现组内排序。）
+/// 拖动排序行：长按右侧抓手，将卡片放到同组另一张卡上；边缘区域会滚动列表。
 struct EntryDragRow<Content: View>: View {
+    @EnvironmentObject private var store: EntryStore
     let entry: Entry
     let group: [Entry]
     let movable: Bool
     /// 返回是否完成了移动，作为 drop 接收结果。
-    let onDrop: (Entry, Entry, [Entry]) -> Bool
+    let onDrop: (Entry, Entry, [Entry], Bool) -> Bool
     var onMoveToPlanning: (() -> Void)? = nil
     var reduceMotion = false
     @ViewBuilder var content: () -> Content
     @State private var targeted = false
-    @ViewBuilder private var dragEnabledContent: some View {
-        let card = content()
-            .overlay {
-                if targeted {
-                    RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.accent, lineWidth: 2)
-                        .allowsHitTesting(false)
-                }
+    @State private var rowHeight: CGFloat = 0
+    private var canDrag: Bool { movable && !store.readOnly }
+
+    @ViewBuilder private var rowContent: some View {
+        let card = content().overlay {
+            if targeted {
+                RoundedRectangle(cornerRadius: 18).strokeBorder(Theme.accent, lineWidth: 2)
+                    .allowsHitTesting(false)
             }
-        if movable {
-            card.draggable(entry)
-                .dropDestination(for: Entry.self) { payload, _ in
-                    guard let dragged = payload.first else { return false }
-                    return onDrop(dragged, entry, group)
-                } isTargeted: { targeted = $0 }
+        }
+        HStack(alignment: .center, spacing: 8) {
+            if let onMoveToPlanning {
+                FocusSwipeRow(action: onMoveToPlanning, reduceMotion: reduceMotion) {
+                    card.frame(maxWidth: .infinity)
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                card.frame(maxWidth: .infinity)
+            }
+            if canDrag {
+                EntryDragHandle(entry: entry)
+                    .frame(width: 48, height: 52)
+                    .background(Color(uiColor: .tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+                    .overlay(alignment: .bottom) {
+                        Text("拖动").font(.caption2).foregroundStyle(.secondary).padding(.bottom, 3)
+                            .allowsHitTesting(false)
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("拖动排序：\(entry.title)")
+                    .accessibilityHint("长按此抓手拖动排序，也可以使用上移或下移操作。")
+                    .accessibilityAction(named: Text("上移")) { moveForAccessibility(by: -1) }
+                    .accessibilityAction(named: Text("下移")) { moveForAccessibility(by: 1) }
+            }
+        }
+        .background {
+            GeometryReader { geometry in
+                Color.clear
+                    .onAppear { rowHeight = geometry.size.height }
+                    .onChange(of: geometry.size.height) { _, height in rowHeight = height }
+            }
+        }
+        .contentShape(Rectangle())
+    }
+
+    var body: some View {
+        if canDrag {
+            rowContent.dropDestination(for: Entry.self) { payload, location in
+                guard !store.readOnly, let dragged = payload.first else { return false }
+                return onDrop(dragged, entry, group, location.y >= rowHeight / 2)
+            } isTargeted: { targeted = $0 }
         } else {
-            card
+            rowContent
         }
     }
-    @ViewBuilder var body: some View {
-        if let onMoveToPlanning {
-            FocusSwipeRow(action: onMoveToPlanning, reduceMotion: reduceMotion) {
-                dragEnabledContent
-            }
-        } else {
-            dragEnabledContent
+
+    private func moveForAccessibility(by offset: Int) {
+        guard canDrag, let index = group.firstIndex(where: { $0.id == entry.id }) else { return }
+        let targetIndex = index + offset
+        guard group.indices.contains(targetIndex) else { return }
+        let after = offset > 0
+        if onDrop(entry, group[targetIndex], group, after) {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
     }
 }
 
-/// A horizontal action layer that does not replace the containing ScrollView or
-/// the row's native long-press drag/drop behavior.
+/// A horizontal action layer that leaves the row's drag handle separate from swipe recognition.
 private struct FocusSwipeRow<Content: View>: View {
     private enum Direction { case horizontal, vertical }
     private let actionWidth: CGFloat = 132
@@ -553,6 +594,8 @@ struct NotesView: View {
                               message: "随手记录灵感、课堂重点，或一份旅行清单。", actionTitle: "写一条笔记") { add(.note) }
                 } else { ForEach(notes) { entry in EntryCard(entry: entry, edit: { edit(entry) }) } }
             }.padding(20).padding(.bottom, 16)
-        }.background(Theme.background).navigationTitle("笔记").searchable(text: $query, prompt: "搜索笔记与清单")
+        }.background(Theme.background).navigationTitle("笔记").navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $query, prompt: "搜索笔记与清单")
     }
 }
+

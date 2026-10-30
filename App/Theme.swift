@@ -139,11 +139,17 @@ struct EntryCard: View {
     let entry: Entry
     let edit: () -> Void
     var now: Date = Date()
-    /// false 时省略长按菜单：拖动排序行用长按起拖，两者手势冲突。
+    /// false 时省略长按菜单。
     var showsContextMenu = true
+    @State private var pendingStepsExpanded = true
+    @State private var completedStepsExpanded = false
+    @State private var newChecklistStep = ""
     private var isDoing: Bool { entry.startedAt != nil && !entry.isCompleted }
+    private var pendingSteps: [ChecklistItem] { entry.checklist.filter { !$0.isDone } }
+    private var doneSteps: [ChecklistItem] { entry.checklist.filter(\.isDone) }
     var body: some View {
         let card = content.padding(16).background(EntryCardBackground(isDoing: isDoing))
+            .onChange(of: pendingSteps.map(\.id)) { _, _ in pendingStepsExpanded = true }
         if showsContextMenu {
             card.contextMenu { Button("编辑", systemImage: "pencil", action: edit) }
         } else {
@@ -209,20 +215,54 @@ struct EntryCard: View {
                         ProgressView(value: entry.progress).tint(Theme.color(for: entry.kind)).frame(maxWidth: 100)
                         Text("\(entry.completedSteps)/\(entry.checklist.count) 项").font(.caption).foregroundStyle(.secondary)
                     }.accessibilityElement(children: .combine)
-                    ForEach(entry.checklist.prefix(3)) { step in
-                        Button { UISelectionFeedbackGenerator().selectionChanged(); withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) { store.toggleStep(entryID: entry.id, stepID: step.id) } } label: {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: step.isDone ? "checkmark.square.fill" : "square")
-                                    .foregroundStyle(step.isDone ? Theme.accent : .primary)
-                                Text(step.title).strikethrough(step.isDone).foregroundStyle(step.isDone ? .secondary : .primary).multilineTextAlignment(.leading)
+                    if !pendingSteps.isEmpty {
+                        Button {
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+                                pendingStepsExpanded.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(pendingStepsExpanded ? "收起待办 · \(pendingSteps.count) 项" : "显示待办 · \(pendingSteps.count) 项")
+                                Image(systemName: pendingStepsExpanded ? "chevron.up" : "chevron.down").font(.caption2)
                                 Spacer(minLength: 0)
-                            }.font(.subheadline).padding(.vertical, 4).frame(minHeight: 32).contentShape(Rectangle())
-                        }.buttonStyle(.plain).disabled(store.readOnly)
-                            .accessibilityLabel("\(step.isDone ? "取消完成" : "完成")步骤：\(step.title)")
+                            }.font(.caption).foregroundStyle(.secondary).padding(.vertical, 4)
+                        }.buttonStyle(.plain)
+                            .accessibilityLabel(pendingStepsExpanded ? "收起待办步骤" : "展开待办步骤，共 \(pendingSteps.count) 项")
+                        if pendingStepsExpanded {
+                            ForEach(pendingSteps) { checklistButton($0) }
+                        }
                     }
-                    if entry.checklist.count > 3 {
-                        Button("查看全部 \(entry.checklist.count) 个步骤", action: edit).font(.caption)
+                    if !doneSteps.isEmpty {
+                        Button {
+                            withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
+                                completedStepsExpanded.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text(completedStepsExpanded ? "收起已完成 · \(doneSteps.count) 项" : "显示已完成 · \(doneSteps.count) 项")
+                                Image(systemName: completedStepsExpanded ? "chevron.up" : "chevron.down").font(.caption2)
+                                Spacer(minLength: 0)
+                            }.font(.caption).foregroundStyle(.secondary).padding(.vertical, 4)
+                        }.buttonStyle(.plain)
+                            .accessibilityLabel(completedStepsExpanded ? "收起已完成步骤" : "展开已完成步骤，共 \(doneSteps.count) 项")
+                        if completedStepsExpanded {
+                            ForEach(doneSteps) { checklistButton($0) }
+                        }
                     }
+                }
+                if !store.readOnly {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle").foregroundStyle(Theme.accent)
+                        TextField("添加子事项", text: $newChecklistStep)
+                            .submitLabel(.done)
+                            .onSubmit(addChecklistStep)
+                            .accessibilityIdentifier("card-new-step-\(entry.id)")
+                        Button(action: addChecklistStep) {
+                            Image(systemName: "plus.circle.fill").foregroundStyle(Theme.accent)
+                        }.buttonStyle(.plain)
+                            .disabled(newChecklistStep.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityLabel("添加子事项")
+                    }.font(.subheadline).padding(.vertical, 4)
                 }
                 if entry.isTask && !entry.isCompleted {
                     HStack(spacing: 12) {
@@ -246,6 +286,37 @@ struct EntryCard: View {
     private func complete() {
         UISelectionFeedbackGenerator().selectionChanged()
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.16)) { store.toggleCompletion(entry.id) }
+    }
+    private func checklistButton(_ step: ChecklistItem) -> some View {
+        Button {
+            UISelectionFeedbackGenerator().selectionChanged()
+            withAnimation(reduceMotion ? nil : .smooth(duration: 0.35)) {
+                store.toggleStep(entryID: entry.id, stepID: step.id)
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: step.isDone ? "checkmark.square.fill" : "square")
+                    .foregroundStyle(step.isDone ? Theme.accent : .primary)
+                Text(step.title).strikethrough(step.isDone)
+                    .foregroundStyle(step.isDone ? .secondary : .primary).multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+            }.font(.subheadline).padding(.vertical, 4).frame(minHeight: 32).contentShape(Rectangle())
+        }.buttonStyle(.plain).disabled(store.readOnly)
+            .accessibilityLabel("\(step.isDone ? "取消完成" : "完成")步骤：\(step.title)")
+    }
+    private func addChecklistStep() {
+        let title = newChecklistStep.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, !store.readOnly,
+              var latest = store.entries.first(where: { $0.id == entry.id }) else { return }
+        latest.checklist.append(ChecklistItem(title: title))
+        if latest.isTask && latest.isCompleted {
+            latest.isCompleted = false
+            latest.completedAt = nil
+        }
+        guard store.save(latest) else { return }
+        newChecklistStep = ""
+        pendingStepsExpanded = true
+        UISelectionFeedbackGenerator().selectionChanged()
     }
     private var metadata: some View { HStack(spacing: 10) { typeLabel; dateLabel } }
     private var typeLabel: some View {

@@ -153,6 +153,7 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("我的")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await notifications.refresh() }
         .fileExporter(isPresented: $exporting, document: backup, contentType: .json, defaultFilename: "Mikansei备份-\(Date().formatted(.iso8601.year().month().day().dateSeparator(.dash)))") { result in
             if case .failure(let error) = result { message = "导出失败：\(error.localizedDescription)" }
