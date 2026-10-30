@@ -248,12 +248,19 @@ struct MacNoteDetail: View {
     @State private var title: String
     @State private var bodyText: String
     @State private var category: String
+    @State private var openingTitle: String
+    @State private var openingBody: String
+    @State private var openingCategory: String
+    @State private var isPreviewing = false
 
     init(entry: Entry) {
         self.entry = entry
         _title = State(initialValue: entry.title)
         _bodyText = State(initialValue: entry.body)
         _category = State(initialValue: entry.category)
+        _openingTitle = State(initialValue: entry.title)
+        _openingBody = State(initialValue: entry.body)
+        _openingCategory = State(initialValue: entry.category)
     }
 
     var body: some View {
@@ -262,28 +269,47 @@ struct MacNoteDetail: View {
                 Text(entry.updatedAt, format: .dateTime.year().month().day().hour().minute())
                     .font(.caption).foregroundStyle(.secondary)
                 Spacer()
+                Picker("正文模式", selection: $isPreviewing) {
+                    Text("编辑").tag(false)
+                    Text("预览").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(width: 150)
                 Button("保存") { commit() }
                     .keyboardShortcut("s", modifiers: .command)
-                    .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(store.readOnly || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }.padding(.horizontal, 30).padding(.top, 16).padding(.bottom, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     TextField("标题", text: $title, axis: .vertical)
                         .font(.system(.title2, design: .default).weight(.bold))
                         .textFieldStyle(.plain)
+                        .disabled(store.readOnly)
                     TextField("分类（学习、生活、社团…）", text: $category)
                         .font(.footnote).foregroundStyle(.secondary).textFieldStyle(.plain)
-                    TextEditor(text: $bodyText)
-                        .font(.body)
-                        .frame(minHeight: 280)
-                        .scrollContentBackground(.hidden)
+                        .disabled(store.readOnly)
+                    if isPreviewing {
+                        Text("预览不会修改笔记原文。")
+                            .font(.caption).foregroundStyle(.secondary)
+                        markdownPreview
+                    } else {
+                        Text("支持六级标题、列表、引用、代码块、分隔线和链接。")
+                            .font(.caption).foregroundStyle(.secondary)
+                        TextEditor(text: $bodyText)
+                            .font(.body)
+                            .frame(minHeight: 280)
+                            .scrollContentBackground(.hidden)
+                            .disabled(store.readOnly)
+                    }
                     ForEach(entry.checklist) { step in
                         Button {
                             var current = store.entries.first { $0.id == entry.id } ?? entry
-                            current.toggleStep(step.id); store.save(current)
+                            current.toggleStep(step.id)
+                            if !store.readOnly { store.save(current) }
                         } label: {
                             Label(step.title, systemImage: step.isDone ? "checkmark.square.fill" : "square").strikethrough(step.isDone)
-                        }.buttonStyle(.plain)
+                        }.buttonStyle(.plain).disabled(store.readOnly)
                     }
                     Spacer()
                 }
@@ -294,14 +320,81 @@ struct MacNoteDetail: View {
         .onDisappear { commit() }
     }
 
+    private var markdownPreview: some View {
+        let lines = NoteMarkdown.lines(bodyText)
+        return VStack(alignment: .leading, spacing: 8) {
+            ForEach(lines.indices, id: \.self) { index in
+                markdownLine(lines[index])
+            }
+        }
+        .padding(.top, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder private func markdownLine(_ line: NoteMarkdown.Line) -> some View {
+        switch line.kind {
+        case .heading1:
+            Text(NoteMarkdown.inline(line.text)).font(.largeTitle.weight(.bold))
+        case .heading2:
+            Text(NoteMarkdown.inline(line.text)).font(.title.weight(.semibold))
+        case .heading3:
+            Text(NoteMarkdown.inline(line.text)).font(.title2.weight(.semibold))
+        case .heading4:
+            Text(NoteMarkdown.inline(line.text)).font(.title3.weight(.semibold))
+        case .heading5:
+            Text(NoteMarkdown.inline(line.text)).font(.headline)
+        case .heading6:
+            Text(NoteMarkdown.inline(line.text)).font(.subheadline.weight(.semibold))
+        case .bullet:
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(line.depth == 0 ? "•" : "◦").foregroundStyle(.secondary)
+                Text(NoteMarkdown.inline(line.text))
+            }
+            .padding(.leading, CGFloat(line.depth * 14))
+        case .orderedList:
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(line.number ?? 1).").foregroundStyle(.secondary)
+                Text(NoteMarkdown.inline(line.text))
+            }
+            .padding(.leading, CGFloat(line.depth * 14))
+        case .blockquote:
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 1).fill(Color.accentColor.opacity(0.6)).frame(width: 3)
+                Text(NoteMarkdown.inline(line.text)).foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, CGFloat(max(0, line.depth - 1) * 12))
+        case .codeBlock:
+            Text(line.text)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        case .horizontalRule:
+            Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1).padding(.vertical, 5)
+        case .paragraph:
+            if line.text.isEmpty { Text(" ") } else { Text(NoteMarkdown.inline(line.text)) }
+        }
+    }
+
     private func commit() {
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != entry.title || bodyText != entry.body
-            || category.trimmingCharacters(in: .whitespacesAndNewlines) != entry.category else { return }
-        var next = entry
-        next.title = trimmed
-        next.body = bodyText
-        next.category = category.trimmingCharacters(in: .whitespacesAndNewlines)
-        _ = store.save(next)
+        let trimmedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !store.readOnly, !trimmed.isEmpty else { return }
+        let titleChanged = title != openingTitle
+        let bodyChanged = bodyText != openingBody
+        let categoryChanged = category != openingCategory
+        guard titleChanged || bodyChanged || categoryChanged else { return }
+        let current = store.entries.first { $0.id == entry.id } ?? entry
+        var next = current
+        if titleChanged { next.title = trimmed }
+        if bodyChanged { next.body = bodyText }
+        if categoryChanged { next.category = trimmedCategory }
+        store.save(next)
+        openingTitle = title
+        openingBody = bodyText
+        openingCategory = category
     }
 }

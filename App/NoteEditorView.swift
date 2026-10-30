@@ -44,8 +44,8 @@ struct NoteEditorView: View {
                     isPreviewing.toggle()
                     titleFocused = false; bodyFocused = false
                 } label: {
-                    Image(systemName: isPreviewing ? "eye.slash" : "eye")
-                }.accessibilityLabel(isPreviewing ? "编辑" : "预览")
+                    Label(isPreviewing ? "编辑" : "预览", systemImage: isPreviewing ? "eye.slash" : "eye")
+                }
                 Button("完成") { save() }.fontWeight(.semibold).disabled(!canSave)
             }
             .font(.body)
@@ -67,6 +67,8 @@ struct NoteEditorView: View {
                     if isPreviewing {
                         markdownPreview
                     } else {
+                        Text("支持六级标题、列表、引用、代码块、分隔线和链接。预览不会修改原文。")
+                            .font(.caption).foregroundStyle(.secondary)
                         TextField("开始记录", text: $bodyText, axis: .vertical)
                             .font(.body)
                             .lineLimit(4...30)
@@ -118,9 +120,44 @@ struct NoteEditorView: View {
             Text(NoteMarkdown.inline(line.text))
                 .font(.system(.title, design: .default).weight(.bold))
         case .heading2:
+            Text(NoteMarkdown.inline(line.text)).font(.system(.title2, design: .default).weight(.semibold))
+        case .heading3:
             Text(NoteMarkdown.inline(line.text)).font(.title3.weight(.semibold))
+        case .heading4:
+            Text(NoteMarkdown.inline(line.text)).font(.headline)
+        case .heading5:
+            Text(NoteMarkdown.inline(line.text)).font(.subheadline.weight(.semibold))
+        case .heading6:
+            Text(NoteMarkdown.inline(line.text)).font(.footnote.weight(.semibold))
         case .bullet:
-            Text("•  ") + Text(NoteMarkdown.inline(line.text))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(line.depth == 0 ? "•" : "◦").foregroundStyle(.secondary)
+                Text(NoteMarkdown.inline(line.text))
+            }
+            .padding(.leading, CGFloat(line.depth * 14))
+        case .orderedList:
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(line.number ?? 1).").foregroundStyle(.secondary)
+                Text(NoteMarkdown.inline(line.text))
+            }
+            .padding(.leading, CGFloat(line.depth * 14))
+        case .blockquote:
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 1).fill(Theme.accent.opacity(0.6)).frame(width: 3)
+                Text(NoteMarkdown.inline(line.text)).foregroundStyle(.secondary)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, CGFloat(max(0, line.depth - 1) * 12))
+        case .codeBlock:
+            Text(line.text)
+                .font(.system(.body, design: .monospaced))
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10).padding(.vertical, 5)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+        case .horizontalRule:
+            Rectangle().fill(Color.secondary.opacity(0.3)).frame(height: 1).padding(.vertical, 5)
         case .paragraph:
             if line.text.isEmpty { Text(" ") } else { Text(NoteMarkdown.inline(line.text)) }
         }
