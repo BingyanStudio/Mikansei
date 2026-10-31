@@ -14,7 +14,7 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
     private let clockLabel = NSTextField(labelWithString: "00:00")
     private let statusLabel = NSTextField(labelWithString: "")
     private let primaryButton = NSButton(title: "打开专注页", target: nil, action: nil)
-    private let finishButton = NSButton(title: "结束", target: nil, action: nil)
+    private let finishButton = NSButton(title: "结束并保存", target: nil, action: nil)
 
     init(messenger: FlutterBinaryMessenger, owner: NSWindow) {
         self.owner = owner
@@ -51,7 +51,7 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
 
     private func makeWindow() {
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 360, height: 280),
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 430),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -60,7 +60,7 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
         panel.level = .floating
         panel.isReleasedWhenClosed = false
         panel.isMovableByWindowBackground = true
-        panel.minSize = NSSize(width: 280, height: 260)
+        panel.minSize = NSSize(width: 320, height: 380)
         panel.delegate = self
         panel.contentView = makeContentView()
         panel.center()
@@ -75,48 +75,71 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
 
         subjectLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         subjectLabel.lineBreakMode = .byTruncatingTail
-        subjectLabel.maximumNumberOfLines = 2
+        subjectLabel.maximumNumberOfLines = 1
+        subjectLabel.alignment = .left
         subjectLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        clockLabel.font = .monospacedDigitSystemFont(ofSize: 48, weight: .bold)
+        clockLabel.font = .monospacedDigitSystemFont(ofSize: 100, weight: .bold)
         clockLabel.alignment = .center
+        clockLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         statusLabel.font = .systemFont(ofSize: 12)
         statusLabel.textColor = .secondaryLabelColor
-        statusLabel.alignment = .center
+        statusLabel.alignment = .left
+        statusLabel.lineBreakMode = .byTruncatingTail
+        statusLabel.maximumNumberOfLines = 1
 
         primaryButton.bezelStyle = .rounded
+        primaryButton.controlSize = .large
         primaryButton.target = self
         primaryButton.action = #selector(primaryPressed)
         finishButton.bezelStyle = .rounded
+        finishButton.controlSize = .large
         finishButton.target = self
         finishButton.action = #selector(finishPressed)
 
         let buttons = NSStackView(views: [primaryButton, finishButton])
-        buttons.orientation = .horizontal
-        buttons.alignment = .centerY
+        buttons.orientation = .vertical
+        buttons.alignment = .leading
         buttons.distribution = .fillEqually
         buttons.spacing = 10
-
-        let stack = NSStackView(views: [subjectLabel, clockLabel, statusLabel, buttons])
-        stack.orientation = .vertical
-        stack.alignment = .centerX
-        stack.distribution = .fill
-        stack.spacing = 12
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(stack)
+        let controls: [NSView] = [subjectLabel, statusLabel, clockLabel, buttons]
+        controls.forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            root.addSubview($0)
+        }
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 18),
-            stack.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -18),
-            stack.topAnchor.constraint(equalTo: root.topAnchor, constant: 18),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: root.bottomAnchor, constant: -18),
-            subjectLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            clockLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            statusLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            buttons.widthAnchor.constraint(equalTo: stack.widthAnchor),
-            buttons.heightAnchor.constraint(greaterThanOrEqualToConstant: 34),
+            subjectLabel.topAnchor.constraint(equalTo: root.topAnchor, constant: 18),
+            subjectLabel.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 18),
+            subjectLabel.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -18),
+            statusLabel.topAnchor.constraint(equalTo: subjectLabel.bottomAnchor, constant: 6),
+            statusLabel.leadingAnchor.constraint(equalTo: subjectLabel.leadingAnchor),
+            statusLabel.trailingAnchor.constraint(equalTo: subjectLabel.trailingAnchor),
+            clockLabel.centerXAnchor.constraint(equalTo: root.centerXAnchor),
+            clockLabel.centerYAnchor.constraint(equalTo: root.centerYAnchor),
+            clockLabel.leadingAnchor.constraint(greaterThanOrEqualTo: root.leadingAnchor, constant: 12),
+            clockLabel.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -12),
+            clockLabel.topAnchor.constraint(greaterThanOrEqualTo: statusLabel.bottomAnchor, constant: 8),
+            clockLabel.bottomAnchor.constraint(lessThanOrEqualTo: buttons.topAnchor, constant: -12),
+            buttons.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 18),
+            buttons.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -18),
+            buttons.bottomAnchor.constraint(equalTo: root.bottomAnchor, constant: -16),
+            buttons.heightAnchor.constraint(equalToConstant: 98),
+            primaryButton.widthAnchor.constraint(equalTo: buttons.widthAnchor),
+            finishButton.widthAnchor.constraint(equalTo: buttons.widthAnchor),
         ])
         return root
+    }
+
+    private func updateClockFont() {
+        guard let content = window?.contentView else { return }
+        let width = max(120, content.bounds.width - 36)
+        let availableHeight = max(60, content.bounds.height - 204)
+        let digits = CGFloat(max(5, clockLabel.stringValue.count))
+        let widthLimit = width / (digits * 0.62)
+        let heightLimit = availableHeight * 0.58
+        let size = min(170, max(44, min(widthLimit, heightLimit)))
+        clockLabel.font = .monospacedDigitSystemFont(ofSize: size, weight: .bold)
     }
 
     private func render() {
@@ -128,6 +151,7 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
             primaryButton.title = "打开专注页"
             primaryButton.isEnabled = true
             finishButton.isHidden = true
+            updateClockFont()
             return
         }
 
@@ -151,8 +175,9 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
         }
         primaryButton.title = runningSince == nil ? "继续" : "暂停"
         primaryButton.isEnabled = !id.isEmpty
-        finishButton.title = mode == "countUp" ? "结束并保存" : "提前结束"
+        finishButton.title = "结束并保存"
         finishButton.isHidden = false
+        updateClockFont()
     }
 
     private func timeLabel(_ seconds: Double) -> String {
@@ -191,6 +216,10 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         sender.orderOut(nil)
         return false
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        updateClockFont()
     }
 }
 #endif

@@ -91,6 +91,7 @@ struct MacPomodoroMiniPanelView: View {
     @State private var durationMinutes = 25
     @State private var linkedEntryID = ""
     @State private var confirmEarlyFinish = false
+    @ScaledMetric(relativeTo: .largeTitle) private var timerScale: CGFloat = 1
 
     private var linkableEntries: [Entry] {
         store.entries.filter { $0.isTask && !$0.isCompleted }.sorted {
@@ -105,6 +106,7 @@ struct MacPomodoroMiniPanelView: View {
         }
         .frame(minWidth: 260, maxWidth: .infinity, minHeight: 180, maxHeight: .infinity)
         .background(.regularMaterial)
+        .tint(MacTheme.accent)
         .confirmationDialog("提前结束本次专注？", isPresented: $confirmEarlyFinish, titleVisibility: .visible) {
             Button("提前结束并保存", role: .destructive) {
                 if let active = coordinator.active { _ = coordinator.finish(sessionID: active.id) }
@@ -172,18 +174,18 @@ struct MacPomodoroMiniPanelView: View {
     private func activeSession(_ run: PomodoroRun) -> some View {
         TimelineView(.periodic(from: .now, by: 1)) { tick in
             let seconds = run.mode == .countdown ? (run.remainingSeconds(at: tick.date) ?? 0) : run.elapsedSeconds(at: tick.date)
-            ViewThatFits(in: .vertical) {
-                activeContent(run, seconds: seconds, compact: false)
-                activeContent(run, seconds: seconds, compact: true)
+            GeometryReader { geometry in
+                let compact = geometry.size.height < 285 || geometry.size.width < 300
+                activeContent(run, seconds: seconds, size: geometry.size, compact: compact)
             }
             .onChange(of: tick.date) { _, date in coordinator.refresh(at: date) }
         }
     }
 
-    private func activeContent(_ run: PomodoroRun, seconds: Double, compact: Bool) -> some View {
-        let subjectFont: Font = compact ? .headline : .title3
-        let clockStyle: Font.TextStyle = compact ? .title : .largeTitle
-        return VStack(alignment: .leading, spacing: compact ? 4 : 13) {
+    private func activeContent(_ run: PomodoroRun, seconds: Double, size: CGSize, compact: Bool) -> some View {
+        let baseClockSize = min(compact ? 80 : 120, max(compact ? 64 : 90, size.height * (compact ? 0.40 : 0.36)))
+        let clockSize = baseClockSize * timerScale
+        return VStack(spacing: 0) {
             HStack {
                 Label(run.mode == .countdown ? "倒计时" : "正计时", systemImage: "timer")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
@@ -192,32 +194,47 @@ struct MacPomodoroMiniPanelView: View {
                     .font(.caption).foregroundStyle(run.isRunning ? .green : .secondary)
             }
             Text(run.subject)
-                .font(subjectFont.weight(.semibold))
-                .lineLimit(compact ? 2 : 4).fixedSize(horizontal: false, vertical: true)
+                .font(.system(size: compact ? 15 : 19, weight: .semibold))
+                .multilineTextAlignment(.center)
+                .lineLimit(compact ? 1 : 2).fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(.top, compact ? 3 : 8)
             if !compact, let title = linkedTaskTitle(for: run) {
-                Label(title, systemImage: "link").font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Label(title, systemImage: "link").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    .frame(maxWidth: .infinity).padding(.top, 3)
             }
+            Spacer(minLength: 0)
             Text(Self.clock(seconds))
-                .font(.system(clockStyle, design: .rounded).weight(.medium).monospacedDigit())
-                .minimumScaleFactor(0.55).lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .font(.system(size: clockSize, weight: .medium, design: .rounded).monospacedDigit())
+                .minimumScaleFactor(0.45).lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .center)
                 .accessibilityLabel(run.mode == .countdown ? "剩余时间" : "已专注时间")
-            HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            VStack(spacing: compact ? 5 : 7) {
                 Button {
                     if run.isRunning { _ = coordinator.pause(sessionID: run.id) }
                     else { _ = coordinator.resume(sessionID: run.id) }
                 } label: {
                     Label(run.isRunning ? "暂停" : "继续", systemImage: run.isRunning ? "pause.fill" : "play.fill")
-                        .frame(maxWidth: .infinity)
-                }.buttonStyle(.borderedProminent)
-                Button(run.mode == .countdown ? "提前结束" : "结束并保存") {
+                        .font(.system(size: compact ? 12 : 14, weight: .medium))
+                        .frame(maxWidth: .infinity).frame(height: compact ? 25 : 31)
+                }
+                .controlSize(.small)
+                .buttonStyle(.borderedProminent)
+                Button {
                     if run.mode == .countdown { confirmEarlyFinish = true }
                     else { _ = coordinator.finish(sessionID: run.id) }
-                }.frame(maxWidth: .infinity)
+                } label: {
+                    Text(run.mode == .countdown ? "提前结束" : "结束并保存")
+                        .font(.system(size: compact ? 12 : 14, weight: .medium))
+                        .frame(maxWidth: .infinity).frame(height: compact ? 25 : 31)
+                }
+                .controlSize(.small)
+                .buttonStyle(.bordered)
             }
         }
         .padding(compact ? 8 : 16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var selectedTaskTitle: String? {

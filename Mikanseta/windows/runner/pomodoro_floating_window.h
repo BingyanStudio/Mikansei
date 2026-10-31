@@ -40,6 +40,7 @@ class PomodoroFloatingWindow {
   HFONT clock_font_ = nullptr;
   HBRUSH background_ = nullptr;
   int clock_font_size_ = 0;
+  int clock_text_length_ = 0;
   ActionHandler action_handler_;
   std::string session_id_;
   std::string subject_text_;

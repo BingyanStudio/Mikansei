@@ -51,8 +51,13 @@ class _PomodoroPageState extends State<PomodoroPage> {
       return ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
-          _summaryCard(context),
-          const SizedBox(height: 16),
+          if (active == null) ...[
+            _summaryCard(context),
+            const SizedBox(height: 16),
+          ] else ...[
+            _activeCard(context, active, link?.title, desktopFloat),
+            const SizedBox(height: 16),
+          ],
           if (focus.error != null)
             _messageCard(context, focus.error!, error: true),
           if (focus.saveError != null)
@@ -73,7 +78,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
             const SizedBox(height: 16),
             _historyCard(context, history),
           ] else ...[
-            _activeCard(context, active, link?.title, desktopFloat),
+            _summaryCard(context),
             const SizedBox(height: 16),
             _historyCard(context, history),
           ],
@@ -304,118 +309,148 @@ class _PomodoroPageState extends State<PomodoroPage> {
     PomodoroRun run,
     String? linkedTitle,
     bool desktopFloat,
-  ) {
-    final color = Theme.of(context).colorScheme;
-    final elapsed = focus.activeElapsedSeconds;
-    final displayed = run.mode == PomodoroMode.countdown
-        ? focus.activeRemainingSeconds.ceilToDouble()
-        : elapsed.floorToDouble();
-    final paused = run.runningSince == null;
-    return Card(
-      color: color.primaryContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: color.outline.withValues(alpha: .35)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Icon(Icons.center_focus_strong, color: color.primary),
-                const SizedBox(width: 9),
-                Expanded(
-                  child: Text(
-                    run.subject,
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Chip(
-                  label: Text(
-                    run.mode == PomodoroMode.countdown ? '倒计时' : '正计时',
-                  ),
-                ),
-              ],
-            ),
-            if (linkedTitle != null) ...[
-              const SizedBox(height: 4),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  '关联待办 · $linkedTitle',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-            ],
-            const SizedBox(height: 22),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                _clockLabel(displayed),
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                  fontSize: 72,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2,
-                ),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              paused
-                  ? '已暂停 · 暂停时间不计入专注'
-                  : run.mode == PomodoroMode.countdown
-                  ? '剩余时间'
-                  : '已专注',
-              style: Theme.of(context).textTheme.bodyMedium
-                  ?.copyWith(color: color.onSurfaceVariant),
-            ),
-            const SizedBox(height: 22),
-            Wrap(
-              alignment: WrapAlignment.center,
-              spacing: 12,
-              runSpacing: 10,
-              children: [
-                FilledButton.icon(
-                  onPressed: paused ? focus.resume : focus.pause,
-                  icon: Icon(
-                    paused ? Icons.play_arrow_rounded : Icons.pause_rounded,
-                  ),
-                  label: Text(paused ? '继续' : '暂停'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: focus.finish,
-                  icon: const Icon(Icons.stop_rounded),
-                  label: Text(
-                    run.mode == PomodoroMode.countUp ? '结束并保存' : '提前结束',
-                  ),
-                ),
-                if (desktopFloat)
-                  OutlinedButton.icon(
-                    onPressed: widget.onOpenFloatingWindow,
-                    icon: const Icon(Icons.picture_in_picture_alt_outlined),
-                    label: const Text('打开浮动计时器'),
-                  ),
-              ],
-            ),
-            if (run.mode == PomodoroMode.countdown && !paused)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  '到时会自动结束并记录完成',
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: color.onSurfaceVariant),
-                ),
-              ),
-          ],
+  ) => LayoutBuilder(
+    builder: (context, constraints) {
+      final color = Theme.of(context).colorScheme;
+      final elapsed = focus.activeElapsedSeconds;
+      final displayed = run.mode == PomodoroMode.countdown
+          ? focus.activeRemainingSeconds.ceilToDouble()
+          : elapsed.floorToDouble();
+      final paused = run.runningSince == null;
+      final wide = constraints.maxWidth >= 680;
+      final clockSize = (constraints.maxWidth * .22).clamp(88.0, 176.0);
+      return Card(
+        color: color.primaryContainer,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: color.outline.withValues(alpha: .35)),
         ),
-      ),
-    );
-  }
+        child: SizedBox(
+          height: wide ? 520 : 420,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.center_focus_strong, color: color.primary),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            run.subject,
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Chip(
+                          label: Text(
+                            run.mode == PomodoroMode.countdown ? '倒计时' : '正计时',
+                          ),
+                        ),
+                        if (desktopFloat)
+                          IconButton(
+                            tooltip: '打开浮动计时器',
+                            onPressed: widget.onOpenFloatingWindow,
+                            icon: const Icon(
+                              Icons.picture_in_picture_alt_outlined,
+                            ),
+                          ),
+                      ],
+                    ),
+                    if (linkedTitle != null)
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 34, top: 2),
+                          child: Text(
+                            '关联待办 · $linkedTitle',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: color.onSurfaceVariant),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    _clockLabel(displayed),
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      fontSize: clockSize,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
+                Column(
+                  children: [
+                    Text(
+                      paused
+                          ? '已暂停 · 暂停时间不计入专注'
+                          : run.mode == PomodoroMode.countdown
+                          ? '剩余时间'
+                          : '已专注',
+                      style: Theme.of(context).textTheme.bodyMedium
+                          ?.copyWith(color: color.onSurfaceVariant),
+                    ),
+                    if (run.mode == PomodoroMode.countdown && !paused)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          '到时会自动结束并记录完成',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: color.onSurfaceVariant),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: (constraints.maxWidth - 48)
+                          .clamp(0.0, 420.0)
+                          .toDouble(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SizedBox(
+                            height: 54,
+                            child: FilledButton.icon(
+                              onPressed: paused ? focus.resume : focus.pause,
+                              icon: Icon(
+                                paused
+                                    ? Icons.play_arrow_rounded
+                                    : Icons.pause_rounded,
+                              ),
+                              label: Text(paused ? '继续' : '暂停'),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 54,
+                            child: OutlinedButton.icon(
+                              onPressed: focus.finish,
+                              icon: const Icon(Icons.stop_rounded),
+                              label: const Text('结束并保存'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 
   Widget _historyCard(BuildContext context, List<PomodoroRecord> records) {
     final color = Theme.of(context).colorScheme;

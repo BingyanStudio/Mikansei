@@ -141,7 +141,7 @@ bool PomodoroFloatingWindow::Create() {
   const DWORD style = WS_OVERLAPPEDWINDOW;
   const DWORD extended = WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
   window_ = CreateWindowExW(extended, kWindowClass, L"专注计时器", style,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 360, 255, owner_, nullptr,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 420, 430, owner_, nullptr,
                             GetModuleHandle(nullptr), this);
   if (window_ == nullptr) return false;
 
@@ -166,6 +166,7 @@ bool PomodoroFloatingWindow::Create() {
   SendMessageW(status_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
   SendMessageW(primary_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
   SendMessageW(finish_, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+  clock_text_length_ = GetWindowTextLengthW(clock_);
   SetTimer(window_, kTimer, 1000, nullptr);
   Layout();
   return true;
@@ -178,11 +179,21 @@ void PomodoroFloatingWindow::Layout() {
   const int width = client.right - client.left;
   const int height = client.bottom - client.top;
   const int margin = 18;
-  const int button_height = 34;
+  const int button_height = 44;
   const int button_gap = 10;
   const int usable_width = std::max(0, width - margin * 2);
-  const int half_width = (usable_width - button_gap) / 2;
-  const int clock_font_size = std::max(28, std::min(48, usable_width / 7));
+  const int button_bottom = height - margin;
+  const int finish_y = button_bottom - button_height;
+  const int primary_y = finish_y - button_gap - button_height;
+  const int status_y = 48;
+  const int status_height = 20;
+  const int clock_top = status_y + status_height + 10;
+  const int clock_bottom = primary_y - 12;
+  const int clock_area = std::max(0, clock_bottom - clock_top);
+  const int text_length = std::max(5, GetWindowTextLengthW(clock_));
+  const int width_limit = usable_width / std::max(1, text_length) * 5 / 3;
+  const int height_limit = clock_area * 7 / 8;
+  const int clock_font_size = std::max(40, std::min(156, std::min(width_limit, height_limit)));
   if (clock_font_size != clock_font_size_) {
     if (clock_font_ != nullptr) DeleteObject(clock_font_);
     clock_font_ = CreateFontW(clock_font_size, 0, 0, 0, FW_BOLD, FALSE, FALSE,
@@ -192,12 +203,14 @@ void PomodoroFloatingWindow::Layout() {
     SendMessageW(clock_, WM_SETFONT, reinterpret_cast<WPARAM>(clock_font_), TRUE);
     clock_font_size_ = clock_font_size;
   }
-  MoveWindow(subject_, margin, 12, usable_width, 42, TRUE);
-  MoveWindow(clock_, margin, std::max(50, height / 2 - 30), usable_width, 58, TRUE);
-  MoveWindow(status_, margin, std::max(104, height - 88), usable_width, 20, TRUE);
-  MoveWindow(primary_, margin, height - 58, half_width, button_height, TRUE);
-  MoveWindow(finish_, margin + half_width + button_gap, height - 58,
-             half_width, button_height, TRUE);
+  const int clock_height = std::min(clock_area, clock_font_size + 12);
+  const int clock_y = clock_top + std::max(0, (clock_area - clock_height) / 2);
+  MoveWindow(subject_, margin, 12, usable_width, 28, TRUE);
+  MoveWindow(status_, margin, status_y, usable_width, status_height, TRUE);
+  MoveWindow(clock_, margin, clock_y, usable_width, clock_height, TRUE);
+  MoveWindow(primary_, margin, primary_y, usable_width, button_height, TRUE);
+  MoveWindow(finish_, margin, finish_y, usable_width, button_height, TRUE);
+  clock_text_length_ = text_length;
 }
 
 void PomodoroFloatingWindow::Render() {
@@ -208,6 +221,7 @@ void PomodoroFloatingWindow::Render() {
     SetWindowTextW(status_, L"打开 Mikanseta 设置主题和计时方式");
     SetWindowTextW(primary_, L"打开专注页");
     ShowWindow(finish_, SW_HIDE);
+    if (GetWindowTextLengthW(clock_) != clock_text_length_) Layout();
     return;
   }
   SetWindowTextW(subject_, Utf8ToWide(subject_text_).c_str());
@@ -215,7 +229,9 @@ void PomodoroFloatingWindow::Render() {
       (running_since_ > 0 ? std::max(0.0, CurrentEpoch() - running_since_) : 0.0);
   const double remaining = std::max(0.0, target_seconds_ - elapsed);
   const bool countdown = mode_ == "countdown";
-  SetWindowTextW(clock_, FormatClock(countdown ? remaining : elapsed).c_str());
+  const std::wstring clock_text = FormatClock(countdown ? remaining : elapsed);
+  SetWindowTextW(clock_, clock_text.c_str());
+  if (static_cast<int>(clock_text.size()) != clock_text_length_) Layout();
   const wchar_t* label = running_since_ <= 0
                              ? L"已暂停 · 暂停时间不计入专注"
                              : countdown && remaining <= 0
@@ -223,7 +239,7 @@ void PomodoroFloatingWindow::Render() {
                                    : countdown ? L"剩余时间" : L"已专注";
   SetWindowTextW(status_, label);
   SetWindowTextW(primary_, running_since_ > 0 ? L"暂停" : L"继续");
-  SetWindowTextW(finish_, mode_ == "countUp" ? L"结束并保存" : L"提前结束");
+  SetWindowTextW(finish_, L"结束并保存");
   ShowWindow(finish_, SW_SHOW);
 }
 
@@ -278,8 +294,8 @@ LRESULT PomodoroFloatingWindow::HandleMessage(HWND window, UINT message,
       HDC dc = GetDC(window);
       const int dpi = dc == nullptr ? 96 : GetDeviceCaps(dc, LOGPIXELSX);
       if (dc != nullptr) ReleaseDC(window, dc);
-      limits->ptMinTrackSize.x = MulDiv(280, dpi, 96);
-      limits->ptMinTrackSize.y = MulDiv(260, dpi, 96);
+      limits->ptMinTrackSize.x = MulDiv(320, dpi, 96);
+      limits->ptMinTrackSize.y = MulDiv(380, dpi, 96);
       return 0;
     }
     case WM_DPICHANGED: {
