@@ -2,7 +2,7 @@
 
 ## 0.7.0 (14) — 构建通过，待设备验收
 
-新增独立的番茄专注计时：主题必填，可选关联未完成任务，支持倒计时和不限时正计时、暂停 / 继续 / 结束与历史记录。计时使用时间戳恢复，专注数据独立保存在本机 `pomodoro.json`，不进入待办备份或清单云同步。iOS 主屏幕只注册番茄专注小组件，适配系统小 / 中 / 大尺寸；DDL 与闹钟 Live Activity 保留为单独功能。原生 Mikansei iOS App + Widgets 与 Mac universal Release 构建通过；最后一次 iOS 冻结源码重检也通过。Mikanseta 0.6.0 (17) 的 iOS、macOS、Android debug 构建通过，`dart analyze lib` 无问题。本轮未添加或运行自动化测试，设备验收待完成，尚未上传 TestFlight。Mikanseta macOS 构建有 414 条指向旧工作区路径的 stale-file 警告，产物为无 Team ID 的 ad-hoc 签名。详见 [0.7.0 发布准备记录](RELEASE_0.7.0.md) 和 [专注计时说明](POMODORO.md)。
+新增独立的番茄专注计时：主题必填，可选关联未完成任务，支持倒计时和不限时正计时、暂停 / 继续 / 结束与历史记录。计时使用时间戳恢复，专注数据独立保存在本机 `pomodoro.json`，不进入待办备份或清单云同步。iOS 主屏幕只注册番茄专注小组件，适配系统小 / 中 / 大尺寸；DDL 与闹钟 Live Activity 保留为单独功能。计时数字作为主视觉居中显示，适配空间允许时暂停 / 继续在结束并保存上方。原生 Mikansei iOS App + Widgets 与 Mac universal Release 最新界面构建通过；Mac 隔离预览验证了约 266×248 小窗的显示与计时操作。Mikanseta `dart analyze lib` 无问题，最新界面的 iOS、macOS 与 Android debug 构建均通过。Windows CI 基线提交 `eeefa77` 通过；最新界面修改的 CI 待推送。未新增测试；本机未运行自动化测试，基线 Windows CI 已运行既有检查。真实设备与 Widget 宿主验收待完成，尚未上传 TestFlight。Mikanseta macOS 产物为无 Team ID 的 ad-hoc 签名。详见 [0.7.0 发布准备记录](RELEASE_0.7.0.md) 和 [专注计时说明](POMODORO.md)。
 
 ## 0.6.1 (13) — 待验证
 

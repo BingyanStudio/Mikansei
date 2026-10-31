@@ -205,8 +205,11 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
 
     private func send(action: String, session: String?) {
         if action == "open" {
+            if let owner {
+                if owner.isMiniaturized { owner.deminiaturize(nil) }
+                owner.makeKeyAndOrderFront(nil)
+            }
             NSApp.activate(ignoringOtherApps: true)
-            owner?.makeKeyAndOrderFront(nil)
         }
         var values: [String: Any] = ["action": action]
         if let session { values["session"] = session }

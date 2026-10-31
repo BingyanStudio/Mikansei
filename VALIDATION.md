@@ -2,11 +2,12 @@
 
 ## 0.7.0（14）专注计时与 WidgetKit · 2026-10-31
 
-- **原生 iOS Release**：Xcode 26.5，scheme `Mikansei`，`generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`。Mikansei App + 内嵌 `MikanseiWidgets` 最终冻结源码构建 `BUILD SUCCEEDED`；最后一轮是在添加 UI 快照会话保护后运行。日志 `/private/tmp/Mikansei-Pomodoro-ios-build-frozen.log`（此前最终构建 `/private/tmp/Mikansei-Pomodoro-ios-build-final.log`）。App 与扩展产物均为 `0.7.0 / 14`，位于 `/private/tmp/Mikansei-Pomodoro-iOSDerivedData/Build/Products/Release-iphoneos/`。
-- **原生 Mac universal Release**：Xcode 26.5，scheme `MikanseiMac`，x86_64 + arm64。`BUILD SUCCEEDED`；App 版本 `0.7.0 / 14`，`lipo` 确认双架构。日志 `/private/tmp/MikanseiMac-Pomodoro-Release-build-2.log`，xcresult `/private/tmp/MikanseiMac-Pomodoro-Release-2.xcresult`，产物 `/private/tmp/MikanseiMac-PomodoroUniversalDerived/Build/Products/Release/Mikansei.app`。
-- **Mikanseta Flutter 0.6.0 (17)**：`dart analyze lib` 输出 `No issues found!`。iOS unsigned Release 与内嵌 Widget 扩展构建通过，App 和扩展版本均为 `0.6.0 / 17`；Flutter 未找到 `Release-Mikanseta` 专属配置，按提示使用通用 `Release` 配置。日志 `/tmp/mikanseta-ios-0.6.0-17-release.log`。macOS universal Release 构建通过，`x86_64 arm64`，版本 `0.6.0 / 17`；Flutter 输出为无 Team ID 的 ad-hoc 签名。Xcode 记录 414 条 stale-file 警告，涉及旧工作区路径，未阻止构建。日志 `/tmp/mikanseta-macos-0.6.0-17-release.log`，产物 `Mikanseta/build/macos/Build/Products/Release/Mikanseta.app`。
-- **Android**：Mikanseta debug APK 构建通过；`dart analyze lib` 无问题。APK `Mikanseta/build/app/outputs/flutter-apk/app-debug.apk`。Windows CI 计划在 push 后运行，当前未验证。
-- 未添加或运行测试；未做真机专注操作、WidgetKit / Android 启动器实际挂载、不同尺寸或辅助文字大小验收。未上传 TestFlight，未创建 release tag。
+- **原生 iOS Release**：Xcode 26.5，scheme `Mikansei`，`generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`。Mikansei App + 内嵌 `MikanseiWidgets` 最新界面源码构建 `BUILD SUCCEEDED`；App 与扩展版本均为 `0.7.0 / 14`。日志 `/private/tmp/Mikansei-Pomodoro-Clock-iOS-final-build.log`，xcresult `/private/tmp/Mikansei-Pomodoro-Clock-iOS-final.xcresult`。
+- **原生 Mac universal Release**：Xcode 26.5，scheme `MikanseiMac`，x86_64 + arm64，最新界面构建通过；版本 `0.7.0 / 14`。日志 `/private/tmp/Mikansei-Pomodoro-Clock-Mac-build.log`。
+- **Mac 隔离手工预览**：使用合成主题，约 266×248 的小浮窗中计时数字居中且显著，暂停 / 继续在上、结束并保存在下，无重叠；空主题时开始按钮不可用。开始计时后点击暂停，等待一段时间后按钮显示“继续”，再结束并保存，生成 1 条 98.698852 秒的合成专注记录，活动计时为空；本次未实际点击“继续”。此项仅验证该窗口尺寸和合成数据，不代表所有桌面尺寸或真实数据验收。
+- **Mikanseta Flutter 0.6.0 (17)**：`dart analyze lib` 输出 `No issues found!`。最新时钟界面的 macOS universal Release、iOS unsigned Release 与 Android debug APK 构建均通过。iOS App 产物 `Mikanseta/build/ios/iphoneos/Mikanseta.app`；Android APK `Mikanseta/build/app/outputs/flutter-apk/app-debug.apk`；Mac App `Mikanseta/build/macos/Build/Products/Release/Mikanseta.app`。macOS 产物为无 Team ID 的 ad-hoc 签名；此前 Xcode 输出 414 条指向旧工作区路径的 stale-file 警告。
+- **Windows CI**：基线提交 `eeefa77` 的 [CI run 41203404752](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/41203404752) 通过，包括分析、既有测试、集成、Windows x64 构建 / 打包、安装器启动与产物生成。该运行不包含最新时钟界面修改；最新提交的 CI 待推送后运行。
+- 未新增测试；本机未运行自动化测试。基线 Windows CI 已执行既有测试与集成检查；未做真机专注操作、真实 WidgetKit / Android 启动器挂载、iOS 各尺寸及辅助文字大小验收。Mac 小窗手工预览不覆盖其他窗口尺寸。未上传 TestFlight，未创建 release tag。
 
 ## 0.6.1（13）源码候选准备 · 首次准备 2026-10-30，最终构建 2026-10-31
 

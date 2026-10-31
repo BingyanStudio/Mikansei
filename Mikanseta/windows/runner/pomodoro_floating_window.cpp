@@ -141,7 +141,7 @@ bool PomodoroFloatingWindow::Create() {
   const DWORD style = WS_OVERLAPPEDWINDOW;
   const DWORD extended = WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
   window_ = CreateWindowExW(extended, kWindowClass, L"专注计时器", style,
-                            CW_USEDEFAULT, CW_USEDEFAULT, 420, 430, owner_, nullptr,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 420, 430, nullptr, nullptr,
                             GetModuleHandle(nullptr), this);
   if (window_ == nullptr) return false;
 
@@ -275,6 +275,10 @@ LRESULT PomodoroFloatingWindow::HandleMessage(HWND window, UINT message,
     case WM_COMMAND:
       if (LOWORD(wparam) == kPrimaryButton) {
         if (session_id_.empty()) {
+          if (owner_ != nullptr) {
+            ShowWindow(owner_, IsIconic(owner_) ? SW_RESTORE : SW_SHOW);
+            SetForegroundWindow(owner_);
+          }
           if (action_handler_) action_handler_("open", "");
         } else {
           SendAction(running_since_ > 0 ? "pause" : "resume");
