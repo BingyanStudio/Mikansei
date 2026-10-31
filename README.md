@@ -12,21 +12,22 @@
 
 项目目录、App 显示名、Xcode target / scheme 和 Swift 模块已统一为 Mikansei。工程保留你在 Xcode 中选择的 Team 和 Bundle Identifier；手机数据目录和通知内部编号继续使用原值，保留已安装版本的数据和提醒。
 
-当前源码发布准备目标为 **0.6.1 (13)**；源码稳定后已重新生成 iOS / Mac 工程，iOS App + Widgets 与 Mac universal 无签名 Release 构建均通过。尚未运行测试、进行真机拖动 / 触感验收或上传 0.6.1 TestFlight。上一版 `0.6.0 (12)` 的 Xcode Cloud Internal TestFlight Build 已在提交 `0c4f9575239c56582c2c01755aafb2ec54202a90` 上成功：正式 check `124123904848` 于 2026-10-30 22:39:58（上海时间）完成，0 errors、3 个既有 warnings，提交状态为 `succeeded`。旧 check `124121262794` 仍残留 `in_progress`，不代表整体工作流未完成。Xcode Cloud 成功不等于 TestFlight 已处理或可下载；实际 TestFlight 构建号尚未在界面核实，不能从源码 build 13 推断。[查看 Cloud build](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**。进度见 [0.6.1 发布记录](Documentation/RELEASE_0.6.1.md) 和 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
+当前原生源码目标为 **0.7.0 (14)**，Mikanseta Flutter 源码为 **0.6.0 (17)**。原生 Mikansei iOS App + Widgets unsigned Release、Mac universal Release，以及 Mikanseta iOS / macOS Release 与 Android debug APK 均构建通过；Flutter `dart analyze lib` 无问题。Mikanseta macOS 产物为无 Team ID 的 ad-hoc 签名，并有旧工作区路径造成的 Xcode stale-file 警告。未运行自动化测试或设备交互验收，Windows CI 待 push 后运行；0.7.0 尚未上传 TestFlight 或打 tag。详见 [0.7.0 发布准备记录](Documentation/RELEASE_0.7.0.md) 与 [验证记录](VALIDATION.md)。上一版 `0.6.0 (12)` 的 Xcode Cloud Internal TestFlight Build 已在提交 `0c4f9575239c56582c2c01755aafb2ec54202a90` 上成功：正式 check `124123904848` 于 2026-10-30 22:39:58（上海时间）完成，0 errors、3 个既有 warnings，提交状态为 `succeeded`。旧 check `124121262794` 仍残留 `in_progress`，不代表整体工作流未完成。Xcode Cloud 成功不等于 TestFlight 已处理或可下载；实际 TestFlight 构建号尚未在界面核实，不能从源码版本推断。[查看 Cloud build](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/7e2116be-b070-4f2e-88b6-755c2a6e6f37)。上次核实的 TestFlight 安装版本为 **0.5.0 (Build 5)**。此前准备记录见 [0.6.1 发布记录](Documentation/RELEASE_0.6.1.md) 和 [0.6.0 发布记录](Documentation/RELEASE_0.6.0.md)。0.5.0 源码新增与 Mikanseta 共用的 Supabase 云账号；登录并确认合并后共享待办、日程、笔记、Checklist、完成状态、计时与课表。退出登录保留本机数据；云账号是可选功能，离线使用和原有 iCloud Drive 文件夹同步继续可用。跨端保留删除标记和其他平台的扩展字段，见 [同步步骤](SYNC.md)、[客户端配置](Configuration/README.md) 和 [Mac 安装与使用](INSTALL_MAC.md)。
 
-另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.5.3 (16)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
+另有独立的 **[Mikanseta Flutter 测试版](Mikanseta/README.md)**，当前源码为 **0.6.0 (17)**；本文中的 Windows 下载链接指向 **0.4.3 (9)**，Android 下载链接指向 **0.4.2 (8)**，链接保持不变。Mikanseta 使用牛皮浅棕主题，提供清单、Checklist、日 / 周日历、课表与消息解析、计时、备份和共享文件夹同步。本轮增加番茄专注计时与平台小组件 / 浮动窗口，细节见 [专注计时说明](Documentation/POMODORO.md)。Windows 版附安装程序及免安装 ZIP，已加入账号同步服务连接；系统日历、后台提醒、闹钟、小组件和实时活动尚未接入。Apple / Android 的原生服务和真实设备验证范围见 [验证记录](Mikanseta/VALIDATION.md)。两个 App 可并存，本机数据分别保存。安装说明见 [Android](Mikanseta/INSTALL_ANDROID.md) 和 [Windows](Mikanseta/INSTALL_WINDOWS.md)。
 
 ## 已实现
 
 - **共享云账号**：原生 iOS / macOS 与 Mikanseta 共用邮箱验证码、Supabase 项目和归档表。首次合并需确认；本机保存成功后推送，前台通过实时订阅与轮询拉取，支持手动同步、退出和删除账户。账户删除接口已于 2026-10-29 部署并核对权限，真实云功能尚待端到端验收，见 [配置说明](Documentation/SUPABASE_NATIVE.md)。
 - **待办首页**：“已超时”在最前，其次正在做、待完成；每个栏目内按紧急 → 重要 → 普通，再按截止时间由近到远排序，同优先级无日期事项在后。
 - **完成与历史**：勾选立即反馈，以短淡入淡出更新“今日已完成”；清单按需渲染，文件与小组件写入在后台串行执行；按手机当地日期跨天后归入历史记录，可重新打开。启用系统“减弱动态效果”时减少动画。
-- **主屏幕小组件**：今日清单（小 / 中 / 大）、快速添加（小 / 中）、今日进度（小尺寸及锁屏）。点事项打开详情，点快速添加直接填写待办、作业或笔记。今日清单包括已超时、今天截止、无日期和今日完成的事项。
-- **正在做 · 计时**：小 / 中尺寸和锁屏矩形小组件，显示当前事项与累计用时。在清单点“开始做”启动，暂停保留用时，继续累加；开始另一件事会自动暂停前一件，完成时停止。小组件的暂停 / 继续按钮会打开 App 并执行动作。
+- **主屏幕小组件**：iOS 的 Mikansei 与 Mikanseta 只注册番茄专注这一种主屏小组件；按系统小 / 中 / 大网格尺寸适配，显示进行中的专注主题与计时，较大尺寸还显示今日记录和累计完成次数。控制链接打开 App 后再处理操作，过期会话链接会被忽略。Android 使用启动器提供的小组件尺寸；Mac 与 Windows 使用独立浮动窗口。平台差异见 [专注计时说明](Documentation/POMODORO.md)。DDL 与闹钟的 Live Activity 仍独立保留，不属于主屏小组件。
+- **番茄专注**：开始前必须填写主题，可选关联一项未完成任务；支持倒计时和不限时正计时，以及暂停、继续、结束与历史记录。计时与历史单独保存在本机 `pomodoro.json`，不纳入待办备份或清单云同步。详情见 [专注计时说明](Documentation/POMODORO.md)。
+- **正在做 · 计时**：在清单点“开始做”启动当前事项计时，暂停保留用时，继续累加；开始另一件事会自动暂停前一件，完成时停止。
 - **清晰选项**：类型、视图切换使用实色选中态；可点击选项使用更清楚的文字与自适应深浅色强调色。
 - **低成本录入**：点击 `+`，输入一句话就能保存；今天、明天快捷截止时间；详细字段按需展开。
 - **Checklist**：事项与笔记都能拆成小步骤；首页默认展开未完成步骤，可折叠、直接新增、勾选并查看进度。
-- **待办卡片排序（0.6.1 目标）**：长按卡片本体的拖动区域并拿起整张卡片；不增加独立抓手列。输入框继续支持文本编辑与选择。拖动预览中，其他卡片自然让位并留下插入空位，不高亮目标卡，也不显示系统复制加号；放下后按空位排序，取消后保持原顺序。子项勾选与左滑操作仍可用。真实拖动开始和结束时提供触感反馈；边缘自动滚动需在 60 Hz 和 120 Hz 屏幕验收。源码实现已完成，设备交互验证待完成。
+- **待办卡片排序（0.6.1）**：长按卡片本体的拖动区域并拿起整张卡片；不增加独立抓手列。输入框继续支持文本编辑与选择。拖动预览中，其他卡片自然让位并留下插入空位，不高亮目标卡，也不显示系统复制加号；放下后按空位排序，取消后保持原顺序。子项勾选与左滑操作仍可用。真实拖动开始和结束时提供触感反馈；边缘自动滚动需在 60 Hz 和 120 Hz 屏幕验收。源码实现已完成，设备交互验证待完成。
 - **日程**：以开始时间为核心，输入持续分钟数或全天的天数，自动计算结束时间；默认闹钟、按开始时间提醒，不作为逾期 DDL。
 - **具体信息**：作业科目、优先级、DDL、平台、地点、预计耗时、消息原文。
 - **一次性 / routine 提醒**：按设定时间提醒；常态是独立标签，可加在待办和日程上；支持每天、每周多选星期、每两周、每月（缺日取月末）、自定义间隔，以及跨月点选不规律日期。完成后生成下一次，未完成的 routine 也会按后续周期提醒。
@@ -89,9 +90,10 @@ ICS / CSV 仍保留受限导入入口；ICS 支持范围和未支持的复杂调
 - 倒计时使用系统动态时间文字，App 退出或挂起后继续显示，到零停止而不反向计时。日程计到开始时间，无日期显示“无时限”。已超时事项在下一次 App 更新时显示超时；不依赖每秒运行 App。
 - 保存、完成、删除和改期后更新同一条活动；没有今日待办时结束。系统收起或超时结束后，回到 App 可恢复；手动收起的当日活动可通过“重新显示 / 更新”恢复。关闭开关会结束活动。
 - 使用本地摘要，不发送任务到服务器，不包含备注、平台、群消息或 Checklist 正文。锁屏只显示前三件，完整列表在 App 内。
+- 番茄主屏小组件读取当前专注快照，显示主题、计时和统计数字；不读取任务摘要或完整专注历史，也不保存历史记录。
 - 苹果限制单次实时活动最长 8 小时；本版没有服务器推送来重启活动或在 App 未运行时刷新任务列表。日期跨天后旧卡片提示更新，回到 App 更新今日内容。系统实时活动权限需开启。
 
-设置页版本从安装包读取；当前工程准备目标为 **0.6.1 (13)**，iPhone、Widgets 与 Mac 的无签名 Release 产物版本字段一致。源码构建通过不代表已完成真机验收或 TestFlight 上传；实际云端构建号以 TestFlight 显示为准，不能从源码 build 13 推断。
+设置页版本从安装包读取；当前原生工程版本目标为 **0.7.0 (14)**，Mikanseta Flutter 源码版本为 **0.6.0 (17)**。构建与验收状态见 [0.7.0 发布准备记录](Documentation/RELEASE_0.7.0.md)；实际云端构建号以 TestFlight 显示为准，不能从源码版本推断。
 
 ## 清单和日历的分工
 

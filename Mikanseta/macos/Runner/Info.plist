@@ -20,10 +20,10 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>FLTEnableImpeller</key>
 	<false/>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>读取所选日历，并在你确认后安排或编辑日历事件。</string>
 	<key>NSCalendarsUsageDescription</key>

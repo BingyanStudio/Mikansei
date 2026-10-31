@@ -20,17 +20,22 @@ import 'android_system.dart';
 import 'calendar_view.dart';
 import 'student_tools.dart';
 import 'system_services.dart';
+import 'pomodoro_store.dart';
+import 'pomodoro_page.dart';
+import 'focus_window.dart';
 
-const appVersion = '0.5.3 (16)';
+const appVersion = '0.6.0 (17)';
 
 class MikansetaApp extends StatelessWidget {
   const MikansetaApp({
     super.key,
     required this.store,
+    this.focusStore,
     this.cloud,
     this.localSync,
   });
   final EntryStore store;
+  final PomodoroStore? focusStore;
   final CloudSync? cloud;
   final LocalFolderSync? localSync;
   @override
@@ -50,14 +55,26 @@ class MikansetaApp extends StatelessWidget {
         "dark" => ThemeMode.dark,
         _ => ThemeMode.system,
       },
-      home: HomePage(store: store, cloud: cloud, localSync: localSync),
+      home: HomePage(
+        store: store,
+        focusStore: focusStore,
+        cloud: cloud,
+        localSync: localSync,
+      ),
     ),
   );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.store, this.cloud, this.localSync});
+  const HomePage({
+    super.key,
+    required this.store,
+    this.focusStore,
+    this.cloud,
+    this.localSync,
+  });
   final EntryStore store;
+  final PomodoroStore? focusStore;
   final CloudSync? cloud;
   final LocalFolderSync? localSync;
   @override
@@ -78,15 +95,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final pendingPopups = <Map<String, dynamic>>[];
   final handledPopups = <String>{};
   bool initialCalendarSync = false;
+  bool focusRoutesReady = false;
+  final pendingFocusRoutes = <Map<String, dynamic>>[];
+  PomodoroStore? _fallbackFocusStore;
   String? calendarSyncError;
   EntryStore get store => widget.store;
+  PomodoroStore get focus => widget.focusStore ?? _fallbackFocusStore!;
   CloudSync? get cloud => widget.cloud;
   LocalFolderSync? get localSync => widget.localSync;
   @override
   void initState() {
     super.initState();
+    if (widget.focusStore == null) {
+      _fallbackFocusStore = PomodoroStore(MemoryPomodoroStorage());
+      unawaited(_fallbackFocusStore!.load());
+    }
     WidgetsBinding.instance.addObserver(this);
     store.addListener(onStoreReady);
+    focus.addListener(onFocusChanged);
+    FocusWindowBridge.setActionHandler(handleFocusWindowAction);
     NativeStorage.channel.setMethodCallHandler((call) async {
       if (call.method == "routesAvailable") {
         readRoutes();
@@ -107,11 +134,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     store.removeListener(onStoreReady);
+    focus.removeListener(onFocusChanged);
+    FocusWindowBridge.setActionHandler(null);
     NativeStorage.channel.setMethodCallHandler(null);
     _refresh?.cancel();
     searchFocus.dispose();
     searchController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    _fallbackFocusStore?.dispose();
     super.dispose();
   }
 
@@ -119,6 +149,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       setState(() {});
+      focus.refresh();
       syncCalendar();
       store.refreshServices();
       readRoutes();
@@ -186,6 +217,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         if (!mounted) break;
         final route = Map<String, dynamic>.from(raw as Map);
         final url = Uri.tryParse(route["url"] as String? ?? "");
+        if (url?.host == 'pomodoro') {
+          if (focus.loading) {
+            pendingFocusRoutes.add(route);
+          } else {
+            await handlePomodoroRoute(url!);
+          }
+          continue;
+        }
         final id =
             route["entryID"] as String? ??
             (url?.host == "entry" || url?.host == "focus"
@@ -230,6 +269,60 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       /* A platform without routes keeps the shared UI usable. */
     } finally {
       readingRoutes = false;
+    }
+  }
+
+  void onFocusChanged() {
+    if (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      FocusWindowBridge.updateQuietly(focus.widgetSnapshot);
+    }
+    if (!focus.loading && !focusRoutesReady) {
+      focusRoutesReady = true;
+      unawaited(processPendingFocusRoutes());
+    }
+  }
+
+  Future<void> processPendingFocusRoutes() async {
+    if (focus.loading || !mounted || pendingFocusRoutes.isEmpty) return;
+    final routes = List<Map<String, dynamic>>.from(pendingFocusRoutes);
+    pendingFocusRoutes.clear();
+    for (final route in routes) {
+      final url = Uri.tryParse(route['url'] as String? ?? '');
+      if (url?.host == 'pomodoro') await handlePomodoroRoute(url!);
+    }
+  }
+
+  Future<void> handlePomodoroRoute(Uri url) async {
+    final action = url.queryParameters['action'] ?? '';
+    final session = url.queryParameters['session'];
+    if (action == 'open' && session == null) {
+      if (mounted) setState(() => page = 5);
+    } else if (session != null && session == focus.active?.id) {
+      await focus.handleRoute(action: action, sessionID: session);
+      if (mounted) setState(() => page = 5);
+    }
+  }
+
+  Future<void> handleFocusWindowAction(Map<String, dynamic> action) async {
+    final name = action['action'] as String? ?? '';
+    final session = action['session'] as String?;
+    if (name == 'open') {
+      if (session == null || session == focus.active?.id) {
+        if (mounted) setState(() => page = 5);
+      }
+      return;
+    }
+    if (session == null || session != focus.active?.id) return;
+    await focus.handleRoute(action: name, sessionID: session);
+    if (mounted) setState(() => page = 5);
+  }
+
+  Future<void> openFocusWindow() async {
+    try {
+      await FocusWindowBridge.show(focus.widgetSnapshot);
+    } catch (error) {
+      if (mounted) message('浮动计时器无法打开：$error');
     }
   }
 
@@ -370,13 +463,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           child: LayoutBuilder(
             builder: (context, bounds) {
               final desktop = bounds.maxWidth >= 760;
-              final titles = ['今日', '我的清单', '日程', '笔记', '设置'];
+              final titles = ['今日', '我的清单', '日程', '笔记', '设置', '专注'];
               final destinations = [
                 Icons.wb_sunny_outlined,
                 Icons.checklist_rounded,
                 Icons.calendar_month_outlined,
                 Icons.notes_rounded,
                 Icons.tune_rounded,
+                Icons.center_focus_strong,
               ];
               return Scaffold(
                 appBar: AppBar(
@@ -409,7 +503,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         onPressed: store.readOnly ? null : openPlanning,
                         icon: const Icon(Icons.event_note_outlined),
                       ),
-                    if (page != 4)
+                    if (page == 5 && desktop && focus.active != null)
+                      IconButton(
+                        tooltip: '打开浮动计时器',
+                        onPressed: openFocusWindow,
+                        icon: const Icon(Icons.picture_in_picture_alt_outlined),
+                      ),
+                    if (page != 4 && page != 5)
                       Padding(
                         padding: const EdgeInsets.only(right: 14),
                         child: desktop
@@ -547,7 +647,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                     switchOutCurve: Curves.easeIn,
                                     child: KeyedSubtree(
                                       key: ValueKey(page),
-                                      child: page == 2
+                                      child: page == 5
+                                          ? PomodoroPage(
+                                              focus: focus,
+                                              entries: store,
+                                              onOpenFloatingWindow:
+                                                  openFocusWindow,
+                                            )
+                                          : page == 2
                                           ? calendar(desktop)
                                           : page == 4
                                           ? settings()
@@ -657,9 +764,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -669,9 +776,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 fontFeatures: [FontFeature.tabularFigures()],
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
                               ),
                             ),
                           ],
@@ -1137,8 +1244,7 @@ class _AnimatedEntryListState extends State<AnimatedEntryList>
     final rows = <_ListRow>[
       for (var index = 0; index < entries.length; index++) ...[
         if (showGroups &&
-            (index == 0 ||
-                group(entries[index - 1]) != group(entries[index])))
+            (index == 0 || group(entries[index - 1]) != group(entries[index])))
           // boundary 记下标题前那条条目的 id：同一分组标签可能出现两次
           // （条目顺序不保证分组连续时），key 必须唯一。
           _ListRow.heading(

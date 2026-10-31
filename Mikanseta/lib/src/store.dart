@@ -94,11 +94,11 @@ class EntryStore extends ChangeNotifier {
   final DateTime Function() clock;
 
   /// 内置的「使用说明」笔记：note 类型、分类「帮助」，正文即 guideMikanseta。
-  static Entry builtInGuideNote(DateTime now) =>
-      Entry.create(title: '使用说明', kind: EntryKind.note, now: now).change({
-        'category': '帮助',
-        'body': guideMikanseta,
-      }, now: now);
+  static Entry builtInGuideNote(DateTime now) => Entry.create(
+    title: '使用说明',
+    kind: EntryKind.note,
+    now: now,
+  ).change({'category': '帮助', 'body': guideMikanseta}, now: now);
   Archive _archive = Archive(entries: []);
   List<Course> get courses => (_archive.metadata['courses'] as List? ?? [])
       .map((c) => Course(Map<String, dynamic>.from(c as Map)))
@@ -181,7 +181,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.5.3 (16)';
+  String displayVersion = '0.6.0 (17)';
   String? error;
   String? serviceError;
 
@@ -303,8 +303,7 @@ class EntryStore extends ChangeNotifier {
       if (index < 0 && routineIdentity != null) {
         final matches = <MapEntry<int, Entry>>[
           for (var i = 0; i < next.length; i++)
-            if (next[i].data['routineSeriesID'] ==
-                    routineIdentity.seriesID &&
+            if (next[i].data['routineSeriesID'] == routineIdentity.seriesID &&
                 next[i].data['routineOccurrenceID'] ==
                     routineIdentity.occurrenceID)
               MapEntry(i, next[i]),
@@ -415,8 +414,7 @@ class EntryStore extends ChangeNotifier {
       fields['androidCalendarLink'] = calendarLink;
       fields['routineSeriesID'] = routineIdentity?.seriesID;
       fields['routineOccurrenceID'] = routineIdentity?.occurrenceID;
-      if (index < 0 ||
-          reattachedBySharedIdentity && old.source.isEmpty) {
+      if (index < 0 || reattachedBySharedIdentity && old.source.isEmpty) {
         fields['source'] = '系统日历 · ${event['calendarTitle']}';
       }
       // Comparing the normalized data avoids a save on every app resume.
@@ -608,10 +606,12 @@ class EntryStore extends ChangeNotifier {
   void setPlannedTime(String id, DateTime start, DateTime end) {
     final entry = find(id);
     if (entry == null || !entry.isTask) return;
-    save(entry.change({
-      'plannedStart': isoDate(start),
-      'plannedEnd': isoDate(end),
-    }, now: clock()));
+    save(
+      entry.change({
+        'plannedStart': isoDate(start),
+        'plannedEnd': isoDate(end),
+      }, now: clock()),
+    );
   }
 
   /// Drag ordering: assign 0..n sortOrder to the given entries in the given
@@ -687,10 +687,12 @@ class EntryStore extends ChangeNotifier {
     if (localCalendar != null) {
       metadata['androidCalendarSync'] = localCalendar;
     }
-    final next = _withRoutineIdentityFields(collapseRunningSessions(
-      Archive(entries: merged.entries, metadata: metadata),
-      clock(),
-    ));
+    final next = _withRoutineIdentityFields(
+      collapseRunningSessions(
+        Archive(entries: merged.entries, metadata: metadata),
+        clock(),
+      ),
+    );
     if (next.encode() == _archive.encode()) return false;
     _commit(next);
     return true;

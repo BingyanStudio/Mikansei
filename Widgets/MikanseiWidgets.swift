@@ -317,10 +317,7 @@ struct FocusTimerWidgetView: View {
 @main
 struct MikanseiWidgets: WidgetBundle {
     var body: some Widget {
-        TodayChecklistWidget()
-        QuickAddWidget()
-        TodayProgressWidget()
-        FocusTimerWidget()
+        PomodoroWidget()
         DeadlineLiveActivity()
         if #available(iOS 26.0, *) { ReminderAlarmActivity() }
     }

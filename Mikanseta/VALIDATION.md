@@ -1,6 +1,14 @@
 # Mikanseta 验证记录
 
-本文件按时间记录各版本的验证范围，从 0.1.0 (1) 到当前 0.2.0 (4)。
+本文件按时间记录各版本的验证范围；当前源码为 0.6.0 (17)，旧版本记录保留原状。
+
+## 0.6.0 (17)：番茄专注与平台小组件 · 2026-10-31
+
+- `dart analyze lib` 通过，输出 `No issues found!`。
+- **iOS unsigned Release**：`./Scripts/flutter.sh build ios --release --flavor Mikanseta --no-codesign` 构建通过。App 与内嵌 `MikansetaWidgets.appex` 均为 0.6.0 (17)。Flutter 没有找到 `Release-Mikanseta` 配置，按提示使用通用 `Release` 配置。日志 `/tmp/mikanseta-ios-0.6.0-17-release.log`。
+- **macOS universal Release**：`./Scripts/flutter.sh build macos --release` 构建通过，产物包含 x86_64 与 arm64，版本为 0.6.0 (17)。Flutter 的 macOS build 命令不支持 `--no-codesign`；产物为无 Team ID 的 ad-hoc 签名。Xcode 输出 414 条 stale-file 警告，指向旧工作区路径，未阻止构建。日志 `/tmp/mikanseta-macos-0.6.0-17-release.log`；产物 `build/macos/Build/Products/Release/Mikanseta.app`。
+- **Android debug**：APK 构建通过，产物 `build/app/outputs/flutter-apk/app-debug.apk`。尚未在 Android 启动器上实际添加 / 调整小组件，也没有真机验收。
+- 本轮未新增或运行自动化测试。iOS / macOS / Android 专注控件、恢复、历史、尺寸与辅助文字体验仍待设备验收。Windows 构建计划由 push 后 CI 执行，本轮未验证。
 
 首轮记录日期：2026-10-13。测试宿主：Intel Mac，Xcode 26.5；Flutter 3.47.7、Dart 3.13.5。源工程包含 iOS、Android、macOS；原版 Mikansei 源码与安装标识未改动。
 

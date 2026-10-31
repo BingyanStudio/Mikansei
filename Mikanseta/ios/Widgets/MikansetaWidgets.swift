@@ -362,10 +362,7 @@ struct PlannedCountdown: View {
 @main
 struct MikansetaWidgets: WidgetBundle {
     var body: some Widget {
-        TodayChecklistWidget()
-        QuickAddWidget()
-        TodayProgressWidget()
-        FocusTimerWidget()
+        PomodoroWidget()
         DeadlineLiveActivity()
         if #available(iOS 26.0, *) { ReminderAlarmActivity() }
     }

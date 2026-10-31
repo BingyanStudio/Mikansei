@@ -39,46 +39,43 @@
 "path" = "../../Sources/MikanseiCore/WorkspaceSync.swift";
 "sourceTree" = "SOURCE_ROOT";
 };
-"33CC10F22044A3C60003C045" = {
-"path" = "Runner/Assets.xcassets";
-"isa" = "PBXFileReference";
-"name" = "Assets.xcassets";
-"lastKnownFileType" = "folder.assetcatalog";
-"sourceTree" = "<group>";
+"33CC10F32044A3C60003C045" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "33CC10F22044A3C60003C045";
 };
 "8F5E8C2C4CA2493DA78B5B7E" = {
 "isa" = "PBXBuildFile";
 "fileRef" = "A15F082E25CDCB8E6B5D9B0D";
 };
 "3399D490228B24CF009A79C7" = {
-"files" = (
-);
+"alwaysOutOfDate" = "1";
 "inputPaths" = (
 );
 "buildActionMask" = "2147483647";
 "shellPath" = "/bin/sh";
-"outputPaths" = (
-);
 "isa" = "PBXShellScriptBuildPhase";
 "runOnlyForDeploymentPostprocessing" = "0";
+"outputPaths" = (
+);
 "shellScript" = "echo \"$PRODUCT_NAME.app\" > \"$PROJECT_DIR\"/Flutter/ephemeral/.app_filename && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh embed\n";
 "outputFileListPaths" = (
 );
+"files" = (
+);
 "inputFileListPaths" = (
 );
-"alwaysOutOfDate" = "1";
 };
 "33CC10FA2044A3C60003C045" = {
 "baseConfigurationReference" = "7AFA3C8E1D35360C0083082E";
 "isa" = "XCBuildConfiguration";
 "buildSettings" = {
 "CLANG_WARN_SUSPICIOUS_MOVE" = "YES";
-"CLANG_WARN_OBJC_LITERAL_CONVERSION" = "YES";
+"CLANG_WARN_DOCUMENTATION_COMMENTS" = "YES";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
 "CLANG_ENABLE_OBJC_ARC" = "YES";
 "CLANG_WARN_DIRECT_OBJC_ISA_USAGE" = "YES_ERROR";
 "SWIFT_COMPILATION_MODE" = "wholemodule";
-"CLANG_CXX_LIBRARY" = "libc++";
+"ENABLE_NS_ASSERTIONS" = "NO";
 "CLANG_WARN_INFINITE_RECURSION" = "YES";
 "DEAD_CODE_STRIPPING" = "YES";
 "CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION" = "YES_AGGRESSIVE";
@@ -111,9 +108,9 @@
 "SWIFT_OPTIMIZATION_LEVEL" = "-O";
 "CLANG_WARN_NON_LITERAL_NULL_CONVERSION" = "YES";
 "GCC_WARN_UNUSED_FUNCTION" = "YES";
+"CLANG_WARN_OBJC_LITERAL_CONVERSION" = "YES";
 "DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
-"CLANG_WARN_DOCUMENTATION_COMMENTS" = "YES";
-"ENABLE_NS_ASSERTIONS" = "NO";
+"CLANG_CXX_LIBRARY" = "libc++";
 };
 "name" = "Release";
 };
@@ -156,6 +153,12 @@
 "7BE36D63F83743E1AEB22396",
 "D6B2B6D67C767840868473EC",
 "63A5BE99A7B490B6BDFDF2A2",
+"9D802EE5594FC6C833A97906",
+"8675DA70C167145EC618BC96",
+"973552E04E97F9BFA117734B",
+"FB950F643A9B7E421E0A8B60",
+"23DAF3BA869824E30D1C5CA0",
+"CFA5155F4043DC269D94F682",
 );
 "runOnlyForDeploymentPostprocessing" = "0";
 };
@@ -239,9 +242,9 @@
 "9740EEB21CF90195004384FC" = {
 "path" = "Debug.xcconfig";
 "isa" = "PBXFileReference";
+"sourceTree" = "<group>";
 "fileEncoding" = "4";
 "lastKnownFileType" = "text.xcconfig";
-"sourceTree" = "<group>";
 };
 "33CC11132044BFA00003C045" = {
 "isa" = "PBXBuildFile";
@@ -250,9 +253,9 @@
 "33E51914231749380026EE4D" = {
 "path" = "Release.entitlements";
 "isa" = "PBXFileReference";
+"sourceTree" = "<group>";
 "fileEncoding" = "4";
 "lastKnownFileType" = "text.plist.entitlements";
-"sourceTree" = "<group>";
 };
 "33CC11122044BFA00003C045" = {
 "path" = "MainFlutterWindow.swift";
@@ -475,12 +478,12 @@
 "isa" = "XCBuildConfiguration";
 "buildSettings" = {
 "CLANG_WARN_SUSPICIOUS_MOVE" = "YES";
-"CLANG_WARN_OBJC_LITERAL_CONVERSION" = "YES";
+"CLANG_WARN_DOCUMENTATION_COMMENTS" = "YES";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
 "CLANG_ENABLE_OBJC_ARC" = "YES";
 "CLANG_WARN_DIRECT_OBJC_ISA_USAGE" = "YES_ERROR";
 "SWIFT_COMPILATION_MODE" = "wholemodule";
-"CLANG_CXX_LIBRARY" = "libc++";
+"ENABLE_NS_ASSERTIONS" = "NO";
 "CLANG_WARN_INFINITE_RECURSION" = "YES";
 "DEAD_CODE_STRIPPING" = "YES";
 "CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION" = "YES_AGGRESSIVE";
@@ -513,9 +516,9 @@
 "SWIFT_OPTIMIZATION_LEVEL" = "-O";
 "CLANG_WARN_NON_LITERAL_NULL_CONVERSION" = "YES";
 "GCC_WARN_UNUSED_FUNCTION" = "YES";
+"CLANG_WARN_OBJC_LITERAL_CONVERSION" = "YES";
 "DEBUG_INFORMATION_FORMAT" = "dwarf-with-dsym";
-"CLANG_WARN_DOCUMENTATION_COMMENTS" = "YES";
-"ENABLE_NS_ASSERTIONS" = "NO";
+"CLANG_CXX_LIBRARY" = "libc++";
 };
 "name" = "Profile";
 };
@@ -672,7 +675,7 @@
 "isa" = "XCBuildConfiguration";
 "buildSettings" = {
 "CLANG_WARN_SUSPICIOUS_MOVE" = "YES";
-"CLANG_CXX_LIBRARY" = "libc++";
+"DEBUG_INFORMATION_FORMAT" = "dwarf";
 "MACOSX_DEPLOYMENT_TARGET" = "12.0";
 "CLANG_ENABLE_OBJC_ARC" = "YES";
 "CLANG_WARN_DIRECT_OBJC_ISA_USAGE" = "YES_ERROR";
@@ -719,7 +722,7 @@
 "SWIFT_ACTIVE_COMPILATION_CONDITIONS" = "DEBUG";
 "CLANG_WARN_OBJC_LITERAL_CONVERSION" = "YES";
 "CLANG_WARN_DOCUMENTATION_COMMENTS" = "YES";
-"DEBUG_INFORMATION_FORMAT" = "dwarf";
+"CLANG_CXX_LIBRARY" = "libc++";
 };
 "name" = "Debug";
 };
@@ -846,9 +849,9 @@
 "isa" = "PBXCopyFilesBuildPhase";
 "runOnlyForDeploymentPostprocessing" = "0";
 "dstPath" = "";
+"name" = "Bundle Framework";
 "files" = (
 );
-"name" = "Bundle Framework";
 };
 "331C80DE294CF71000263BE5" = {
 "isa" = "XCConfigurationList";
@@ -863,9 +866,9 @@
 "335BBD1A22A9A15E00E9071D" = {
 "path" = "GeneratedPluginRegistrant.swift";
 "isa" = "PBXFileReference";
+"sourceTree" = "<group>";
 "fileEncoding" = "4";
 "lastKnownFileType" = "sourcecode.swift";
-"sourceTree" = "<group>";
 };
 "BB6707F66629750D3E825053" = {
 "isa" = "PBXFileReference";
@@ -921,12 +924,17 @@
 "isa" = "PBXGroup";
 "name" = "Shared Native Services";
 "children" = (
+"304151B5D1E5510B213A8699",
+"70F4F50BD30EDB16FB22790C",
 "F4B2FC585499E0C45F30CCD2",
 "03346BC50D246ED6D96E99C2",
 "93ED071A689228923A07D953",
 "87AB8F5D92D394C5D1F2399B",
 "9E66AEA3127C963E017BCF26",
 "E0AE7ECC54D6BACCD63C48DC",
+"CC4C16BCE7D0BB46578D2045",
+"220167717F01FB71B2188FF7",
+"D69E97AF22420FD67A397698",
 "D33EB2301D5AED50245712CE",
 "987C6E2FFDD3030B3B07B34E",
 "8416B0CFEDBF2FDB5EED5BAE",
@@ -935,6 +943,7 @@
 "5ED55532F2648FCCC1FEE8F7",
 "1C5FC22CB10FD11E9EEF0CDE",
 "52A8986A2906B9E4D172A8BF",
+"CF5C79E188E9A85026924A93",
 );
 "sourceTree" = "<group>";
 };
@@ -1032,9 +1041,78 @@
 "isa" = "PBXBuildFile";
 "fileRef" = "D33EB2301D5AED50245712CE";
 };
-"33CC10F32044A3C60003C045" = {
+"33CC10F22044A3C60003C045" = {
+"path" = "Runner/Assets.xcassets";
+"isa" = "PBXFileReference";
+"name" = "Assets.xcassets";
+"lastKnownFileType" = "folder.assetcatalog";
+"sourceTree" = "<group>";
+};
+"304151B5D1E5510B213A8699" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "Pomodoro.swift";
+"path" = "../../Sources/MikanseiCore/Pomodoro.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"9D802EE5594FC6C833A97906" = {
 "isa" = "PBXBuildFile";
-"fileRef" = "33CC10F22044A3C60003C045";
+"fileRef" = "304151B5D1E5510B213A8699";
+};
+"70F4F50BD30EDB16FB22790C" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "CloudArchive.swift";
+"path" = "../../Sources/MikanseiCore/CloudArchive.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"8675DA70C167145EC618BC96" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "70F4F50BD30EDB16FB22790C";
+};
+"CC4C16BCE7D0BB46578D2045" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "BingyanSchedule.swift";
+"path" = "../../Sources/MikanseiCore/BingyanSchedule.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"973552E04E97F9BFA117734B" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "CC4C16BCE7D0BB46578D2045";
+};
+"220167717F01FB71B2188FF7" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "BuiltInGuide.swift";
+"path" = "../../Sources/MikanseiCore/BuiltInGuide.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"FB950F643A9B7E421E0A8B60" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "220167717F01FB71B2188FF7";
+};
+"D69E97AF22420FD67A397698" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "NoteMarkdown.swift";
+"path" = "../../Sources/MikanseiCore/NoteMarkdown.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"23DAF3BA869824E30D1C5CA0" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "D69E97AF22420FD67A397698";
+};
+"CF5C79E188E9A85026924A93" = {
+"isa" = "PBXFileReference";
+"lastKnownFileType" = "sourcecode.swift";
+"name" = "PomodoroFloatingWindowBridge.swift";
+"path" = "../../Mikanseta/native/Apple/PomodoroFloatingWindowBridge.swift";
+"sourceTree" = "SOURCE_ROOT";
+};
+"CFA5155F4043DC269D94F682" = {
+"isa" = "PBXBuildFile";
+"fileRef" = "CF5C79E188E9A85026924A93";
 };
 };
 "rootObject" = "33CC10E52044A3C60003C045";

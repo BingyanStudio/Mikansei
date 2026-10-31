@@ -27,6 +27,44 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  focus_channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "mikanseta/focus_window",
+      &flutter::StandardMethodCodec::GetInstance());
+  focus_window_ = std::make_unique<PomodoroFloatingWindow>(
+      GetHandle(), [this](const std::string& action, const std::string& session) {
+        if (!focus_channel_) return;
+        flutter::EncodableMap arguments;
+        arguments[flutter::EncodableValue(std::string("action"))] =
+            flutter::EncodableValue(action);
+        if (!session.empty()) {
+          arguments[flutter::EncodableValue(std::string("session"))] =
+              flutter::EncodableValue(session);
+        }
+        focus_channel_->InvokeMethod(
+            "focusAction",
+            std::make_unique<flutter::EncodableValue>(std::move(arguments)));
+      });
+  focus_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        if (!focus_window_) {
+          result->Error("unavailable", "专注窗口不可用");
+          return;
+        }
+        if (call.method_name() == "show") {
+          if (call.arguments() != nullptr) focus_window_->Show(*call.arguments());
+          result->Success();
+        } else if (call.method_name() == "updateSnapshot") {
+          if (call.arguments() != nullptr) focus_window_->UpdateSnapshot(*call.arguments());
+          result->Success();
+        } else if (call.method_name() == "hide") {
+          focus_window_->Hide();
+          result->Success();
+        } else {
+          result->NotImplemented();
+        }
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +78,8 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  focus_window_.reset();
+  focus_channel_.reset();
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

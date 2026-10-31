@@ -47,7 +47,8 @@
         <receiver android:name=".ChecklistWidget" android:label="Mikanseta 待办清单" android:exported="false"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/mikanseta_widget"/></receiver>
         <receiver android:name=".QuickAddWidget" android:label="Mikanseta 快速添加" android:exported="false"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/mikanseta_widget"/></receiver>
         <receiver android:name=".ProgressWidget" android:label="Mikanseta 今日进度" android:exported="false"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/mikanseta_widget"/></receiver>
-        <receiver android:name=".FocusWidget" android:label="Mikanseta 正在做" android:exported="false"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/mikanseta_widget"/></receiver>
+        <receiver android:name=".FocusWidget" android:label="Mikanseta 专注计时器" android:exported="false"><intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter><meta-data android:name="android.appwidget.provider" android:resource="@xml/pomodoro_widget"/></receiver>
+        <receiver android:name=".PomodoroWidgetDeadlineReceiver" android:exported="false" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

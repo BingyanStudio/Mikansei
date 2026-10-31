@@ -2,15 +2,17 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 enum MacPage: String, CaseIterable, Identifiable {
-    case today = "今日", all = "我的清单", overdue = "已超时", homework = "作业", routine = "常态", schedule = "日程", notes = "笔记", history = "历史", courses = "课表"
+    case today = "今日", all = "我的清单", overdue = "已超时", homework = "作业", routine = "常态", schedule = "日程", notes = "笔记", history = "历史", courses = "课表", pomodoro = "专注"
     var id: Self { self }
     var symbol: String { switch self {
-        case .today: return "sun.max"; case .all: return "checklist"; case .overdue: return "exclamationmark.circle"; case .homework: return "book.closed"; case .routine: return "repeat"; case .schedule: return "calendar"; case .notes: return "note.text"; case .history: return "clock.arrow.circlepath"; case .courses: return "graduationcap"
+        case .today: return "sun.max"; case .all: return "checklist"; case .overdue: return "exclamationmark.circle"; case .homework: return "book.closed"; case .routine: return "repeat"; case .schedule: return "calendar"; case .notes: return "note.text"; case .history: return "clock.arrow.circlepath"; case .courses: return "graduationcap"; case .pomodoro: return "timer"
     } }
 }
 
 struct MacWorkspaceView: View {
     @EnvironmentObject private var store: MacWorkspaceStore
+    @EnvironmentObject private var pomodoro: PomodoroCoordinator
+    @EnvironmentObject private var pomodoroPanel: MacPomodoroPanelController
     @EnvironmentObject private var sync: FolderSyncManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -26,90 +28,11 @@ struct MacWorkspaceView: View {
     @State private var showPlanning = false
     @StateObject private var calendarImport = MacCalendarImport()
     var body: some View {
-        NavigationSplitView {
-            List(MacPage.allCases, selection: $page) { item in Label(item.rawValue, systemImage: item.symbol).tag(item) }
-                .navigationSplitViewColumnWidth(min: 170, ideal: 190)
-                .safeAreaInset(edge: .bottom) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text(sync.status).font(.caption).foregroundStyle(.secondary)
-                        SettingsLink { Label("设置", systemImage: "gearshape") }
-                    }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
-                }
-        } content: {
-            VStack(spacing: 0) {
-                if page == .schedule {
-                    DatePicker("查看日期", selection: $scheduleDate, displayedComponents: .date).datePickerStyle(.graphical).padding(8)
-                    Divider()
-                }
-                if page == .courses {
-                    List(store.courses) { course in
-                        Button { editingCourse = course } label: {
-                            VStack(alignment: .leading) { Text(course.name); Text("\(course.weekdayTitle) · \(course.timeLabel)").font(.caption).foregroundStyle(.secondary) }
-                        }.buttonStyle(.plain).contextMenu { Button("删除", role: .destructive) { store.deleteCourse(course.id) } }
-                    }
-                } else {
-                    TimelineView(.periodic(from: .now, by: 30)) { clock in
-                        let rows = filtered(at: clock.date)
-                        List(selection: $selection) {
-                            if rows.isEmpty { Text(query.isEmpty ? "清单是空的，按 ⌘N 记下一件事。" : "没有匹配事项").foregroundStyle(.secondary) }
-                            ForEach(rows) { entry in
-                                HStack(alignment: .top, spacing: 10) {
-                                    if entry.isTask { Button { store.toggle(entry.id) } label: { Image(systemName: entry.isCompleted ? "checkmark.circle.fill" : "circle").foregroundStyle(entry.isCompleted ? .green : .secondary) }.buttonStyle(.borderless).accessibilityLabel("勾选：" + entry.title) }
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text(entry.title).strikethrough(entry.isCompleted)
-                                        HStack(spacing: 6) {
-                                            if entry.priority != .normal { Text(entry.priority.title).foregroundStyle(entry.priority == .urgent ? .red : .orange) }
-                                            if let date = entry.attentionDate { Text(date, format: .dateTime.month().day().hour().minute()) }
-                                            if !entry.category.isEmpty { Text(entry.category) }
-                                        }.font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    if entry.startedAt != nil { Image(systemName: "timer").foregroundStyle(.green) }
-                                }.padding(.vertical, 5).tag(entry.id)
-                                .contextMenu {
-                                    if entry.kind == .note {
-                                        Button("编辑") { selection = entry.id }
-                                    } else {
-                                        Button("编辑") { editing = entry }
-                                    }
-                                    if entry.isTask { Button(entry.isCompleted ? "重新打开" : "完成") { store.toggle(entry.id) } }
-                                    if page == .today && entry.isTask && !entry.isCompleted && !entry.isInPlanning {
-                                        Button("移到规划") { store.moveToPlanning(entry.id) }
-                                            .disabled(store.readOnly)
-                                    }
-                                    Button("删除", role: .destructive) { store.delete(entry.id) }
-                                }
-                            }
-                            // 今日页整列可拖动排序（macOS List 原生拖拽），其余页面关闭；
-                            // onMove 里按新顺序写 sortOrder。
-                            .onMove(perform: page == .today ? { source, destination in
-                                var ids = rows.map(\.id)
-                                ids.move(fromOffsets: source, toOffset: min(max(destination, 0), ids.count))
-                                store.reorder(ids)
-                            } : nil)
-                        }
-                        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.entries)
-                    }
-                }
-            }
-            .navigationTitle(page?.rawValue ?? "清单")
-            .navigationSplitViewColumnWidth(min: 280, ideal: 360)
-            .searchable(text: $query, prompt: "搜索事项、平台或地点")
-        } detail: {
-            if let entry = store.entries.first(where: { $0.id == selection }) {
-                if entry.kind == .note {
-                    // Notes edit inline in the detail pane, Apple-Notes style.
-                    MacNoteDetail(entry: entry).id(entry.id).environmentObject(store)
-                } else {
-                    MacEntryDetail(entry: entry) { editing = entry }
-                }
-            } else {
-                ContentUnavailableView("选一件事，开始做", systemImage: "checklist", description: Text("清单在左侧，详情在这里。"))
-            }
-        }
+        NavigationSplitView { sidebarColumn } content: { contentColumn } detail: { detailColumn }
         .toolbar {
             ToolbarItemGroup {
                 Button("规划", systemImage: "calendar.badge.clock") { showPlanning = true }.disabled(store.readOnly)
+                Button("专注浮窗", systemImage: "timer") { pomodoroPanel.show() }
                 Button("新建", systemImage: "plus") { newEntry() }.disabled(store.readOnly)
                 Button("同步", systemImage: "arrow.triangle.2.circlepath") { sync.request(store) }.disabled(sync.folder == nil || sync.isSyncing)
                 Menu("导入", systemImage: "square.and.arrow.down") {
@@ -140,17 +63,80 @@ struct MacWorkspaceView: View {
         }
         .fileImporter(isPresented: $importBackup, allowedContentTypes: [.json]) { result in read(result) { data, _ in try store.importBackup(data) } }
         .focusedSceneValue(\.newEntryAction, store.readOnly || editing != nil || editingCourse != nil ? nil : { newEntry() })
+        .focusedSceneValue(\.showPomodoroAction, { pomodoroPanel.show() })
+        .onChange(of: page) { _, next in if next == .pomodoro { selection = nil } }
         .onChange(of: store.reminderRoute?.id) { _, _ in handleReminder() }
         .onChange(of: editing?.id) { _, id in if id == nil { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { handleReminder() } } }
         .onChange(of: editingCourse?.id) { _, id in if id == nil { DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { handleReminder() } } }
         .onChange(of: store.hasUnsavedChanges) { _, pending in if !pending { sync.request(store) } }
         .onChange(of: scenePhase) { _, state in if state == .active { sync.request(store); store.scheduleNotifications(); if editing == nil { Task { await calendarImport.refresh(store: store) } } } }
         .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in if scenePhase == .active { sync.request(store) } }
-        .task { handleReminder(); sync.request(store); await calendarImport.refresh(store: store) }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { tick in
+            refreshPomodoroIfNeeded(at: tick)
+        }
+        .task { handleReminder(); pomodoro.refresh(); sync.request(store); await calendarImport.refresh(store: store) }
         .alert("操作尚未完成", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
             Button("重试保存") { store.persist() }; Button("关闭", role: .cancel) { store.error = nil }
         } message: { Text(store.error ?? "") }
     }
+    private var sidebarColumn: some View {
+        List(MacPage.allCases, selection: $page) { item in Label(item.rawValue, systemImage: item.symbol).tag(item) }
+            .navigationSplitViewColumnWidth(min: 170, ideal: 190)
+            .safeAreaInset(edge: .bottom) {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text(sync.status).font(.caption).foregroundStyle(.secondary)
+                    SettingsLink { Label("设置", systemImage: "gearshape") }
+                }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
+            }
+    }
+
+    private var contentColumn: some View {
+        Group {
+            if page == .pomodoro {
+                MacPomodoroSummaryView()
+            } else {
+                VStack(spacing: 0) {
+                    if page == .schedule {
+                        DatePicker("查看日期", selection: $scheduleDate, displayedComponents: .date).datePickerStyle(.graphical).padding(8)
+                        Divider()
+                    }
+                    if page == .courses {
+                        List(store.courses) { course in
+                            Button { editingCourse = course } label: {
+                                VStack(alignment: .leading) {
+                                    Text(course.name)
+                                    Text("\(course.weekdayTitle) · \(course.timeLabel)").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }.buttonStyle(.plain).contextMenu { Button("删除", role: .destructive) { store.deleteCourse(course.id) } }
+                        }
+                    } else {
+                        TimelineView(.periodic(from: .now, by: 30)) { clock in
+                            MacWorkspaceEntryList(rows: filtered(at: clock.date), page: page,
+                                                  query: query, selection: $selection, editing: $editing)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle(page?.rawValue ?? "清单")
+        .navigationSplitViewColumnWidth(min: 280, ideal: 360)
+        .searchable(text: $query, prompt: "搜索事项、平台或地点")
+    }
+
+    @ViewBuilder private var detailColumn: some View {
+        if page == .pomodoro {
+            MacPomodoroHistoryView()
+        } else if let entry = store.entries.first(where: { $0.id == selection }) {
+            if entry.kind == .note {
+                MacNoteDetail(entry: entry).id(entry.id).environmentObject(store)
+            } else {
+                MacEntryDetail(entry: entry) { editing = entry }
+            }
+        } else {
+            ContentUnavailableView("选一件事，开始做", systemImage: "checklist", description: Text("清单在左侧，详情在这里。"))
+        }
+    }
+
     private func newEntry() {
         if page == .courses { editingCourse = Course(); return }
         var entry = Entry(kind: page == .notes ? .note : page == .schedule ? .schedule : page == .homework ? .homework : .task)
@@ -163,6 +149,10 @@ struct MacWorkspaceView: View {
             return
         }
         editing = entry
+    }
+    private func refreshPomodoroIfNeeded(at date: Date) {
+        guard scenePhase == .active, let active = pomodoro.active, active.mode == .countdown else { return }
+        pomodoro.refresh(at: date)
     }
     private func handleReminder() {
         guard editing == nil, editingCourse == nil, let route = store.reminderRoute else { return }
@@ -194,13 +184,76 @@ struct MacWorkspaceView: View {
             let ids = Set(CalendarDisplay.items(on: scheduleDate, entries: store.entries).map { $0.entry.id })
             items = store.entries.filter { ids.contains($0.id) }
         case .all: items = board.open + board.finishedToday
-        case .courses: items = []
+        case .courses, .pomodoro: items = []
         }
         return items.filter { $0.matches(query) }.sorted {
             if $0.isCompleted != $1.isCompleted { return !$0.isCompleted }
             if $0.isOverdue(at: now) != $1.isOverdue(at: now) { return $0.isOverdue(at: now) }
             return TaskBoard.order($0, $1)
         }
+    }
+}
+
+private struct MacWorkspaceEntryList: View {
+    @EnvironmentObject private var store: MacWorkspaceStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let rows: [Entry]
+    let page: MacPage?
+    let query: String
+    @Binding var selection: UUID?
+    @Binding var editing: Entry?
+
+    var body: some View {
+        List(selection: $selection) {
+            if rows.isEmpty { Text(query.isEmpty ? "清单是空的，按 ⌘N 记下一件事。" : "没有匹配事项").foregroundStyle(.secondary) }
+            ForEach(rows) { entry in
+                HStack(alignment: .top, spacing: 10) {
+                    if entry.isTask {
+                        Button { store.toggle(entry.id) } label: {
+                            Image(systemName: entry.isCompleted ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(entry.isCompleted ? .green : .secondary)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("勾选：" + entry.title)
+                    }
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(entry.title).strikethrough(entry.isCompleted)
+                        HStack(spacing: 6) {
+                            if entry.priority != .normal { Text(entry.priority.title).foregroundStyle(entry.priority == .urgent ? .red : .orange) }
+                            if let date = entry.attentionDate { Text(date, format: .dateTime.month().day().hour().minute()) }
+                            if !entry.category.isEmpty { Text(entry.category) }
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if entry.startedAt != nil { Image(systemName: "timer").foregroundStyle(.green) }
+                }
+                .padding(.vertical, 5)
+                .tag(entry.id)
+                .contextMenu {
+                    if entry.kind == .note {
+                        Button("编辑") { selection = entry.id }
+                    } else {
+                        Button("编辑") { editing = entry }
+                    }
+                    if entry.isTask { Button(entry.isCompleted ? "重新打开" : "完成") { store.toggle(entry.id) } }
+                    if canMoveToPlanning(entry) {
+                        Button("移到规划") { store.moveToPlanning(entry.id) }.disabled(store.readOnly)
+                    }
+                    Button("删除", role: .destructive) { store.delete(entry.id) }
+                }
+            }
+            .onMove(perform: page == .today ? { source, destination in
+                var ids = rows.map(\.id)
+                ids.move(fromOffsets: source, toOffset: min(max(destination, 0), ids.count))
+                store.reorder(ids)
+            } : nil)
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: store.entries)
+    }
+
+    private func canMoveToPlanning(_ entry: Entry) -> Bool {
+        page == .today && entry.isTask && !entry.isCompleted && !entry.isInPlanning
     }
 }
 

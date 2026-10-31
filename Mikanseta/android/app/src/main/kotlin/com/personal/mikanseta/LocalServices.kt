@@ -9,6 +9,7 @@ import android.media.*
 import android.net.Uri
 import android.os.*
 import android.provider.Settings
+import android.util.AtomicFile
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,6 +26,7 @@ object LocalServices {
     const val FIRE = "com.personal.mikanseta.FIRE"
     const val STOP = "com.personal.mikanseta.STOP"
     const val SNOOZE = "com.personal.mikanseta.SNOOZE"
+    const val POMODORO_DEADLINE = "com.personal.mikanseta.POMODORO_DEADLINE"
     private const val LIVE = 9101
     fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
     fun manager(c: Context) = c.getSystemService(NotificationManager::class.java)
@@ -56,7 +58,7 @@ object LocalServices {
     private const val ROUTE_QUEUE_LIMIT = 20
     private const val ROUTE_MAX_LENGTH = 1024
     private val ROUTE_KEYS = setOf("url", "entryID", "courseID", "action")
-    private val ROUTE_HOSTS = setOf("entry", "focus", "new", "today", "tasks")
+    private val ROUTE_HOSTS = setOf("entry", "focus", "pomodoro", "new", "today", "tasks")
     private val ROUTE_ACTIONS = setOf("complete")
     private val ROUTE_KINDS = setOf("task", "homework", "note")
     private val ROUTE_ID = Regex("^[A-Za-z0-9_-]{1,64}$")
@@ -71,6 +73,14 @@ object LocalServices {
             if (host == "entry" || host == "focus") {
                 val segments = uri.pathSegments
                 if (segments.size != 1 || !ROUTE_ID.matches(segments[0])) return null
+            }
+            if (host == "pomodoro") {
+                if (uri.pathSegments.any { it.isNotEmpty() }) return null
+                val action = uri.getQueryParameter("action") ?: return null
+                if (action !in setOf("open", "pause", "resume", "finish")) return null
+                val session = uri.getQueryParameter("session")
+                if (action == "open" && session == null) return uri.toString()
+                if (session == null || !Regex("^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$").matches(session)) return null
             }
             if ((host == "today" || host == "tasks") && uri.pathSegments.any { it.isNotEmpty() }) return null
             if (host == "new") {
@@ -229,7 +239,222 @@ object LocalServices {
         else b.setSubText(if(deadline>0) "已到期" else "无时限")
         manager(c).notify(LIVE,b.build())
     }
-    fun refreshWidgets(c: Context) { for(type in arrayOf(ChecklistWidget::class.java,QuickAddWidget::class.java,ProgressWidget::class.java,FocusWidget::class.java)){val ids=AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c,type));updateWidgets(c,ids,type.simpleName)} }
+    fun refreshWidgets(c: Context) {
+        for (type in arrayOf(ChecklistWidget::class.java, QuickAddWidget::class.java, ProgressWidget::class.java)) {
+            val ids = AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c, type))
+            updateWidgets(c, ids, type.simpleName)
+        }
+        updatePomodoroWidgets(c)
+    }
+
+    fun writePomodoroSnapshot(c: Context, content: String) {
+        require(content.length <= 65536) { "专注卡片状态过大" }
+        val snapshot = JSONObject(content)
+        require(snapshot.optInt("version") == 1) { "专注卡片状态版本无效" }
+        require(snapshot.optDouble("savedAt", -1.0) > 0 && snapshot.optDouble("todaySeconds", -1.0) >= 0)
+        require(snapshot.optInt("completedCount", -1) >= 0)
+        val active = snapshot.optJSONObject("active")
+        if (active != null) {
+            val id = active.optString("id")
+            val subject = active.optString("subject").trim()
+            val mode = active.optString("mode")
+            val target = active.optDouble("targetSeconds", -1.0)
+            val accumulated = active.optDouble("accumulatedSeconds", -1.0)
+            require(Regex("^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$").matches(id))
+            require(subject.isNotEmpty() && subject.length <= 120 && mode in setOf("countdown", "countUp"))
+            require(target >= 0 && accumulated >= 0 && (mode != "countdown" || target > 0) && (mode != "countUp" || target == 0.0))
+        }
+        val file = AtomicFile(File(c.filesDir, "Mikanseta/pomodoro-snapshot.json"))
+        file.baseFile.parentFile?.mkdirs()
+        val stream = file.startWrite()
+        try {
+            stream.write(content.toByteArray(Charsets.UTF_8))
+            file.finishWrite(stream)
+        } catch (exception: Exception) {
+            file.failWrite(stream)
+            throw exception
+        }
+        updatePomodoroWidgets(c, snapshot)
+    }
+
+    private fun pomodoroDeadlinePending(c: Context, id: String): PendingIntent {
+        val intent = Intent(c, PomodoroWidgetDeadlineReceiver::class.java)
+            .setAction(POMODORO_DEADLINE)
+            .setData(Uri.parse("mikanseta-pomodoro://deadline/${Uri.encode(id)}"))
+        return PendingIntent.getBroadcast(c, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun schedulePomodoroDeadline(c: Context, snapshot: JSONObject) {
+        val alarm = c.getSystemService(AlarmManager::class.java)
+        val active = snapshot.optJSONObject("active")
+        val id = active?.optString("id")?.takeIf { it.isNotBlank() }
+        val preferences = c.getSharedPreferences("mikanseta-pomodoro-widget-v1", Context.MODE_PRIVATE)
+        val previousID = preferences.getString("deadlineSession", null)
+        if (previousID != null && previousID != id) alarm.cancel(pomodoroDeadlinePending(c, previousID))
+        if (id == null) {
+            preferences.edit().remove("deadlineSession").apply()
+            return
+        }
+        val run = active ?: return
+        val pending = pomodoroDeadlinePending(c, id)
+        val mode = run.optString("mode")
+        val runningSince = if (run.isNull("runningSince")) null else run.optDouble("runningSince", 0.0)
+        if (mode != "countdown" || runningSince == null || runningSince <= 0) {
+            alarm.cancel(pending)
+            preferences.edit().remove("deadlineSession").apply()
+            return
+        }
+        val remaining = (run.optDouble("targetSeconds", 0.0) - run.optDouble("accumulatedSeconds", 0.0)).coerceAtLeast(0.0)
+        val at = ((runningSince + remaining) * 1000).toLong()
+        if (at <= System.currentTimeMillis()) {
+            alarm.cancel(pending)
+            preferences.edit().remove("deadlineSession").apply()
+            return
+        }
+        // Exact access is used only when the user has already granted it. The widget
+        // still renders a clamped static deadline and never depends on this callback.
+        try {
+            if (exact(c)) alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+            else alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+        } catch (_: SecurityException) {
+            // Permission can be revoked between the check and scheduling. A
+            // best-effort inexact refresh is enough because the widget clamps.
+            runCatching { alarm.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending) }
+        }
+        preferences.edit().putString("deadlineSession", id).apply()
+    }
+
+    fun updatePomodoroWidgets(c: Context, snapshotOverride: JSONObject? = null, widgetIds: IntArray? = null) {
+        val manager = AppWidgetManager.getInstance(c)
+        val component = ComponentName(c, FocusWidget::class.java)
+        val ids = widgetIds ?: manager.getAppWidgetIds(component)
+        if (ids.isEmpty()) return
+        val snapshot = snapshotOverride ?: try {
+            val file = File(c.filesDir, "Mikanseta/pomodoro-snapshot.json")
+            if (file.isFile) JSONObject(file.readText(Charsets.UTF_8)) else null
+        } catch (_: Exception) { null }
+        if (snapshot != null) schedulePomodoroDeadline(c, snapshot)
+        val nowSeconds = System.currentTimeMillis() / 1000.0
+        val savedAt = snapshot?.optDouble("savedAt", 0.0) ?: 0.0
+        val todaySeconds = if (snapshot != null && sameLocalDay(savedAt * 1000.0, System.currentTimeMillis())) snapshot.optDouble("todaySeconds", 0.0) else 0.0
+        val completedCount = snapshot?.optInt("completedCount", 0) ?: 0
+        val active = snapshot?.optJSONObject("active")
+        val id = active?.optString("id")?.takeIf { !it.isNullOrBlank() }
+        val mode = active?.optString("mode") ?: ""
+        val subject = active?.optString("subject")?.takeIf { it.isNotBlank() } ?: "开始一段专注"
+        val runningSince = active?.takeUnless { it.isNull("runningSince") }?.optDouble("runningSince")
+        val accumulated = active?.optDouble("accumulatedSeconds", 0.0) ?: 0.0
+        val target = active?.optDouble("targetSeconds", 0.0) ?: 0.0
+        val elapsed = accumulated + (runningSince?.let { maxOf(0.0, nowSeconds - it) } ?: 0.0)
+        val remaining = maxOf(0.0, target - elapsed)
+        val snapshotTime = if (savedAt > 0) java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(java.util.Date((savedAt * 1000).toLong())) else "—"
+        for (widgetId in ids) {
+            val views = RemoteViews(c.packageName, R.layout.pomodoro_widget)
+            views.setTextViewText(R.id.pomodoro_widget_heading, "今日记录 ${formatWidgetDuration(todaySeconds)} · 累计完成 $completedCount 段")
+            views.setTextViewText(R.id.pomodoro_widget_subject, subject)
+            val timer = when (mode) {
+                "countdown" -> {
+                    if (runningSince == null) formatWidgetClock(remaining) + " · 已暂停"
+                    else formatWidgetClock(remaining) + " · 至 ${formatWidgetTime(System.currentTimeMillis() + (remaining * 1000).toLong())}"
+                }
+                "countUp" -> formatWidgetClock(elapsed)
+                else -> "00:00"
+            }
+            val exactCountdown = mode == "countdown" && runningSince != null && remaining > 0 &&
+                Build.VERSION.SDK_INT >= 24 && exact(c)
+            val status = when {
+                id == null -> "打开应用设置主题和计时方式"
+                mode == "countdown" && remaining <= 0 && runningSince != null -> "已到时间 · 打开应用归档"
+                mode == "countdown" && runningSince == null -> "已暂停 · 继续后刷新倒计时"
+                mode == "countdown" && exactCountdown -> "倒计时 · 至 ${formatWidgetTime(System.currentTimeMillis() + (remaining * 1000).toLong())}"
+                mode == "countdown" -> "倒计时快照 · $snapshotTime 更新，打开应用刷新"
+                mode == "countUp" && runningSince == null -> "已暂停 · 时长 ${formatWidgetDuration(elapsed)}"
+                else -> "正计时 · 上次刷新 $snapshotTime"
+            }
+            val options = manager.getAppWidgetOptions(widgetId)
+            val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
+            val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
+            val compact = (minHeight in 1..175) || (minWidth in 1..219)
+            views.setViewVisibility(R.id.pomodoro_widget_heading, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
+            views.setViewVisibility(R.id.pomodoro_widget_status, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
+            views.setTextViewTextSize(R.id.pomodoro_widget_subject, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 14f else 16f)
+            views.setInt(R.id.pomodoro_widget_subject, "setMaxLines", if (compact) 1 else 2)
+            views.setTextViewTextSize(R.id.pomodoro_widget_timer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 18f else 28f)
+            views.setViewPadding(R.id.pomodoro_widget_subject, 0, if (compact) 1 else 6, 0, 0)
+            views.setViewPadding(R.id.pomodoro_widget_timer, 0, if (compact) 1 else 4, 0, 0)
+            views.setTextViewTextSize(R.id.pomodoro_widget_status, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 9f else 12f)
+            views.setInt(R.id.pomodoro_widget_status, "setMaxLines", if (compact) 1 else 2)
+            views.setViewPadding(R.id.pomodoro_widget_status, 0, 0, 0, if (compact) 1 else 0)
+            views.setViewPadding(R.id.pomodoro_widget_root, if (compact) 8 else 12, if (compact) 8 else 12, if (compact) 8 else 12, if (compact) 8 else 12)
+            views.setTextViewText(R.id.pomodoro_widget_status, status)
+            views.setTextViewText(R.id.pomodoro_widget_timer, if (compact && mode == "countdown" && runningSince != null) formatWidgetClock(remaining) + " · 打开刷新" else timer)
+            views.setChronometer(R.id.pomodoro_widget_chronometer, SystemClock.elapsedRealtime(), "%s", false)
+            if (Build.VERSION.SDK_INT >= 24) {
+                views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, false)
+            }
+            views.setViewVisibility(R.id.pomodoro_widget_chronometer, android.view.View.GONE)
+            if (exactCountdown) {
+                val base = SystemClock.elapsedRealtime() + (remaining * 1000).toLong()
+                views.setChronometer(R.id.pomodoro_widget_chronometer, base, "%s", true)
+                if (Build.VERSION.SDK_INT >= 24) {
+                    views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, true)
+                }
+                views.setTextViewTextSize(R.id.pomodoro_widget_chronometer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 18f else 28f)
+                views.setViewVisibility(R.id.pomodoro_widget_timer, android.view.View.GONE)
+                views.setViewVisibility(R.id.pomodoro_widget_chronometer, android.view.View.VISIBLE)
+            }
+            if (mode == "countUp" && runningSince != null) {
+                val base = SystemClock.elapsedRealtime() - (elapsed * 1000).toLong()
+                if (Build.VERSION.SDK_INT >= 24) {
+                    views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, false)
+                }
+                views.setChronometer(R.id.pomodoro_widget_chronometer, base, "↑ %s", true)
+                views.setTextViewTextSize(R.id.pomodoro_widget_chronometer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 20f else 28f)
+                views.setViewVisibility(R.id.pomodoro_widget_timer, android.view.View.GONE)
+                views.setViewVisibility(R.id.pomodoro_widget_chronometer, android.view.View.VISIBLE)
+            }
+            views.setTextViewText(R.id.pomodoro_widget_primary, when {
+                id == null -> "开始专注"
+                runningSince == null -> "继续"
+                else -> "暂停"
+            })
+            views.setViewVisibility(R.id.pomodoro_widget_finish, if (id == null) android.view.View.GONE else android.view.View.VISIBLE)
+            views.setTextViewText(R.id.pomodoro_widget_finish, if (mode == "countUp") "结束并保存" else "提前结束")
+            val openRoute = JSONObject().put("url", if (id == null) "mikanseta://pomodoro?action=open" else "mikanseta://pomodoro?action=open&session=$id")
+            views.setOnClickPendingIntent(R.id.pomodoro_widget_heading, open(c, openRoute, "pomodoro-open-$widgetId"))
+            views.setOnClickPendingIntent(R.id.pomodoro_widget_subject, open(c, openRoute, "pomodoro-subject-$widgetId"))
+            views.setOnClickPendingIntent(R.id.pomodoro_widget_timer, open(c, openRoute, "pomodoro-timer-$widgetId"))
+            val primaryAction = when {
+                id == null -> "open"
+                runningSince == null -> "resume"
+                else -> "pause"
+            }
+            val primaryURL = if (id == null) "mikanseta://pomodoro?action=open" else "mikanseta://pomodoro?action=$primaryAction&session=$id"
+            views.setOnClickPendingIntent(R.id.pomodoro_widget_primary, open(c, JSONObject().put("url", primaryURL), "pomodoro-primary-$widgetId"))
+            if (id != null) {
+                val finishURL = "mikanseta://pomodoro?action=finish&session=$id"
+                views.setOnClickPendingIntent(R.id.pomodoro_widget_finish, open(c, JSONObject().put("url", finishURL), "pomodoro-finish-$widgetId"))
+            }
+            manager.updateAppWidget(widgetId, views)
+        }
+    }
+
+    private fun sameLocalDay(firstMs: Double, secondMs: Long): Boolean {
+        val first = Calendar.getInstance().apply { timeInMillis = firstMs.toLong() }
+        val second = Calendar.getInstance().apply { timeInMillis = secondMs }
+        return first.get(Calendar.YEAR) == second.get(Calendar.YEAR) && first.get(Calendar.DAY_OF_YEAR) == second.get(Calendar.DAY_OF_YEAR)
+    }
+
+    private fun formatWidgetDuration(seconds: Double): String = "${(seconds.coerceAtLeast(0.0).toLong() / 60)}分"
+    private fun formatWidgetClock(seconds: Double): String {
+        val value = seconds.coerceAtLeast(0.0).toLong()
+        val hours = value / 3600
+        val minutes = value / 60 % 60
+        val remainder = value % 60
+        return if (hours > 0) String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, remainder)
+        else String.format(Locale.getDefault(), "%02d:%02d", value / 60, remainder)
+    }
+    private fun formatWidgetTime(epochMillis: Long): String = java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(java.util.Date(epochMillis))
     fun updateWidgets(c: Context,ids: IntArray,mode: String) {
         val root=try{archive(c)}catch(_:Exception){JSONObject()};val entries=root.optJSONArray("entries")?:JSONArray();val rows=(0 until entries.length()).map{entries.getJSONObject(it)}
         val open=rows.filter{it.optString("kind")!="note"&&!it.optBoolean("isCompleted")}.sortedWith(compareByDescending<JSONObject>{it.optInt("priority")}.thenBy{epoch(it.optString(if(it.optString("kind")=="schedule")"plannedStart" else "dueDate"))?:Long.MAX_VALUE})
@@ -293,4 +518,12 @@ open class BaseWidget:AppWidgetProvider(){override fun onUpdate(c:Context,m:AppW
 class ChecklistWidget:BaseWidget()
 class QuickAddWidget:BaseWidget()
 class ProgressWidget:BaseWidget()
-class FocusWidget:BaseWidget()
+class FocusWidget:AppWidgetProvider(){
+    override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){LocalServices.updatePomodoroWidgets(c, widgetIds = ids)}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:android.os.Bundle){super.onAppWidgetOptionsChanged(c,m,id,options);LocalServices.updatePomodoroWidgets(c, widgetIds = intArrayOf(id))}
+}
+class PomodoroWidgetDeadlineReceiver:BroadcastReceiver(){
+    override fun onReceive(context:Context,intent:Intent){
+        if(intent.action==LocalServices.POMODORO_DEADLINE) LocalServices.updatePomodoroWidgets(context)
+    }
+}

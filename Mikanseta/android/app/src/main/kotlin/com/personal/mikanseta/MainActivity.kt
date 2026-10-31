@@ -41,6 +41,7 @@ class MainActivity : FlutterActivity() {
         else UUID.randomUUID().toString().also { file.writeText(it) }
     }
     private val archive by lazy { AtomicFile(File(filesDir, "Mikanseta/entries.json")) }
+    private val pomodoroArchive by lazy { AtomicFile(File(filesDir, "Mikanseta/pomodoro.json")) }
 
     override fun onCreate(state: Bundle?) { super.onCreate(state); acceptRoute(intent) }
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); acceptRoute(intent) }
@@ -69,6 +70,28 @@ class MainActivity : FlutterActivity() {
                 "openSystemSettings" -> { val full=call.argument<String>("target")=="fullscreen";val intent=if(full&&Build.VERSION.SDK_INT>=34) Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")) else Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName);try{startActivity(intent);result.success(true)}catch(e:Exception){result.error("settings",e.localizedMessage,null)} }
                 "systemStatus" -> result.success(LocalServices.status(this))
                 "takeRoutes" -> result.success(LocalServices.takeRoutes(this))
+                "readPomodoroArchive" -> background(result) {
+                    if (!pomodoroArchive.baseFile.exists()) null
+                    else pomodoroArchive.openRead().use { it.readBytes().toString(Charsets.UTF_8) }
+                }
+                "writePomodoroArchive" -> background(result) {
+                    val content = call.arguments as? String ?: error("缺少专注记录")
+                    pomodoroArchive.baseFile.parentFile?.mkdirs()
+                    val stream = pomodoroArchive.startWrite()
+                    try {
+                        stream.write(content.toByteArray(Charsets.UTF_8))
+                        pomodoroArchive.finishWrite(stream)
+                    } catch (exception: Exception) {
+                        pomodoroArchive.failWrite(stream)
+                        throw exception
+                    }
+                    null
+                }
+                "writePomodoroSnapshot" -> background(result) {
+                    val content = call.arguments as? String ?: error("缺少专注卡片状态")
+                    LocalServices.writePomodoroSnapshot(this, content)
+                    null
+                }
                 "setLiveEnabled" -> { LocalServices.prefs(this).edit().putBoolean("live",call.argument<Boolean>("enabled") == true).apply();LocalServices.live(this);result.success(true) }
                 "requestReminderAccess" -> {
                     val delivery=call.argument<String>("delivery") ?: "popup"

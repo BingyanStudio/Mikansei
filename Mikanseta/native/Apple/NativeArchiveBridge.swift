@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 #if os(iOS)
 import Flutter
 import UIKit
+import WidgetKit
 #else
 import FlutterMacOS
 import AppKit
@@ -19,6 +20,9 @@ final class NativeArchiveBridge: NSObject {
     private var folderPickerResult: FlutterResult?
     private static let localSyncBookmarkKey = "Mikanseta.localSyncFolderBookmark.v1"
     private let archiveURL: URL
+    private var pomodoroArchiveURL: URL {
+        archiveURL.deletingLastPathComponent().appendingPathComponent("pomodoro.json")
+    }
     init(messenger: FlutterBinaryMessenger) {
         channel = FlutterMethodChannel(name: "mikanseta/native", binaryMessenger: messenger)
         archiveURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -50,6 +54,40 @@ final class NativeArchiveBridge: NSObject {
                 DispatchQueue.main.async { self.services.update(text) }
                 return nil
             }
+        case "readPomodoroArchive":
+            perform(result) { [pomodoroArchiveURL] in
+                guard FileManager.default.fileExists(atPath: pomodoroArchiveURL.path) else { return nil }
+                return try String(contentsOf: pomodoroArchiveURL, encoding: .utf8)
+            }
+        case "writePomodoroArchive":
+            guard let text = call.arguments as? String else { result(FlutterError(code: "arguments", message: "缺少专注记录", details: nil)); return }
+            perform(result) { [pomodoroArchiveURL] in
+                try FileManager.default.createDirectory(at: pomodoroArchiveURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                #if os(iOS)
+                try Data(text.utf8).write(to: pomodoroArchiveURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+                #else
+                try Data(text.utf8).write(to: pomodoroArchiveURL, options: .atomic)
+                #endif
+                return nil
+            }
+        case "writePomodoroSnapshot":
+            #if os(iOS)
+            guard let text = call.arguments as? String, let data = text.data(using: .utf8) else {
+                result(FlutterError(code: "arguments", message: "缺少专注卡片状态", details: nil)); return
+            }
+            do {
+                let snapshot = try JSONDecoder().decode(PomodoroSnapshot.self, from: data)
+                perform(result) {
+                    try PomodoroSnapshotStore.save(snapshot)
+                    WidgetCenter.shared.reloadTimelines(ofKind: "Mikanseta.Pomodoro")
+                    return nil
+                }
+            } catch {
+                result(FlutterError(code: "snapshot", message: "专注卡片状态无效：\(error.localizedDescription)", details: nil))
+            }
+            #else
+            result(nil)
+            #endif
         case "importArchive", "importText": openDocument(result)
         case "exportArchive":
             guard let text = call.arguments as? String else { result(FlutterError(code: "arguments", message: "缺少备份内容", details: nil)); return }

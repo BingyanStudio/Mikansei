@@ -4,6 +4,11 @@ from pathlib import Path
 import hashlib,json,subprocess,plistlib
 ROOT=Path(__file__).resolve().parents[2]
 MKS=ROOT/'Mikanseta'
+version_line=next(line for line in (MKS/'pubspec.yaml').read_text().splitlines() if line.startswith('version:'))
+version_value=version_line.partition(':')[2].strip()
+widget_marketing_version, version_separator, widget_build_number=version_value.partition('+')
+if not version_separator:
+ widget_build_number='1'
 def uid(s):return hashlib.sha1(('Mikanseta.port.'+s).encode()).hexdigest()[:24].upper()
 def atom(v):
  if isinstance(v,dict):return '{\n'+'\n'.join(json.dumps(str(k))+ ' = '+atom(x)+';' for k,x in v.items())+'\n}'
@@ -23,7 +28,7 @@ def configure(platform):
   if build not in phase['files']:phase['files'].append(build)
   return ref
  core=[p for p in (ROOT/'Sources/MikanseiCore').glob('*.swift') if p.stem!='AppRoute']
- files=core+[MKS/'native/Apple/AppleSystemServices.swift']
+ files=core+[MKS/'native/Apple/AppleSystemServices.swift']+list((MKS/'native/Apple').glob('Pomodoro*.swift'))
  if platform=='ios':files+=list((MKS/'native/Apple/Ported').glob('*.swift'))
  group=uid(platform+'native-group');objects[group]={'isa':'PBXGroup','name':'Shared Native Services','children':[addFile(p,sources,platform+'app') for p in files],'sourceTree':'<group>'}
  if group not in main['children']:main['children'].append(group)
@@ -38,7 +43,7 @@ def configure(platform):
   objects[ws]={'isa':'PBXSourcesBuildPhase','buildActionMask':'2147483647','files':[],'runOnlyForDeploymentPostprocessing':'0'}
   objects[wr]={'isa':'PBXResourcesBuildPhase','buildActionMask':'2147483647','files':[],'runOnlyForDeploymentPostprocessing':'0'}
   objects[wf]={'isa':'PBXFrameworksBuildPhase','buildActionMask':'2147483647','files':[],'runOnlyForDeploymentPostprocessing':'0'}
-  widgetFiles=list((MKS/'ios/Widgets').glob('*.swift'))+core+[MKS/'native/Apple/Ported'/f'{p}.swift' for p in ['AppRoute','WidgetSnapshotStore','DeadlineActivityAttributes','ReminderAlarmMetadata','FocusClock']]
+  widgetFiles=list((MKS/'ios/Widgets').glob('*.swift'))+core+[MKS/'native/Apple/Ported'/f'{p}.swift' for p in ['AppRoute','WidgetSnapshotStore','PomodoroSnapshotStore','DeadlineActivityAttributes','ReminderAlarmMetadata','FocusClock']]
   wg=uid('widgets-group');objects[wg]={'isa':'PBXGroup','name':'Mikanseta Widgets','children':[addFile(p,objects[ws],'widget') for p in widgetFiles],'sourceTree':'<group>'}
   if wg not in main['children']:main['children'].append(wg)
   objects[product]={'isa':'PBXFileReference','explicitFileType':'wrapper.app-extension','path':'MikansetaWidgets.appex','sourceTree':'BUILT_PRODUCTS_DIR','includeInIndex':'0'}
@@ -46,7 +51,7 @@ def configure(platform):
   if product not in products['children']:products['children'].append(product)
   configids=[]
   for name in ['Debug','Release','Profile']:
-   c=uid('widgets-'+name);configids.append(c);objects[c]={'isa':'XCBuildConfiguration','name':name,'buildSettings':{'PRODUCT_NAME':'MikansetaWidgets','PRODUCT_BUNDLE_IDENTIFIER':bundle+'.Widgets','DEVELOPMENT_TEAM':team,'CODE_SIGN_STYLE':'Automatic','CODE_SIGN_ENTITLEMENTS':'Runner/Mikanseta.entitlements','MIKANSETA_SHARED_KEYCHAIN_SUFFIX':bundle+'.shared','INFOPLIST_FILE':'Widgets/Info.plist','MARKETING_VERSION':'0.2.0','CURRENT_PROJECT_VERSION':'4','IPHONEOS_DEPLOYMENT_TARGET':'17.0','SDKROOT':'iphoneos','TARGETED_DEVICE_FAMILY':'1,2','SWIFT_VERSION':'5.0','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks'],'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if name=='Debug' else '-O'}}
+   c=uid('widgets-'+name);configids.append(c);objects[c]={'isa':'XCBuildConfiguration','name':name,'buildSettings':{'PRODUCT_NAME':'MikansetaWidgets','PRODUCT_BUNDLE_IDENTIFIER':bundle+'.Widgets','DEVELOPMENT_TEAM':team,'CODE_SIGN_STYLE':'Automatic','CODE_SIGN_ENTITLEMENTS':'Runner/Mikanseta.entitlements','MIKANSETA_SHARED_KEYCHAIN_SUFFIX':bundle+'.shared','INFOPLIST_FILE':'Widgets/Info.plist','MARKETING_VERSION':widget_marketing_version,'CURRENT_PROJECT_VERSION':widget_build_number,'IPHONEOS_DEPLOYMENT_TARGET':'17.0','SDKROOT':'iphoneos','TARGETED_DEVICE_FAMILY':'1,2','SWIFT_VERSION':'5.0','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks'],'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if name=='Debug' else '-O'}}
   objects[cl]={'isa':'XCConfigurationList','buildConfigurations':configids,'defaultConfigurationIsVisible':'0','defaultConfigurationName':'Release'}
   objects[w]={'isa':'PBXNativeTarget','buildConfigurationList':cl,'buildPhases':[ws,wf,wr],'buildRules':[],'dependencies':[],'name':'MikansetaWidgets','productName':'MikansetaWidgets','productReference':product,'productType':'com.apple.product-type.app-extension'}
   proj=objects[project['rootObject']]

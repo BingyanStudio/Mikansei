@@ -37,7 +37,7 @@ class WindowsNative {
   static final instance = WindowsNative();
   static const version = String.fromEnvironment(
     'MIKANSETA_VERSION',
-    defaultValue: '0.5.3 (16)',
+    defaultValue: '0.6.0 (17)',
   );
   final Future<Directory> Function() _supportDirectory;
   final WindowsOpenFile _openFile;
@@ -166,6 +166,11 @@ class WindowsNative {
         return _readOptional(await _localFile('entries.json'));
       case 'writeArchive':
         await _writeAtomic(await _localFile('entries.json'), _text(arguments));
+        return null;
+      case 'readPomodoroArchive':
+        return _readOptional(await _localFile('pomodoro.json'));
+      case 'writePomodoroArchive':
+        await _writeAtomic(await _localFile('pomodoro.json'), _text(arguments));
         return null;
       case 'importArchive':
       case 'importText':

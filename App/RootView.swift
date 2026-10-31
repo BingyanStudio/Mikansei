@@ -18,6 +18,7 @@ private struct AgendaOccurrence: Identifiable {
 
 struct RootView: View {
     @EnvironmentObject private var store: EntryStore
+    @EnvironmentObject private var pomodoro: PomodoroCoordinator
     @EnvironmentObject private var notifications: NotificationManager
     @EnvironmentObject private var calendarSync: CalendarSyncManager
     @EnvironmentObject private var deadlineActivity: DeadlineActivityManager
@@ -27,6 +28,8 @@ struct RootView: View {
     @State private var editing: EditingSession?
     @State private var noteEditing: EditingSession?
     @State private var settings = false
+    @State private var showPomodoro = false
+    @State private var pendingPomodoroPresentation = false
     @State private var tab = AppTab.tasks
     @AppStorage("schedulePage") private var todayPage = 0
     @State private var todayNavigationID = UUID()
@@ -64,7 +67,7 @@ struct RootView: View {
             }
         }
         .overlay {
-            if editing == nil && noteEditing == nil && !settings, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
+            if editing == nil && noteEditing == nil && !settings && !showPomodoro, let reminder = notifications.foregroundReminders.first { ReminderPopup(reminder: reminder) }
         }
         .sheet(item: $editing, onDismiss: applyPendingRoute) { session in EntryEditor(entry: session.entry, isNew: session.isNew) }
         // Notes edit on a full Apple-Notes style page instead of a sheet.
@@ -72,7 +75,19 @@ struct RootView: View {
             NoteEditorView(entry: session.entry, isNew: session.isNew)
         }
         .sheet(isPresented: $settings, onDismiss: applyPendingRoute) { NavigationStack { SettingsView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { settings = false } } } } }
+        .sheet(isPresented: $showPomodoro, onDismiss: applyPendingRoute) {
+            NavigationStack { PomodoroFocusView() }
+                .presentationDetents([.large])
+        }
         .onOpenURL { url in
+            if url.scheme?.lowercased() == "mikansei", url.host?.lowercased() == "pomodoro" {
+                if let action = PomodoroURLAction(url: url) { _ = pomodoro.apply(action) }
+                else { pomodoro.error = "无法识别这个专注计时链接。" }
+                if settings { settings = false }
+                pendingPomodoroPresentation = true
+                presentPomodoroIfSafe()
+                return
+            }
             guard let route = AppRoute(url: url) else { return }
             // Preserve an existing unsaved draft; the widget destination opens after its sheet closes.
             if editing != nil || noteEditing != nil || settings { pendingRoute = route }
@@ -85,6 +100,7 @@ struct RootView: View {
             if phase == .active {
                 store.refreshNotifications()
                 if store.syncReady { store.retrySave() }
+                pomodoro.refresh()
                 deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
                 if editing == nil && noteEditing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
             }
@@ -99,6 +115,9 @@ struct RootView: View {
         }
         .onReceive(Timer.publish(every: 30, on: .main, in: .common).autoconnect()) { _ in
             if scenePhase == .active { folderSync.request(store) }
+        }
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { tick in
+            if scenePhase == .active, pomodoro.active?.mode == .countdown { pomodoro.refresh(at: tick) }
         }
         .onChange(of: store.entries) { _, entries in
             deadlineActivity.refresh(entries: store.readOnly ? [] : entries)
@@ -131,6 +150,7 @@ struct RootView: View {
     }
     @ToolbarContentBuilder private var addToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) { Button("设置", systemImage: "gearshape") { settings = true } }
+        ToolbarItem(placement: .topBarLeading) { Button("专注", systemImage: "timer") { queuePomodoroPresentation() } }
         ToolbarItem(placement: .topBarTrailing) {
             Button { add(tab == .today ? .schedule : tab == .notes ? .note : .task) } label: {
                 Image(systemName: "plus").font(.title3.weight(.medium)).frame(width: 36, height: 36)
@@ -162,7 +182,23 @@ struct RootView: View {
         Task { @MainActor in
             await Task.yield()
             if let route { open(route) }
+            presentPomodoroIfSafe()
             if editing == nil { await calendarSync.sync(store: store, requestAccess: true) }
+        }
+    }
+    private func queuePomodoroPresentation() {
+        pendingPomodoroPresentation = true
+        presentPomodoroIfSafe()
+    }
+    private func presentPomodoroIfSafe() {
+        guard pendingPomodoroPresentation, !showPomodoro,
+              editing == nil, noteEditing == nil, !settings else { return }
+        Task { @MainActor in
+            await Task.yield()
+            guard pendingPomodoroPresentation, !showPomodoro,
+                  editing == nil, noteEditing == nil, !settings else { return }
+            pendingPomodoroPresentation = false
+            showPomodoro = true
         }
     }
     private func open(_ route: AppRoute) {
