@@ -6,8 +6,8 @@
 - **原生 Mac universal Release**：Xcode 26.5，scheme `MikanseiMac`，x86_64 + arm64，最新界面构建通过；版本 `0.7.0 / 14`。日志 `/private/tmp/Mikansei-Pomodoro-Clock-Mac-build.log`。
 - **Mac 隔离手工预览**：使用合成主题，约 266×248 的小浮窗中计时数字居中且显著，暂停 / 继续在上、结束并保存在下，无重叠；空主题时开始按钮不可用。开始计时后点击暂停，等待一段时间后按钮显示“继续”，再结束并保存，生成 1 条 98.698852 秒的合成专注记录，活动计时为空；本次未实际点击“继续”。此项仅验证该窗口尺寸和合成数据，不代表所有桌面尺寸或真实数据验收。
 - **Mikanseta Flutter 0.6.0 (17)**：`dart analyze lib` 输出 `No issues found!`。最新时钟界面的 macOS universal Release、iOS unsigned Release 与 Android debug APK 构建均通过。iOS App 产物 `Mikanseta/build/ios/iphoneos/Mikanseta.app`；Android APK `Mikanseta/build/app/outputs/flutter-apk/app-debug.apk`；Mac App `Mikanseta/build/macos/Build/Products/Release/Mikanseta.app`。macOS 产物为无 Team ID 的 ad-hoc 签名；此前 Xcode 输出 414 条指向旧工作区路径的 stale-file 警告。
-- **Windows CI**：基线提交 `eeefa77` 的 [CI run 41203404752](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/41203404752) 通过，包括分析、既有测试、集成、Windows x64 构建 / 打包、安装器启动与产物生成。该运行不包含最新时钟界面修改；最新提交的 CI 待推送后运行。
-- 未新增测试；本机未运行自动化测试。基线 Windows CI 已执行既有测试与集成检查；未做真机专注操作、真实 WidgetKit / Android 启动器挂载、iOS 各尺寸及辅助文字大小验收。Mac 小窗手工预览不覆盖其他窗口尺寸。未上传 TestFlight，未创建 release tag。
+- **Windows CI**：时钟界面源码提交 `454ba5a` 的 [CI run 41205433832](https://github.com/BingyanStudio/Mikansei/actions/runs/41205433832) 通过，分析、既有测试、Windows 集成、x64 构建 / 打包、安装器 Release 启动与产物上传均成功。此前基线 CI 也通过。
+- 未新增测试；本机未运行自动化测试。未做真机专注操作、真实 WidgetKit / Android 启动器挂载、iOS 各尺寸及辅助文字大小验收。Mac 小窗手工预览不覆盖其他窗口尺寸。未上传 TestFlight，未创建 release tag。
 
 ## 0.6.1（13）源码候选准备 · 首次准备 2026-10-30，最终构建 2026-10-31
 

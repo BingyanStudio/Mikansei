@@ -23,7 +23,7 @@
 - Mikanseta 最新界面的 iOS unsigned Release：**通过**，版本 0.6.0 (17)，产物 `Mikanseta/build/ios/iphoneos/Mikanseta.app`（26.9 MB）。Flutter 使用通用 `Release` 配置；此前构建日志 `/tmp/mikanseta-ios-0.6.0-17-release.log`。
 - Mikanseta 最新界面的 Android debug APK：**通过**，产物 `Mikanseta/build/app/outputs/flutter-apk/app-debug.apk`。
 - Mikanseta macOS 构建曾记录 414 条指向旧工作区路径的 stale-file 警告；未阻止此前构建。
-- Windows 基线 CI：提交 `eeefa77` 的 [run 41203404752](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/41203404752) 成功，包含分析、既有测试、集成、Windows x64 构建 / 打包、安装器启动与产物生成。该 CI 不包含最新时钟界面修改；最新提交的 Windows CI **待推送后运行**。
+- Windows CI：时钟界面源码提交 `454ba5a` 的 [run 41205433832](https://github.com/BingyanStudio/Mikansei/actions/runs/41205433832) 成功，分析、既有测试、Windows 集成、x64 构建 / 打包、安装器 Release 启动和产物上传均通过。此前基线 CI 也通过。
 - 未新增测试；本机未运行自动化测试。基线 Windows CI 执行了既有测试与集成检查；未完成原生 iPhone / Mikanseta Apple / Android 真机操作、iOS WidgetKit 实际挂载或各尺寸、辅助文字大小验收。Mac 手工预览不代表所有窗口尺寸已验收。
 - TestFlight 上传：**尚未上传**。
 - Git tag：**尚未创建**。

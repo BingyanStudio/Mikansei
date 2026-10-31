@@ -1,6 +1,6 @@
 # Mikanseta · Flutter 测试版
 
-**当前源码版本：0.6.0 (17)**。本轮新增专注计时：必须填写主题，可选关联任务，支持倒计时、不限时正计时、暂停 / 继续 / 结束和本机历史；平台入口与数据边界见 [专注计时说明](../Documentation/POMODORO.md)。`dart analyze lib` 无问题；最新时钟界面的 macOS universal 与 iOS unsigned Release、Android debug APK 均构建通过。iOS App 产物位于 `build/ios/iphoneos/Mikanseta.app`，Android APK 位于 `build/app/outputs/flutter-apk/app-debug.apk`；macOS 产物为无 Team ID 的 ad-hoc 签名。基线 Windows CI 在提交 `eeefa77` 上通过，最新界面修改的 CI 待推送后运行。专注控件及设备体验尚未验收；iOS / Android 的小组件与系统服务仍需各平台设备验收。本轮增强手机触感：事项长按拖动拾起时强反馈，持有时最多三次间隔脉冲，放下时确认；取消、只读、离开页面或切到后台会停止持有反馈。完成、Checklist、专注计时与规划日历关键操作也使用更明显的反馈。实际触感强度仍待 iPhone 与 Android 真机体验。首次安装会在笔记里内置一篇 Markdown「使用说明」；笔记正文支持 Markdown 预览（编辑页右上角眼睛图标切换）。笔记为苹果备忘录式全页编辑；本轮新增「规划」（日程涂色 + 小时拖拽）、列表长按拖动排序、锁屏番茄钟倒计时与对比色重做（正在做整块变色）。本文 Windows 下载链接指向 **0.4.3 (9)**，提供安装程序与免安装 ZIP，支持本机存储、备份与共享文件夹同步，下载及功能范围见 [Windows 安装与打包](INSTALL_WINDOWS.md)。该链接对应的 Windows 构建已加入经授权的账号同步服务连接，真实 Windows 登录与跨设备同步仍待端到端验收。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮对齐原生 Mikansei 的手机布局：大标题与胶囊添加按钮、胶囊搜索框、分段式筛选条、白卡 + 图标化元信息、悬浮胶囊底栏。此前已加入 Supabase 账户登录与同账号多设备同步，以及 macOS / iOS / Android 的共享文件夹同步（与原生 Mikansei 自动互通）。
+**当前源码版本：0.6.0 (17)**。本轮新增专注计时：必须填写主题，可选关联任务，支持倒计时、不限时正计时、暂停 / 继续 / 结束和本机历史；平台入口与数据边界见 [专注计时说明](../Documentation/POMODORO.md)。`dart analyze lib` 无问题；最新时钟界面的 macOS universal 与 iOS unsigned Release、Android debug APK 均构建通过。iOS App 产物位于 `build/ios/iphoneos/Mikanseta.app`，Android APK 位于 `build/app/outputs/flutter-apk/app-debug.apk`；macOS 产物为无 Team ID 的 ad-hoc 签名。Windows CI 在最新界面源码提交 `454ba5a` 上通过（[run 41205433832](https://github.com/BingyanStudio/Mikansei/actions/runs/41205433832)）；分析、既有测试、Windows 集成、x64 构建 / 打包、安装器 Release 启动和产物上传均成功。专注控件及设备体验尚未验收；iOS / Android 的小组件与系统服务仍需各平台设备验收。本轮增强手机触感：事项长按拖动拾起时强反馈，持有时最多三次间隔脉冲，放下时确认；取消、只读、离开页面或切到后台会停止持有反馈。完成、Checklist、专注计时与规划日历关键操作也使用更明显的反馈。实际触感强度仍待 iPhone 与 Android 真机体验。首次安装会在笔记里内置一篇 Markdown「使用说明」；笔记正文支持 Markdown 预览（编辑页右上角眼睛图标切换）。笔记为苹果备忘录式全页编辑；本轮新增「规划」（日程涂色 + 小时拖拽）、列表长按拖动排序、锁屏番茄钟倒计时与对比色重做（正在做整块变色）。本文 Windows 下载链接指向 **0.4.3 (9)**，提供安装程序与免安装 ZIP，支持本机存储、备份与共享文件夹同步，下载及功能范围见 [Windows 安装与打包](INSTALL_WINDOWS.md)。该链接对应的 Windows 构建已加入经授权的账号同步服务连接，真实 Windows 登录与跨设备同步仍待端到端验收。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮对齐原生 Mikansei 的手机布局：大标题与胶囊添加按钮、胶囊搜索框、分段式筛选条、白卡 + 图标化元信息、悬浮胶囊底栏。此前已加入 Supabase 账户登录与同账号多设备同步，以及 macOS / iOS / Android 的共享文件夹同步（与原生 Mikansei 自动互通）。
 
 本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
 
@@ -28,7 +28,7 @@
 
 ## 迁移进度
 
-0.5.3 (16) 迁移基线此前已通过 Dart 静态检查与 74 项 Flutter 测试、macOS Release 构建与集成测试、Swift 原版备份往返、共享文件夹 replica 文件的原生 Swift 解码兼容测试，以及 Android Release 构建；APK 签名与版本元数据也已校验。0.6.0 (17) 的 iOS unsigned Release 与 macOS universal Release 已构建通过；本轮自动化测试和设备验收尚未完成。macOS 构建有 414 条指向旧工作区路径的 stale-file 警告，产物为无 Team ID 的 ad-hoc 签名。Supabase 登录与跨设备同步、共享文件夹同步尚未在真实设备上完成端到端验证（需要在各端选择同一个文件夹）。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
+0.5.3 (16) 迁移基线此前已通过 Dart 静态检查与 74 项 Flutter 测试、macOS Release 构建与集成测试、Swift 原版备份往返、共享文件夹 replica 文件的原生 Swift 解码兼容测试，以及 Android Release 构建；APK 签名与版本元数据也已校验。0.6.0 (17) 的 iOS unsigned Release 与 macOS universal Release 已构建通过；本机未运行本轮自动化测试，基线 Windows CI 已执行既有检查。设备验收尚未完成。macOS 构建有 414 条指向旧工作区路径的 stale-file 警告，产物为无 Team ID 的 ad-hoc 签名。Supabase 登录与跨设备同步、共享文件夹同步尚未在真实设备上完成端到端验证（需要在各端选择同一个文件夹）。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
 
 | 能力 | 当前状态 |
 | --- | --- |
@@ -37,7 +37,7 @@
 | 日 / 周日历与拖动选时段 | 静态检查与 Widget 测试通过，含只读模式不创建日程的回归 |
 | 循环规则、完成后产生下一次事项 | 已迁移并验证；月历尚未预展开未来循环实例 |
 | 既有清单计时、本机保存、JSON 备份 | 已迁移并验证 |
-| 番茄专注计时、历史与小组件 / 浮动窗口 | 本轮新增；iOS / macOS Release 已构建，本机自动化测试与设备验收待完成；基线 Windows CI 已运行既有检查 |
+| 番茄专注计时、历史与小组件 / 浮动窗口 | 本轮新增；iOS / macOS Release 已构建，本机自动化测试与设备验收待完成；Windows CI 最新界面检查已通过 |
 | iOS、macOS 原生文件桥接 | 本机读写与版本接口通过集成测试；系统文档窗口已实现，未自动化操作 |
 | Apple 日历来源选择、自动导入和反向录入 | 源码已接入，未验证 |
 | 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 源码已接入，未验证 |

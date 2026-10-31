@@ -8,7 +8,7 @@
 - **macOS universal Release**：最新时钟界面构建通过，产物包含 x86_64 与 arm64，版本为 0.6.0 (17)，输出为无 Team ID 的 ad-hoc 签名。最新构建未保存单独日志，产物 `build/macos/Build/Products/Release/Mikanseta.app`。此前 Xcode 输出过 414 条指向旧工作区路径的 stale-file 警告，未阻止构建。
 - **iOS unsigned Release**：最新时钟界面的 Mikanseta Release 构建通过，App 产物 `build/ios/iphoneos/Mikanseta.app`（26.9 MB）。此前构建日志 `/tmp/mikanseta-ios-0.6.0-17-release.log` 仍记录通用 `Release` 配置结果；Flutter 未找到 `Release-Mikanseta` 专属配置。
 - **Android debug**：最新时钟界面的 APK 构建通过，产物 `build/app/outputs/flutter-apk/app-debug.apk`。尚未在 Android 启动器上实际添加 / 调整小组件，也没有真机验收。
-- **Windows CI**：基线提交 `eeefa77` 的 [run 41203404752](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/41203404752) 成功；最新界面修改后的 CI 待推送后运行。
+- **Windows CI**：时钟界面源码提交 `454ba5a` 的 [run 41205433832](https://github.com/BingyanStudio/Mikansei/actions/runs/41205433832) 成功；分析、既有测试、Windows 集成、x64 构建 / 打包、安装器 Release 启动和产物上传均通过。此前基线 CI 也通过。
 - 未新增测试；本机未运行自动化测试。基线 Windows CI 已运行既有检查。iOS / macOS / Android 专注控件、恢复、历史、Widget 实际挂载、尺寸与辅助文字体验仍待设备验收；Mac 隔离预览只覆盖一个约 266×248 的合成数据小窗。
 
 首轮记录日期：2026-10-13。测试宿主：Intel Mac，Xcode 26.5；Flutter 3.47.7、Dart 3.13.5。源工程包含 iOS、Android、macOS；原版 Mikansei 源码与安装标识未改动。
