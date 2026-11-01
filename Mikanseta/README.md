@@ -1,6 +1,10 @@
 # Mikanseta · Mikansei 的 Flutter 版本
 
-**当前源码版本：0.7.0+18。** Mikanseta 与原生 Mikansei 是同一产品的两个版本，共用事项语义与 JSON 归档格式；本轮将 Flutter 主流程调整为对应的三项主导航：**待办、日程、笔记**，手机默认打开待办。日程页包含「今日聚焦、列表、日历」视图，并提供规划入口。现有 9 个测试文件的 107 项、全库 Flutter 分析、34 项 domain 单测和原版备份往返均通过；iOS、macOS 与 Android debug 构建通过。Windows CI run `41303398033` 正在运行，本地未运行平台集成测试。完整操作映射、颜色语义、平台边界与日志见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)和[验证记录](VALIDATION.md)。
+**当前版本：0.7.0+18。** Mikanseta 与原生 Mikansei 是同一产品的两个版本，共用事项语义与 JSON 归档格式。手机默认打开「待办」，主导航为**待办、日程、笔记**；日程包含「今日聚焦、列表、日历」和规划入口。Mikanseta `0.7.0 (18)` 已作为公开预发布发布；原生 Mikansei 仍为 `0.7.0 (14)`。
+
+[GitHub Release 与说明](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0)：[Android APK](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Android.apk) · [macOS ZIP](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-macOS.zip) · [Windows 安装版](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Windows-x64-Setup.exe) · [Windows 免安装版](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Windows-x64.zip) · [SHA-256 校验](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/SHA256SUMS.txt) · [构建信息](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/build-info.json)。
+
+本轮更新了手机和桌面布局，并使用浅色调的眨眼笑脸 Mikanseta 图标。应用内主图 `MikansetaArtwork` 是独立插图，原生 Mikansei App 图标没有替换。Flutter 全套 107 项、全库分析、domain 34 项、原版备份往返与桌面设置导航专测通过；Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 通过。macOS ZIP 签名检查通过但未公证；iOS unsigned App + Widget 构建成功，本轮没有更新 TestFlight。个人设备上的安装升级与逐项交互尚未验收。完整映射、边界和日志见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)、[验证记录](VALIDATION.md) 和[发布验证记录](../Documentation/RELEASE_MIKANSETA_0.7.0.md)。
 
 Mikanseta 的数据目录和安装标识与原生版分开；两端可通过备份互读，也可使用已配置的账户同步或共享文件夹同步。这里的 Flutter 版本不是独立的迁移项目。
 
@@ -37,13 +41,15 @@ Mikanseta 的数据目录和安装标识与原生版分开；两端可通过备�
 
 ## 在 Mac 上试用
 
-当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到相对于源码仓库根目录的 `../Releases/Mikanseta/macOS/<version+build>/Mikanseta-macOS.app` 并打开；版本号和构建号读取 App 内嵌的 `Info.plist`。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
+当前公开版可从上方 GitHub Release 下载 macOS universal ZIP。替换 Applications 中的 `Mikanseta.app` 前无需删除应用支持目录，数据留在该目录。发布 App 未公证，首次打开体验未在多台用户设备上验收。
 
-历史交付：0.4.2 (8) macOS Release 曾通过并启动（x86_64 + arm64 通用，含共享文件夹书签权限）；当时 Mac 原生界面未逐项验证，见 [验证记录](VALIDATION.md)。本段记录旧版交付，不代表当前 0.7.0+18 已构建。
+历史交付：0.4.2 (8) macOS Release 曾通过并启动（x86_64 + arm64 通用，含共享文件夹书签权限）；当时 Mac 原生界面未逐项验证，见 [验证记录](VALIDATION.md)。
 
-第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
+第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在 Mikanseta 的设置导入，即可查看同一批事项。
 
 ## 安装到安卓手机
+
+当前公开版：[Android 0.7.0 (18) APK](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Android.apk)，签名与旧版 0.4.2 (8) 一致，可按原安装方式覆盖更新。先导出 JSON 备份仍是好习惯；本轮未在个人 Android 设备上实测升级。
 
 历史交付：**0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。相对于源码仓库根目录，默认交付目录为 `../Releases/Mikanseta/Android/<version+build>/`，没有将安装包或私钥提交到 Git 历史。
 
@@ -81,13 +87,13 @@ Mikanseta 登录 Supabase 账号后，本机保存的数据（含课表与完成
 
 开启共享文件夹同步后，Mikanseta 会在所选文件夹的 `Mikansei-sync/` 里写一个只属于本设备的 `replica-<设备UUID>.json`，并读取该目录下其它设备的文件；协议、修订号与删除墓碑与原生 Mikansei 相同。请使用个人云盘或 iCloud 的私有文件夹，不要选择公开共享目录。
 
-原版日期使用 UTC ISO 8601 整秒字符串，测试版导出保持这一格式；连续编辑保证更新时间递增，避免备份合并时丢失同一秒内的改动。导出已与原版 `EntryArchive.decode` 实际往返验证，详见 [验证记录](VALIDATION.md)。
+原版日期使用 UTC ISO 8601 整秒字符串，Mikanseta 导出保持这一格式；连续编辑保证更新时间递增，避免备份合并时丢失同一秒内的改动。导出已与原版 `EntryArchive.decode` 实际往返验证，详见 [验证记录](VALIDATION.md)。
 
 ## 开发与验证
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
 
-此前版本的历史实测结果：`./Scripts/flutter.sh analyze` 通过，`./Scripts/flutter.sh test` 74 项通过（包括 0.3.0 与 0.4.0 新增测试；0.4.2 布局重构复用现有用例并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。以上是旧版本验证，不代表 0.7.0+18 本轮已通过。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。受限环境里 Dart 3.13.5 曾在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`；对应历史验证使用可运行 Flutter 的主机环境。Android `apksigner` 校验需将 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录；校验通过 APK Signature Scheme v2。日志见 [验证记录](VALIDATION.md)。
+历史版本的实测结果：`./Scripts/flutter.sh analyze` 通过，`./Scripts/flutter.sh test` 74 项通过（包括 0.3.0 与 0.4.0 新增测试；0.4.2 布局重构复用现有用例并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。当前 0.7.0+18 最终验证见本文件顶部。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。受限环境里 Dart 3.13.5 曾在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`；对应历史验证使用可运行 Flutter 的主机环境。Android `apksigner` 校验需将 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录；校验通过 APK Signature Scheme v2。日志见 [验证记录](VALIDATION.md)。
 
 `Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或从源码仓库向上找到的 `.toolchains/flutter`，否则查找已安装的 Flutter。也可用 `MIKANSEI_TOOLCHAINS_DIR` 指定工具链根目录；缓存默认放在该目录的 `pub-cache/`，可通过 `PUB_CACHE` 覆盖。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 

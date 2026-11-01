@@ -1,8 +1,10 @@
 # Changelog
 
-## Mikanseta 0.7.0+18 — 核心操作对应，验证通过
+## Mikanseta 0.7.0+18 — 核心操作对应，公开预发布
 
-将 Mikanseta 明确为 Mikansei 的 Flutter 版本，并将手机主导航、日程视图、今日聚焦分组、卡片编辑、规划移入 / 恢复和日历语义色对齐原生操作。新增持久化规划标记；旧归档缺省为未规划，循环新事项重置规划状态。9 个测试文件 107 项、Flutter 分析、34 项 domain 单测、Swift → Dart → Swift 备份往返以及 iOS / macOS / Android debug 构建通过。Windows CI run `41303398033` 正在运行；本地平台集成测试与设备验收未完成。操作映射、边界和验证记录见 [Mikanseta 原生操作对应说明](MIKANSETA_PARITY.md) 与 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)。
+将 Mikanseta 明确为 Mikansei 的 Flutter 版本，并将手机主导航、日程视图、今日聚焦分组、卡片编辑、规划移入 / 恢复和日历语义色对齐原生操作。新增持久化规划标记；旧归档缺省为未规划，循环新事项重置规划状态。Flutter 主界面布局已适配手机和桌面；Mikanseta 图标采用浅色调和眨眼笑脸，应用内主图 `MikansetaArtwork` 是独立插图，原生 Mikansei 图标未替换。原生 `0.7.0 (14)` 版本不变。
+
+Mikanseta `0.7.0+18` 已在 [BingyanStudio/Mikansei](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 作为公开预发布；tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`。Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339)、Flutter 107 项、全库分析、domain 34 项、备份往返、桌面设置导航专测通过。Android、macOS 和 Windows 四个安装资产，以及 SHA-256 和 `build-info.json` 已发布并与本地产物核对一致。macOS 包通过严格代码签名校验但未公证；iOS unsigned App + Widget 已构建，本轮没有更新 TestFlight。设备交互与覆盖升级未逐项实测，详见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)、[发布说明](RELEASE_MIKANSETA_0.7.0.md) 与 [操作对应说明](MIKANSETA_PARITY.md)。
 
 ## 0.7.0 (14) — 构建通过，待设备验收
 

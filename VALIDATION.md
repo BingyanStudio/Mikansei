@@ -1,5 +1,15 @@
 # 验证记录
 
+## Mikanseta 0.7.0+18 公开预发布 · 2026-11-01
+
+- **发布状态**：[GitHub Release `mikanseta-v0.7.0`](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 已公开，标记为 prerelease（`draft=false`、`prerelease=true`）；tag 指向源码提交 `cfe17a1d1cb04fff7de86106f469362a338a966d`。原生 Mikansei 版本保持 `0.7.0 (14)`。
+- **Release 资产**：Android APK、macOS ZIP、Windows Setup 与 ZIP、`SHA256SUMS.txt`、`build-info.json` 六项均已上传；远端每项大小与摘要均匹配本地产物。直接下载链接和安装边界见 [Mikanseta 0.7.0 发布说明](Documentation/RELEASE_MIKANSETA_0.7.0.md)。
+- **自动化与兼容性**：Flutter 全套 107 项、全库分析、domain 34 项、Swift → Dart → Swift 备份往返通过；桌面设置导航专测通过（日志 `/private/tmp/Mikanseta-desktop-navigation-final-test.log`）。Windows CI [run 41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 在提交 `cfe17a1` 上成功。早期 run `41303398033` 和下一轮曾因集成测试 locator 未适配设置页导航而失败，已修正测试并在最终 run 通过。
+- **Android**：最终 Release APK `64,007,120` bytes，构建用时 27.1 秒；签名证书与旧 Android 0.4.2 (8) 包一致，摘要见 Release 附件。日志 `/private/tmp/Mikanseta-release-0.7.0-android-published.log`。本轮没有在个人设备上安装升级验收。
+- **macOS**：universal App 同时包含 x86_64 与 arm64，59.2 MB；ZIP 为 `24,998,133` bytes。`codesign --verify --deep --strict` 通过，App 未公证。日志 `/private/tmp/Mikanseta-release-0.7.0-macos.log`。
+- **iOS**：浅色图标和公开客户端配置构建的 unsigned Release，主 App + Widget 为 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。没有更新 TestFlight；该产物不是可直接安装的通用 IPA。
+- **视觉与设备边界**：8 张合成界面预览中文可读、没有布局溢出。构建、CI 安装检查和合成预览不等于个人 Android、macOS、Windows 或 iOS 设备上的逐项交互验收；实际设备行为仍需后续确认。
+
 ## Mikanseta Flutter 0.7.0+18：核心操作与布局重构 · 2026-11-01
 
 - **产品对应**：Mikanseta 是 Mikansei 的 Flutter 版。本轮对齐手机「待办、日程、笔记」主导航、日程「今日聚焦 / 列表 / 日历」、规划入口、清单筛选与 Checklist 操作；说明见 [Mikanseta 原生操作对应说明](Documentation/MIKANSETA_PARITY.md) 和 [Mikanseta 验证记录](Mikanseta/VALIDATION.md)。原生版本仍为 `0.7.0 (14)`。
@@ -9,7 +19,7 @@
 - **macOS universal Release**：Mikanseta Release 构建通过，56.9 MB，包含 arm64 与 x86_64。日志：`/private/tmp/Mikanseta-parity-macos-final.log`。
 - **Android debug**：debug APK 构建通过，`aapt` 核对包名 `com.personal.mikanseta`、版本 `0.7.0` / versionCode `18`；未安装到设备。日志：`/private/tmp/Mikanseta-parity-android-debug-final.log`。
 - **工程标识与视觉预览**：Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 保持不变。8 张合成数据截图覆盖手机浅 / 深色、320 点宽且文字放大 1.5 倍、1280 点桌面、日程、编辑器和笔记；中文可读、无布局溢出，主代理完成目视复核。PNG 位于 `/private/tmp/Mikanseta-Parity-Preview/`，临时预览测试文件已删除。
-- **尚待确认**：Windows CI run `41303398033` 已由提交 `fb3089e` 触发，目前运行中；本地没有运行 `integration_test/app_test.dart`、Android 真机验收或正式包发布。本轮构建与 Flutter 测试不代表平台端到端集成验收。
+- **当时状态**：这一检查点记录时 Windows CI run `41303398033` 尚在执行，正式发布和本地平台集成尚未完成。后续该 run 与下一轮测试因设置导航 locator 失败；修正测试后，最终 run `41305090339` 通过，Release 已公开，详见上方最终记录。
 
 ## 0.7.0（14）专注计时与 WidgetKit · 2026-10-31
 

@@ -2,7 +2,16 @@
 
 本文件按时间记录各版本的验证范围；当前源码目标为 0.7.0+18，旧版本记录保留原状。
 
-## 0.7.0+18：核心操作对应与布局重构 · 2026-11-01
+## 0.7.0+18：公开预发布与最终验证 · 2026-11-01
+
+- **GitHub Release**：[Mikanseta 0.7.0 (18)](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 已公开为预发布（`draft=false`、`prerelease=true`），tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`；原生 Mikansei 仍为 `0.7.0 (14)`。六项资产（Android APK、macOS ZIP、Windows Setup EXE、Windows ZIP、`SHA256SUMS.txt`、`build-info.json`）的 Release 大小与摘要均和本地产物匹配。
+- **最终自动化检查**：Flutter 套件 107 项、全库 `flutter analyze`、domain 34 项、Swift → Dart → Swift 备份往返与桌面设置导航专测均通过。专测日志 `/private/tmp/Mikanseta-desktop-navigation-final-test.log`。Windows CI [run 41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 成功，源码提交 `cfe17a1`。更早的 run 因测试未适配设置页导航而失败，测试修正后通过；不是产品代码失败。
+- **Android Release**：64,007,120 bytes，27.1 秒构建；`com.personal.mikanseta` 发布证书与旧 0.4.2 (8) 包一致，可按相同签名与 application ID 直接覆盖更新。校验摘要与构建信息见 [Release 页面](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0)。日志 `/private/tmp/Mikanseta-release-0.7.0-android-published.log`。个人设备升级仍未实测。
+- **macOS Release**：universal App 59.2 MB，包含 arm64 与 x86_64；发布 ZIP 为 24,998,133 bytes。`codesign --verify --deep --strict` 通过；尚未公证。日志 `/private/tmp/Mikanseta-release-0.7.0-macos.log`。Apple Silicon 与 Intel 用户设备上的实际启动尚未分别验收。
+- **iOS Release**：浅色图标与公开客户端配置对应的 unsigned App + Widget，版本 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。本轮没有更新 TestFlight，也没有发布通用 IPA；需要用户自己的签名部署或未来实际上传 TestFlight 后安装。
+- **界面预览**：8 张合成内存数据截图覆盖手机浅 / 深色、320 点宽且系统文字放大 1.5 倍、桌面、日程、编辑与笔记；中文显示正常且没有布局溢出。预览不是设备 UI 验收。
+
+## 0.7.0+18：发布前核心操作与布局验证快照 · 2026-11-01
 
 - **Flutter 全库分析**：`./Scripts/flutter.sh analyze` 通过，`No issues found!`。最终复跑日志：`/private/tmp/Mikanseta-final-analyze-final.log`。
 - **Flutter 自动化测试**：现有 9 个测试文件共 107 项通过；临时预览测试不属于套件。日志：`/private/tmp/mikanseta-final-nine-tests.log`。单独 `domain_test.dart` 的 34 项也通过，日志：`/private/tmp/mikanseta-domain-test.log`。
@@ -10,7 +19,7 @@
 - **平台构建**：iOS unsigned Release（App + Widget）通过，27.0 MB，App / Widget 版本均为 `0.7.0 (18)`；macOS universal Release 通过，56.9 MB，含 arm64 与 x86_64；Android debug APK 构建通过，包名 `com.personal.mikanseta`、版本码 18，未安装到设备。日志分别为 `/private/tmp/Mikanseta-parity-ios-final.log`、`/private/tmp/Mikanseta-parity-macos-final.log`、`/private/tmp/Mikanseta-parity-android-debug-final.log`。
 - **工程身份**：配置脚本执行后核对 Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 均保留；原生 Mikansei 仍为 `0.7.0 (14)`。
 - **视觉预览**：8 张合成数据截图覆盖手机浅 / 深色、320 点宽且文字放大 1.5 倍、桌面、日程、编辑器与笔记。中文显示正常，未发现布局溢出；预览由主代理复核。PNG 位于 `/private/tmp/Mikanseta-Parity-Preview/`，临时测试文件已删除。
-- **尚待确认**：Windows CI run `41303398033` 已由提交 `fb3089e` 触发，目前运行中，结果待确认；本地未运行 `integration_test/app_test.dart`，Android debug 未安装或真机验收，也未发布安装包。没有本轮 Windows CI 结果时不将其记录为通过。
+- **当时状态**：记录此快照时 Windows CI run `41303398033` 尚在执行，Android 仅有 debug 构建且 Release 尚未发布。之后测试 locator 修正，最终 CI run `41305090339` 成功，0.7.0 Release 已公开；最终信息见上方。
 - 操作映射、数据语义与平台能力边界见 [Mikanseta 原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)。
 
 ## 0.6.0 (17)：番茄专注与平台小组件 · 2026-10-31
@@ -249,16 +258,16 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 - 主机 Flutter 静态检查通过：No issues found。
 - 完整 Flutter 数据与界面测试通过：83/83。新增 9 项覆盖 Unicode/步骤/计时持久化、替换失败保留原档、取消文件操作、文本与备份、共享文件夹与状态重启恢复、非法 replica 路径、文件夹失效、外链限制和 Windows 功能说明。
 - Swift → Dart → Swift 备份往返通过。
-- Windows 2022 GitHub Actions 首轮构建 [39435492858](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39435492858) 全部通过，源码提交 `c6c213ae916e566b8a1577d2440af79729f9e397`。包括静态检查、Flutter 数据与界面套件、Windows 应用集成、Release、ZIP、Inno Setup 安装、安装后进程存活 8 秒及卸载。该结果不代替个人 Windows 电脑上的视觉和长期运行验收。
+- Windows 2022 GitHub Actions 首轮构建 [39435492858](https://github.com/BingyanStudio/Mikansei/actions/runs/39435492858) 全部通过，源码提交 `c6c213ae916e566b8a1577d2440af79729f9e397`。包括静态检查、Flutter 数据与界面套件、Windows 应用集成、Release、ZIP、Inno Setup 安装、安装后进程存活 8 秒及卸载。该结果不代替个人 Windows 电脑上的视觉和长期运行验收。
 - macOS Release 回归构建通过；本轮未替换本机已安装 App。
 - 后续补充读取保护：本机档案不可读或为目录时报告错误，只有文件不存在才视为首次使用，避免误将读取失败当作空档案。对应回归用例在最终 Windows CI 中通过。
 - 第二轮 CI 在旧课表同步检查中失败，Windows 档案读取保护用例通过。发现测试助手用 `contains('BAD')` 排除损坏样本，可能误排除随机 UUID 中包含相同片段的正常设备文件；已改为只排除准确样本名 `replica-BAD.json`，最终 CI 中通过。
-- 最终 Windows 构建 [39438198255](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39438198255) 全部通过，源码提交 `c0854d33ed36a55ac5a469b8b6d86a44eaa65249`：静态检查、**84/84 数据与界面检查**、真实 Windows 应用集成、Release 编译、ZIP / Setup 打包、安装、启动存活 8 秒及卸载。
+- 最终 Windows 构建 [39438198255](https://github.com/BingyanStudio/Mikansei/actions/runs/39438198255) 全部通过，源码提交 `c0854d33ed36a55ac5a469b8b6d86a44eaa65249`：静态检查、**84/84 数据与界面检查**、真实 Windows 应用集成、Release 编译、ZIP / Setup 打包、安装、启动存活 8 秒及卸载。
 - 提供完整 ZIP 与每用户 Setup EXE 构建脚本，包含 VC 运行库与校验文件；不删除用户 AppData 清单。安装包暂未做 Windows 代码签名。
 - 账号同步服务连接仅从经授权的 CI 配置或显式环境变量加入；未配置时仍可使用本地及共享文件夹功能。
 - 经用户明确授权，将核验为 `publishable` 的公开客户端配置加入 Actions secrets。最终产物 `build-info.json` 确认 `supabaseConfigured=true`；未上传管理员密钥、登录会话或个人清单。真实 Windows 登录及跨设备账号同步仍未完成端到端验收。
 
-公开发布：[Windows 0.4.3 (9)](https://github.com/KikuchiHeinrich/Mikansei/releases/tag/mikanseta-windows-v0.4.3)。下载产物的 SHA-256 与随附校验文件一致，ZIP 完整性、Windows x64 PE 架构及完整 VC 运行库已核对：
+公开发布：[Windows 0.4.3 (9)](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-windows-v0.4.3)。下载产物的 SHA-256 与随附校验文件一致，ZIP 完整性、Windows x64 PE 架构及完整 VC 运行库已核对：
 
 | 文件 | 字节数 | SHA-256 |
 | --- | --- | --- |
@@ -281,7 +290,7 @@ SDK 证据来自固定 Flutter 3.47.7（`abaf9c523780a608bd46686fd5e53740a07077f
 | macOS | 使用现有安装脚本和本机配置构建 0.4.4 (10)，覆盖安装后 `codesign` 验证通过；`FLTEnableImpeller=false` 保留，实际运行进程 PID 84914。 |
 | iOS 模拟器 | `Scripts/flutter.sh build ios --simulator --flavor Mikanseta --no-pub` 编译成功，耗时 102.9s；产物 `build/ios/iphonesimulator/Mikanseta.app` 为 x86_64 + arm64 通用模拟器应用，Bundle ID `com.personal.mikanseta`，版本 0.4.4 (10)。本任务未执行额外签名或安装；日志为 `LocalInstall/completion-fix-ios-simulator.log`。 |
 | iPhone | 设备当前 unavailable，未安装。 |
-| Windows | CI [39724313139](https://github.com/KikuchiHeinrich/Mikansei/actions/runs/39724313139) 已 completed success，对应修复提交 `51e6d3f2875bb64947c7a4ecf14939138b358d49`。Windows Analyze、全部单元测试、实际 `integration_test/app_test.dart`、Release 构建、Inno 安装及安装后启动/卸载验证、产物上传全部成功。下载 artifact 12402696936，归档 SHA-256 为 `6c6b92e7ec9fc43742849621c0f522b51180d37471c5e3ec72a7ddd713aee3e9`，解包后每个包的 `.sha256` 均一致。本地交付目录为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Windows/0.4.4+10/`，`Setup.exe` 为 11,869,035 bytes，portable ZIP 为 14,145,112 bytes，`build-info.json` 确认 version `0.4.4`、buildNumber `10`。 |
+| Windows | CI [39724313139](https://github.com/BingyanStudio/Mikansei/actions/runs/39724313139) 已 completed success，对应修复提交 `51e6d3f2875bb64947c7a4ecf14939138b358d49`。Windows Analyze、全部单元测试、实际 `integration_test/app_test.dart`、Release 构建、Inno 安装及安装后启动/卸载验证、产物上传全部成功。下载 artifact 12402696936，归档 SHA-256 为 `6c6b92e7ec9fc43742849621c0f522b51180d37471c5e3ec72a7ddd713aee3e9`，解包后每个包的 `.sha256` 均一致。本地交付目录为 `/Users/xuyilin/Desktop/Projects/Deliveries/Mikanseta/Windows/0.4.4+10/`，`Setup.exe` 为 11,869,035 bytes，portable ZIP 为 14,145,112 bytes，`build-info.json` 确认 version `0.4.4`、buildNumber `10`。 |
 
 限制：iOS 模拟器构建时因工程没有 `Debug-Mikanseta` 配置而由 Flutter 回退到通用 `Debug`，日志已如实记录，本次未修改工程配置。尚未完成 Android、iOS、macOS、Windows 真机 UI 验收；当前证据覆盖动画退出期间的旧快照问题，未在测试中复现稳定态持续错误，不能把本次修复解释为已覆盖所有可能场景。
 
