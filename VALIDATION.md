@@ -1,5 +1,16 @@
 # 验证记录
 
+## Mikanseta Flutter 0.7.0+18：核心操作与布局重构 · 2026-11-01
+
+- **产品对应**：Mikanseta 是 Mikansei 的 Flutter 版。本轮对齐手机「待办、日程、笔记」主导航、日程「今日聚焦 / 列表 / 日历」、规划入口、清单筛选与 Checklist 操作；说明见 [Mikanseta 原生操作对应说明](Documentation/MIKANSETA_PARITY.md) 和 [Mikanseta 验证记录](Mikanseta/VALIDATION.md)。原生版本仍为 `0.7.0 (14)`。
+- **Flutter 检查**：现有 9 个测试文件共 107 项通过；`./Scripts/flutter.sh analyze` 无问题。全套日志：`/private/tmp/mikanseta-final-nine-tests.log`；最终分析日志：`/private/tmp/Mikanseta-final-analyze-final.log`。domain 单测 34 项另行通过，日志 `/private/tmp/mikanseta-domain-test.log`。
+- **备份兼容**：`./Scripts/verify-backup.sh` 通过 Swift → Dart → Swift 往返；日志 `/private/tmp/mikanseta-verify-backup.log`。存在既有 Swift HTTP pipelining 弃用警告，不影响验证结果。
+- **iOS Release**：Mikanseta `0.7.0 (18)` unsigned Release，App + Widget 构建通过，27.0 MB；App / Widget 的版本信息均为 `0.7.0 / 18`。日志：`/private/tmp/Mikanseta-parity-ios-final.log`。
+- **macOS universal Release**：Mikanseta Release 构建通过，56.9 MB，包含 arm64 与 x86_64。日志：`/private/tmp/Mikanseta-parity-macos-final.log`。
+- **Android debug**：debug APK 构建通过，`aapt` 核对包名 `com.personal.mikanseta`、版本 `0.7.0` / versionCode `18`；未安装到设备。日志：`/private/tmp/Mikanseta-parity-android-debug-final.log`。
+- **工程标识与视觉预览**：Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 保持不变。8 张合成数据截图覆盖手机浅 / 深色、320 点宽且文字放大 1.5 倍、1280 点桌面、日程、编辑器和笔记；中文可读、无布局溢出，主代理完成目视复核。PNG 位于 `/private/tmp/Mikanseta-Parity-Preview/`，临时预览测试文件已删除。
+- **尚待确认**：Windows CI run `41303398033` 已由提交 `fb3089e` 触发，目前运行中；本地没有运行 `integration_test/app_test.dart`、Android 真机验收或正式包发布。本轮构建与 Flutter 测试不代表平台端到端集成验收。
+
 ## 0.7.0（14）专注计时与 WidgetKit · 2026-10-31
 
 - **原生 iOS Release**：Xcode 26.5，scheme `Mikansei`，`generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`。Mikansei App + 内嵌 `MikanseiWidgets` 最新界面源码构建 `BUILD SUCCEEDED`；App 与扩展版本均为 `0.7.0 / 14`。日志 `/private/tmp/Mikansei-Pomodoro-Clock-iOS-final-build.log`，xcresult `/private/tmp/Mikansei-Pomodoro-Clock-iOS-final.xcresult`。

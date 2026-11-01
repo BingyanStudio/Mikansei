@@ -1,5 +1,9 @@
 # Changelog
 
+## Mikanseta 0.7.0+18 — 核心操作对应，验证通过
+
+将 Mikanseta 明确为 Mikansei 的 Flutter 版本，并将手机主导航、日程视图、今日聚焦分组、卡片编辑、规划移入 / 恢复和日历语义色对齐原生操作。新增持久化规划标记；旧归档缺省为未规划，循环新事项重置规划状态。9 个测试文件 107 项、Flutter 分析、34 项 domain 单测、Swift → Dart → Swift 备份往返以及 iOS / macOS / Android debug 构建通过。Windows CI run `41303398033` 正在运行；本地平台集成测试与设备验收未完成。操作映射、边界和验证记录见 [Mikanseta 原生操作对应说明](MIKANSETA_PARITY.md) 与 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)。
+
 ## 0.7.0 (14) — 构建通过，待设备验收
 
 新增独立的番茄专注计时：主题必填，可选关联未完成任务，支持倒计时和不限时正计时、暂停 / 继续 / 结束与历史记录。计时使用时间戳恢复，专注数据独立保存在本机 `pomodoro.json`，不进入待办备份或清单云同步。iOS 主屏幕只注册番茄专注小组件，适配系统小 / 中 / 大尺寸；DDL 与闹钟 Live Activity 保留为单独功能。计时数字作为主视觉居中显示，适配空间允许时暂停 / 继续在结束并保存上方。原生 Mikansei iOS App + Widgets 与 Mac universal Release 最新界面构建通过；Mac 隔离预览验证了约 266×248 小窗的显示与计时操作。Mikanseta `dart analyze lib` 无问题，最新界面的 iOS、macOS 与 Android debug 构建均通过。Windows CI 在时钟界面源码提交 `454ba5a` 上通过，包含分析、既有测试、集成、x64 构建 / 打包、安装器 Release 启动和产物上传。未新增测试；本机未运行自动化测试。真实设备与 Widget 宿主验收待完成，尚未上传 TestFlight。Mikanseta macOS 产物为无 Team ID 的 ad-hoc 签名。详见 [0.7.0 发布准备记录](RELEASE_0.7.0.md) 和 [专注计时说明](POMODORO.md)。

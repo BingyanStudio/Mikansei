@@ -1,6 +1,17 @@
 # Mikanseta 验证记录
 
-本文件按时间记录各版本的验证范围；当前源码为 0.6.0 (17)，旧版本记录保留原状。
+本文件按时间记录各版本的验证范围；当前源码目标为 0.7.0+18，旧版本记录保留原状。
+
+## 0.7.0+18：核心操作对应与布局重构 · 2026-11-01
+
+- **Flutter 全库分析**：`./Scripts/flutter.sh analyze` 通过，`No issues found!`。最终复跑日志：`/private/tmp/Mikanseta-final-analyze-final.log`。
+- **Flutter 自动化测试**：现有 9 个测试文件共 107 项通过；临时预览测试不属于套件。日志：`/private/tmp/mikanseta-final-nine-tests.log`。单独 `domain_test.dart` 的 34 项也通过，日志：`/private/tmp/mikanseta-domain-test.log`。
+- **备份兼容**：`./Scripts/verify-backup.sh` 通过 Swift → Dart → Swift 原版备份往返。日志：`/private/tmp/mikanseta-verify-backup.log`；Swift 编译有既有 HTTP pipelining 弃用警告，不影响往返结果。
+- **平台构建**：iOS unsigned Release（App + Widget）通过，27.0 MB，App / Widget 版本均为 `0.7.0 (18)`；macOS universal Release 通过，56.9 MB，含 arm64 与 x86_64；Android debug APK 构建通过，包名 `com.personal.mikanseta`、版本码 18，未安装到设备。日志分别为 `/private/tmp/Mikanseta-parity-ios-final.log`、`/private/tmp/Mikanseta-parity-macos-final.log`、`/private/tmp/Mikanseta-parity-android-debug-final.log`。
+- **工程身份**：配置脚本执行后核对 Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 均保留；原生 Mikansei 仍为 `0.7.0 (14)`。
+- **视觉预览**：8 张合成数据截图覆盖手机浅 / 深色、320 点宽且文字放大 1.5 倍、桌面、日程、编辑器与笔记。中文显示正常，未发现布局溢出；预览由主代理复核。PNG 位于 `/private/tmp/Mikanseta-Parity-Preview/`，临时测试文件已删除。
+- **尚待确认**：Windows CI run `41303398033` 已由提交 `fb3089e` 触发，目前运行中，结果待确认；本地未运行 `integration_test/app_test.dart`，Android debug 未安装或真机验收，也未发布安装包。没有本轮 Windows CI 结果时不将其记录为通过。
+- 操作映射、数据语义与平台能力边界见 [Mikanseta 原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)。
 
 ## 0.6.0 (17)：番茄专注与平台小组件 · 2026-10-31
 

@@ -75,7 +75,40 @@ void main() {
       expect(find.text('验证测试版作业'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('settings-entry')));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('back-to-main')), findsOneWidget);
+      final settingsContext = tester.element(
+        find.byKey(const ValueKey('settings-entry')),
+      );
+      final desktop = MediaQuery.sizeOf(settingsContext).width >= 760;
+      if (desktop) {
+        final railFinder = find.byType(NavigationRail);
+        expect(railFinder, findsOneWidget);
+        expect(tester.widget<NavigationRail>(railFinder).selectedIndex, 5);
+        await tester.tap(find.byKey(const ValueKey('desktop-tab-0')));
+      } else {
+        final backButton = find.byKey(const ValueKey('back-to-main'));
+        expect(backButton, findsOneWidget);
+        await tester.tap(backButton);
+      }
+      await tester.pumpAndSettle();
+      if (desktop) {
+        expect(
+          tester
+              .widget<NavigationRail>(find.byType(NavigationRail))
+              .selectedIndex,
+          0,
+        );
+      } else {
+        expect(
+          tester
+              .widget<NavigationBar>(
+                find.byKey(const ValueKey('main-tab-navigation')),
+              )
+              .selectedIndex,
+          0,
+        );
+      }
+      await tester.tap(find.byKey(const ValueKey('settings-entry')));
+      await tester.pumpAndSettle();
       final settingsScrollable = find
           .descendant(
             of: find.byType(ListView).last,

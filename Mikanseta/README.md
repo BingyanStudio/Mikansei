@@ -1,72 +1,53 @@
-# Mikanseta · Flutter 测试版
+# Mikanseta · Mikansei 的 Flutter 版本
 
-**当前源码版本：0.6.0 (17)**。本轮新增专注计时：必须填写主题，可选关联任务，支持倒计时、不限时正计时、暂停 / 继续 / 结束和本机历史；平台入口与数据边界见 [专注计时说明](../Documentation/POMODORO.md)。`dart analyze lib` 无问题；最新时钟界面的 macOS universal 与 iOS unsigned Release、Android debug APK 均构建通过。iOS App 产物位于 `build/ios/iphoneos/Mikanseta.app`，Android APK 位于 `build/app/outputs/flutter-apk/app-debug.apk`；macOS 产物为无 Team ID 的 ad-hoc 签名。Windows CI 在最新界面源码提交 `454ba5a` 上通过（[run 41205433832](https://github.com/BingyanStudio/Mikansei/actions/runs/41205433832)）；分析、既有测试、Windows 集成、x64 构建 / 打包、安装器 Release 启动和产物上传均成功。专注控件及设备体验尚未验收；iOS / Android 的小组件与系统服务仍需各平台设备验收。本轮增强手机触感：事项长按拖动拾起时强反馈，持有时最多三次间隔脉冲，放下时确认；取消、只读、离开页面或切到后台会停止持有反馈。完成、Checklist、专注计时与规划日历关键操作也使用更明显的反馈。实际触感强度仍待 iPhone 与 Android 真机体验。首次安装会在笔记里内置一篇 Markdown「使用说明」；笔记正文支持 Markdown 预览（编辑页右上角眼睛图标切换）。笔记为苹果备忘录式全页编辑；本轮新增「规划」（日程涂色 + 小时拖拽）、列表长按拖动排序、锁屏番茄钟倒计时与对比色重做（正在做整块变色）。本文 Windows 下载链接指向 **0.4.3 (9)**，提供安装程序与免安装 ZIP，支持本机存储、备份与共享文件夹同步，下载及功能范围见 [Windows 安装与打包](INSTALL_WINDOWS.md)。该链接对应的 Windows 构建已加入经授权的账号同步服务连接，真实 Windows 登录与跨设备同步仍待端到端验收。Mikansei 的独立 Flutter 迁移项目，主题改为牛皮浅棕，搭配深棕文字、棕色操作按钮和跟随系统的深色模式。清单操作放在首位，手机使用底部导航，电脑使用侧边导航与键盘快捷键。本轮对齐原生 Mikansei 的手机布局：大标题与胶囊添加按钮、胶囊搜索框、分段式筛选条、白卡 + 图标化元信息、悬浮胶囊底栏。此前已加入 Supabase 账户登录与同账号多设备同步，以及 macOS / iOS / Android 的共享文件夹同步（与原生 Mikansei 自动互通）。
+**当前源码版本：0.7.0+18。** Mikanseta 与原生 Mikansei 是同一产品的两个版本，共用事项语义与 JSON 归档格式；本轮将 Flutter 主流程调整为对应的三项主导航：**待办、日程、笔记**，手机默认打开待办。日程页包含「今日聚焦、列表、日历」视图，并提供规划入口。现有 9 个测试文件的 107 项、全库 Flutter 分析、34 项 domain 单测和原版备份往返均通过；iOS、macOS 与 Android debug 构建通过。Windows CI run `41303398033` 正在运行，本地未运行平台集成测试。完整操作映射、颜色语义、平台边界与日志见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)和[验证记录](VALIDATION.md)。
 
-本项目放在 Mikansei 仓库的 `Mikanseta/` 目录中，一起提交和推送。原版 Mikansei 0.3.0 的工程、安装标识、签名、绿色主题和数据目录继续保留。
+Mikanseta 的数据目录和安装标识与原生版分开；两端可通过备份互读，也可使用已配置的账户同步或共享文件夹同步。这里的 Flutter 版本不是独立的迁移项目。
 
 ## 已可用功能
 
 - 一句话快速添加，待办 / 作业 / 日程 / 笔记四种类型，详细字段按需展开。
 - 「已超时」优先显示；同栏目内按紧急 → 重要 → 普通，再按 DDL / 日程开始时间排序。无日期事项仍在清单里。
+- 今日聚焦把逾期、今天要做、无日期或已过期未完成事项及今天完成项分组；跨午夜日程按实际执行时段覆盖日期显示。历史页可继续按事项类型和分类筛选。
+- 可将暂不处理的未完成事项移到规划区；规划状态写入共享事项归档，日历规划或重新设定日期 / 时段后回到聚焦。重新生成的循环事项从未规划状态开始。
 - 完成后划线并以动画移到今日已完成区，次日自动进入历史。重新打开事项会保留步骤记录；开启系统减弱动态效果时减少动画。
-- Checklist、科目 / 分类、备注、提交平台、处理地点和预计用时。首页和各清单卡片直接显示前三个可勾选子事项、完成进度和划线；点击子事项文字也能勾选，更多步骤通过“查看全部”进入详情。修改步骤列表时保留未改名步骤的编号和勾选状态。
+- Checklist、科目 / 分类、备注、提交平台、处理地点和预计用时。首页和各清单卡片默认展开所有未完成子事项，完成项可收起；卡片内可添加子事项，笔记也支持清单。点击子事项可勾选，修改步骤列表时保留未改名步骤的编号和勾选状态。
 - 勾选子事项自动保存，不会自动完成整件事项；在已完成事项中取消某一步的勾选，会恢复整件事项为未完成。
 - 普通事项只需 DDL；新建日程使用开始 / 结束时间或全天。月历可点选日期，长按日期直接添加当天日程。
 - 每天、每三天、每周多选星期、每两周、每月、自定义间隔和指定日期循环。完成时产生下一条记录，保留原来的月末锚点并避免重复生成。
-- 专注计时：开始另一件事项自动暂停上一件；暂停、继续和完成保留累计用时，重启后根据保存的时间恢复。
+- 专注计时：开始另一件事项自动暂停上一件；暂停、继续和完成保留累计用时，重启后根据保存的时间恢复。手机提供系统小组件，电脑可从专注页打开浮动计时器。
 - 原子保存，串行写入，失败时提示重试；本地文件损坏时进入只读状态并保留原文件。
-- Mikansei v1 JSON 备份合并导入和导出。保持事项编号，保留较新的记录和尚未迁移的原生字段，包括提醒设置、日历关联、日历选择与课表。
+- Mikansei v1 JSON 备份合并导入和导出。保持事项编号，保留较新的记录和未识别的原生字段，包括提醒设置、日历关联、日历选择与课表。
 - 电脑快捷键：⌘ / Ctrl + N 添加；⌘ / Ctrl + F 搜索。原生文件选择与保存窗口用于备份。
 - 设置里的版本号直接读取安装包，包含构建编号。
 - 安卓系统日历：勾选来源，导入今天起 30 天的日程；可在打开或返回 App 时自动更新，首次不勾选节假日等任何来源。
 - 安卓事项详情可查看系统事件、预填系统日历新增页，以及创建系统闹钟和倒计时；铃声、重复和振动由系统时钟设置。
 - Supabase 账户登录（邮箱验证码）与同账号多设备同步：本机保存后约 2 秒上传，其他设备实时收到并合并；删除带墓碑标记，不会因旧副本复活；系统日历来源按设备设置。配置见 [Supabase 配置指南](Documentation/SUPABASE_SETUP.md)。
 - 共享文件夹同步：macOS、iOS、Android 各选一次文件夹，之后自动与原生 Mikansei 及其它 Mikanseta 设备交换合并；协议与原生版 iCloud 文件夹同步一致（每设备一个 replica 文件、修订号、永久墓碑）。设置见 [共享文件夹同步说明](Documentation/LOCAL_SYNC_SETUP.md)。
-- 手机布局对齐原生 Mikansei：大标题 + 胶囊添加按钮、无描边胶囊搜索框、分段式筛选条与日历视图切换、白卡圆角与图标化元信息、悬浮胶囊底栏；桌面布局与快捷键保持不变。
+- 手机主导航为待办、日程、笔记；待办是默认页。日程含今日聚焦、列表、日历三个入口，规划可从日程页直接打开；电脑在侧栏提供主页面与辅助工具入口。
+- 卡片和子项进度按类型使用颜色：待办 / 日程绿色、作业靛蓝色、笔记暖橙色；日历和规划按执行（绿色）、DDL（暖色）、完成（中性色）呈现，正在做的事项以浅强调色突出。
 - 笔记采用苹果备忘录式全页编辑：大标题 + 正文直接可写、清单项行内增删勾选；未保存退出需确认，已有笔记可整页删除（iOS/Android/macOS/Windows 一致）。
-- 规划：今日页「规划」入口分两种——日程规划在月历上涂色选「哪几天做」（Routine 视为自动规划），小时规划把今日待办长按拖入 24 小时时间轴定「今天哪个时段做」（任务类型不变，可同步系统日历）；今日/清单列表长按拖动调整顺序；iOS 锁屏番茄钟组件在无计时且 60 分钟内有规划块时显示「距开始」倒计时，规划开始时本地通知可一键开始专注。
+- 规划：从「日程 → 今日聚焦」打开规划页。日程规划在月历上涂色选择执行日期（循环事项按重复规则自动规划）；小时规划可把今天待办拖入 24 小时时间轴安排时段，事项仍保留原类型。列表中的事项支持手动排序。
 
-## 迁移进度
+## 核心操作对应
 
-0.5.3 (16) 迁移基线此前已通过 Dart 静态检查与 74 项 Flutter 测试、macOS Release 构建与集成测试、Swift 原版备份往返、共享文件夹 replica 文件的原生 Swift 解码兼容测试，以及 Android Release 构建；APK 签名与版本元数据也已校验。0.6.0 (17) 的 iOS unsigned Release 与 macOS universal Release 已构建通过；本机未运行本轮自动化测试，基线 Windows CI 已执行既有检查。设备验收尚未完成。macOS 构建有 414 条指向旧工作区路径的 stale-file 警告，产物为无 Team ID 的 ad-hoc 签名。Supabase 登录与跨设备同步、共享文件夹同步尚未在真实设备上完成端到端验证（需要在各端选择同一个文件夹）。Android 系统提醒、小组件、前台响铃、Apple 日历和实时活动尚未在真实设备上验证。Android 的系统日历编辑结果即时回流仍未实现。表中的「源码已接入」不代表相关系统服务已在设备上验收。详见 [验证记录](VALIDATION.md)。
+待办类型筛选、今日聚焦 / 历史分类、卡片编辑、移入规划与恢复，以及日历事项颜色的对应规则和边界，见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)。本轮测试与打包状态会在[验证记录](VALIDATION.md)中补充。
 
-| 能力 | 当前状态 |
-| --- | --- |
-| 清单、Checklist、完成 / 历史、排序、快速添加 | 已迁移并验证 |
-| 日程起止时间、全天、月历、长按添加 | 已迁移基础操作并验证 |
-| 日 / 周日历与拖动选时段 | 静态检查与 Widget 测试通过，含只读模式不创建日程的回归 |
-| 循环规则、完成后产生下一次事项 | 已迁移并验证；月历尚未预展开未来循环实例 |
-| 既有清单计时、本机保存、JSON 备份 | 已迁移并验证 |
-| 番茄专注计时、历史与小组件 / 浮动窗口 | 本轮新增；iOS / macOS Release 已构建，本机自动化测试与设备验收待完成；Windows CI 最新界面检查已通过 |
-| iOS、macOS 原生文件桥接 | 本机读写与版本接口通过集成测试；系统文档窗口已实现，未自动化操作 |
-| Apple 日历来源选择、自动导入和反向录入 | 源码已接入，未验证 |
-| 系统弹窗、AlarmKit 闹钟、铃声与持续催办 | 源码已接入，未验证 |
-| iOS 主屏番茄专注小组件、DDL / Alarm Live Activity | iOS Release 构建通过；设备行为未验证 |
-| Android 主屏番茄专注小组件 | 源码已接入；设备行为未验证 |
-| 课表编辑、CSV / ICS、课后作业登记 | 源码已接入；CSV / ICS 解析有单元测试通过，界面与原生未验证 |
-| 粘贴消息解析 | 源码已接入；单元测试通过 |
-| Android 工程、原生文件桥接、系统日历与时钟 | 已生成发布签名通用 APK；Android 16 / x86_64 模拟器核心操作测试通过，尚未安卓真机验证 |
-| Android 系统服务：本地提醒、小组件、前台响铃 | Release 编译通过；设备行为未验证 |
-| Android 系统日历编辑结果即时回流 | 尚未实现；需后续完成原生异步结果与事项匹配 |
-| iCloud Drive 同一 Apple ID 自动同步 | 已由共享文件夹同步覆盖：三端选择同一文件夹即可与原生版互通 |
-| Supabase 账户登录与同账号多设备同步 | 0.3.0 新增：源码、单元与 Widget 测试通过；真实设备登录同步待验证，见 [配置指南](Documentation/SUPABASE_SETUP.md) |
-| 共享文件夹同步（原生 Mikansei / 多设备） | 0.4.0 新增：协议移植、Apple 书签与 Android SAF 通道完成；单元测试与原生 Swift 解码兼容测试通过，设备端到端待验证 |
-
-这些原生功能仍可在原版 Mikansei 中使用。测试版尚未代替原版作为唯一提醒工具。
+操作系统集成能力因平台而异；原生 Mikansei 专有的课表 API 尚未移植，Windows 也没有系统日历读写。Android 交由外部日历编辑后的变更依赖再次同步，不能保证即时回传。详细边界见对应说明。原生版本仍可单独使用，Mikanseta 不会替换或覆盖原生 App。
 
 ## 在 Mac 上试用
 
 当前工作区已有 Flutter 3.47.7 开发工具和构建产物。双击本目录的 **`打开Mac测试版.command`** 会构建、复制到相对于源码仓库根目录的 `../Releases/Mikanseta/macOS/<version+build>/Mikanseta-macOS.app` 并打开；版本号和构建号读取 App 内嵌的 `Info.plist`。数据保存在 App 的应用支持目录中，更新应用包不会清空数据。
 
-0.4.2 (8) macOS Release 构建曾通过并启动（x86_64 + arm64 通用，含共享文件夹书签权限）；Mac 原生界面当时未逐项验证，见 [验证记录](VALIDATION.md)。0.6.0 (17) 的 macOS Release 构建结果见本页上方。后续本地安装脚本按版本目录输出。
+历史交付：0.4.2 (8) macOS Release 曾通过并启动（x86_64 + arm64 通用，含共享文件夹书签权限）；当时 Mac 原生界面未逐项验证，见 [验证记录](VALIDATION.md)。本段记录旧版交付，不代表当前 0.7.0+18 已构建。
 
 第一次试用没有示例事项。在原版 Mikansei 的设置导出 JSON，再在测试版的设置导入，即可比较同一批事项。
 
 ## 安装到安卓手机
 
-已生成 **0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。相对于源码仓库根目录，默认交付目录为 `../Releases/Mikanseta/Android/<version+build>/`，没有将安装包或私钥提交到 Git 历史。
+历史交付：**0.4.2 (8)** 发布签名通用 APK，最低 Android 7.0，包含 ARM64、32 位 ARM 与 x86_64。安装方式、构建与签名说明见 [安卓安装说明](INSTALL_ANDROID.md)。相对于源码仓库根目录，默认交付目录为 `../Releases/Mikanseta/Android/<version+build>/`，没有将安装包或私钥提交到 Git 历史。
 
-本轮已重新构建并导出 **0.4.2 (8)** Release APK，60.5 MB（含 Supabase 连接值读取、共享文件夹同步与对齐原生 Mikansei 的手机布局），SHA-256 `2a0217153e20a605947a494798191abed62426f92535178f961d3223221048c5`。
+旧版 **0.4.2 (8)** Release APK 曾构建并导出，文件 60.5 MB（含 Supabase 连接值读取、共享文件夹同步与当时的手机布局），SHA-256 `2a0217153e20a605947a494798191abed62426f92535178f961d3223221048c5`。这是历史版本，不是本轮 0.7.0+18 安装包。
 
 双击 `生成安卓安装包.command` 可重新打包并按版本输出 APK 和 SHA-256 校验文件。此前 Android 模拟器已通过新建作业、首页子事项勾选、原生读写、重新读取、计时和完成状态的集成测试；本轮 Android 设备未连接，新加入的提醒和小组件仍待设备验证。
 
@@ -106,7 +87,7 @@ Mikanseta 登录 Supabase 账号后，本机保存的数据（含课表与完成
 
 已验证版本为 Flutter **3.47.7** / Dart **3.13.5** / Xcode **26.5**。版本固定在 `.flutter-version`，依赖固定在 `pubspec.lock`。
 
-本轮的实测结果：`./Scripts/flutter.sh analyze` 通过，`No issues found!`；`./Scripts/flutter.sh test` 74 项全部通过（0.3.0 新增 16 项；0.4.0 新增共享文件夹协议与设置页测试 14 项；0.4.2 布局重构复用现有用例全部通过，并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 实际解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。命令要以正常权限（非受限沙箱）运行：受限沙箱里 Dart 3.13.5 会在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`，elevated 主机环境下同样的命令正常。Android `apksigner` 校验需将 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录；校验通过 APK Signature Scheme v2。日志见 [验证记录](VALIDATION.md)。
+此前版本的历史实测结果：`./Scripts/flutter.sh analyze` 通过，`./Scripts/flutter.sh test` 74 项通过（包括 0.3.0 与 0.4.0 新增测试；0.4.2 布局重构复用现有用例并在模拟器完成浅色 / 深色视觉验收）；洛杉矶时区下的 domain、cloud 与 local sync 测试通过；`./Scripts/verify-backup.sh` 原版往返通过；Mikanseta 生成的 replica 文件经原生 `WorkspaceSyncDocument.decode` 解码并重新编码通过；macOS Release 构建与集成测试通过；Android Release 构建通过并导出签名 APK。以上是旧版本验证，不代表 0.7.0+18 本轮已通过。Android 构建曾因国内网络访问 Maven Central 被拒（403）与集成测试残留的 `GeneratedPluginRegistrant.java` 引用 dev 依赖失败，已分别通过阿里云镜像与构建前清理生成文件修复，详见 [验证记录](VALIDATION.md)。受限环境里 Dart 3.13.5 曾在创建 isolate 前报 `runtime/vm/cpuinfo_macos.cc: 42: error: unreachable code`；对应历史验证使用可运行 Flutter 的主机环境。Android `apksigner` 校验需将 `JAVA_HOME` 指向实际 JDK 21 的 Home 目录；校验通过 APK Signature Scheme v2。日志见 [验证记录](VALIDATION.md)。
 
 `Scripts/flutter.sh` 优先使用 `FLUTTER_SDK` 指定的工具，或从源码仓库向上找到的 `.toolchains/flutter`，否则查找已安装的 Flutter。也可用 `MIKANSEI_TOOLCHAINS_DIR` 指定工具链根目录；缓存默认放在该目录的 `pub-cache/`，可通过 `PUB_CACHE` 覆盖。下载默认使用 [Flutter 文档列出的中国网络镜像](https://docs.flutter.dev/community/china)，可用 `FLUTTER_STORAGE_BASE_URL` 覆盖；不会修改全局设置。
 
@@ -134,9 +115,9 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 - `lib/src/store.dart`：操作状态、串行保存、失败重试；通过可替换存储接口调用平台能力。
 - `lib/src/cloud_sync.dart`：Supabase 账户登录、账户行拉取合并与实时上传；传输层可替换，便于测试注入。
 - `lib/src/local_folder_sync.dart`：与原生 Mikansei 互通的文件夹同步协议（修订号、墓碑、采集/合并/投影）与自动交换调度；平台文件访问可替换。
-- `lib/src/app.dart` / `editor.dart` / `theme.dart`：自适应界面、录入表单和牛皮浅棕主题。
+- `lib/src/app.dart` / `editor.dart` / `theme.dart`：自适应界面、录入表单和绿色主色的语义配色。
 - `lib/src/calendar_view.dart`：月历、周视图与日视图，长按拖动选时段。
-- `lib/src/student_tools.dart`：课程模型、CSV / ICS 解析与粘贴消息解析。
+- `lib/src/student_tools.dart`：课程模型、CSV / ICS 解析；冰岩实时 API 尚未接入 Flutter 版。
 - `lib/src/system_services.dart`：把提醒计划交给原生服务的桥接层。
 - `native/Apple/NativeArchiveBridge.swift`：iOS 和 Mac 共用文件桥接；耗时读写在后台队列，iPhone 写入受后台任务保护。
 - `native/Apple/AppleSystemServices.swift`、`native/Apple/Ported/`：Apple 日历、通知 / 闹钟调度、小组件摘要与实时活动数据。
@@ -148,4 +129,4 @@ TZ=America/Los_Angeles ./Scripts/flutter.sh test test/domain_test.dart
 - `Scripts/verify-backup.sh`：使用原版 Swift 核心生成备份，经 Dart 编辑，再交回原版解码器验证。
 - `Scripts/configure-native-services.py`：把共享原生核心与独立命名的 Widget 扩展挂进 Xcode 工程，保留现有签名设置。
 
-后续平台能力从桥接层接入；清单与交互代码继续共享。提醒、日历、WidgetKit / ActivityKit 扩展和同步协议将分别迁移，不把系统服务混入界面代码。
+平台能力边界按系统分别说明，见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)；本轮核心事项操作不改变系统服务或同步协议。
