@@ -23,6 +23,7 @@ DateTime dayOf(DateTime value) {
 }
 
 bool sameDay(DateTime a, DateTime b) => dayOf(a) == dayOf(b);
+
 /// Date-only key ('yyyy-MM-dd') for planning fields such as plannedDays.
 String dayKey(DateTime day) => day.toIso8601String().substring(0, 10);
 String clockLabel(DateTime value) {
@@ -119,6 +120,7 @@ class Entry {
       'reminderPattern': 'single',
       'elapsedSeconds': 0,
       'plannedAllDay': false,
+      'isInPlanning': false,
       'reminderDelivery': 'popup',
       'reminderAnchor': kind == EntryKind.schedule ? 'execution' : 'deadline',
       'reminderSound': 'system',
@@ -141,6 +143,9 @@ class Entry {
   bool get completed => data['isCompleted'] as bool;
   bool get isTask => kind != EntryKind.note;
   bool get allDay => data['plannedAllDay'] as bool? ?? false;
+
+  /// Old native archives predate this field, so their entries remain in focus.
+  bool get isInPlanning => data['isInPlanning'] as bool? ?? false;
   int? get estimate => data['estimatedMinutes'] as int?;
   int? get sortOrder => data['sortOrder'] as int?;
   List<DateTime> get plannedDays => (data['plannedDays'] as List? ?? [])
@@ -167,10 +172,40 @@ class Entry {
       : start;
   DateTime? get recurrenceDate =>
       kind == EntryKind.schedule ? start : due ?? start;
-  bool get calendarRoutine => _calendarIdentities(this).isNotEmpty;
-  bool get isRoutine => repeatRule != 'never' || calendarRoutine;
-  String get routineLabel =>
-      repeatRule == 'never' ? '系统日历循环' : repeatLabels[repeatRule]!;
+  bool get isRecurringCalendarOccurrence =>
+      isTask &&
+      (_androidOccurrenceIdentity(this) != null ||
+          _appleOccurrenceIdentity(this) != null);
+  bool get isProviderRoutineSeries {
+    final series = _nonEmptyString(data['routineSeriesID']);
+    if (series == null) return false;
+    try {
+      final value = jsonDecode(series);
+      return value is List &&
+          value.isNotEmpty &&
+          value.first is String &&
+          (value.first as String).toLowerCase() == 'calendar';
+    } on FormatException {
+      return false;
+    }
+  }
+
+  bool get calendarRoutine =>
+      isTask && (isRecurringCalendarOccurrence || isProviderRoutineSeries);
+  bool get isRoutine => isTask && (repeatRule != 'never' || calendarRoutine);
+
+  /// Includes local routines, provider-backed routines, and known members of a
+  /// routine series even when this particular record has no recurrence rule.
+  bool get isRoutineSeriesMember =>
+      isRoutine ||
+      isRecurringCalendarOccurrence ||
+      _nonEmptyString(data['routineSeriesID']) != null ||
+      _nonEmptyString(data['routineOccurrenceID']) != null;
+  String get routineLabel => calendarRoutine
+      ? '系统日历循环'
+      : repeatRule == 'never'
+      ? '系统日历循环'
+      : repeatLabels[repeatRule]!;
   List<StepItem> get steps => (data['checklist'] as List)
       .map((v) => StepItem.fromJson(Map<String, dynamic>.from(v as Map)))
       .toList();
@@ -180,13 +215,31 @@ class Entry {
       !completed &&
       due != null &&
       due!.isBefore(now);
-  bool onDay(DateTime day) {
+
+  /// Whether a schedule's execution interval intersects this local calendar
+  /// day. Legacy or invalid ends fall back to the start's local day.
+  bool scheduleOccurs(DateTime date) {
+    if (kind != EntryKind.schedule || start == null) return false;
+    final day = dayOf(date);
     final nextDay = DateTime(day.year, day.month, day.day + 1);
+    final end = this.end;
+    if (end == null || !end.isAfter(start!)) return sameDay(start!, day);
+    return start!.isBefore(nextDay) && end.isAfter(day);
+  }
+
+  bool onDay(DateTime day) {
+    if (kind == EntryKind.schedule) return scheduleOccurs(day);
+    final startOfDay = dayOf(day);
+    final nextDay = DateTime(
+      startOfDay.year,
+      startOfDay.month,
+      startOfDay.day + 1,
+    );
     return due != null && sameDay(due!, day) ||
         start != null &&
             end != null &&
             start!.isBefore(nextDay) &&
-            (end!.isAfter(dayOf(day)) || sameDay(start!, day));
+            end!.isAfter(startOfDay);
   }
 
   bool matches(String query) => [
@@ -243,10 +296,7 @@ class Entry {
 
   Entry? nextOccurrence(DateTime now) {
     final base = recurrenceDate;
-    if (!isTask ||
-        repeatRule == 'never' ||
-        calendarRoutine ||
-        base == null) {
+    if (!isTask || repeatRule == 'never' || calendarRoutine || base == null) {
       return null;
     }
     final anchor = date('repeatAnchorDate') ?? base;
@@ -332,6 +382,7 @@ class Entry {
           'completedAt': null,
           'startedAt': null,
           'elapsedSeconds': 0,
+          'isInPlanning': false,
           'createdAt': isoDate(now),
           'updatedAt': isoDate(now),
           'calendarEvent': null,
@@ -398,16 +449,11 @@ _OccurrenceIdentity? _legacyAndroidIdentity(Map link) {
   // seconds. Restrict the format so a slash-containing external identifier is
   // never mistaken for a recurring series.
   if (_parsedProviderOccurrence(occurrence) == null) return null;
-  final calendarID = _nonEmptyString(link['calendarID']) ??
-      key.substring(0, firstSlash);
+  final calendarID =
+      _nonEmptyString(link['calendarID']) ?? key.substring(0, firstSlash);
   final deviceID = _nonEmptyString(link['deviceID']) ?? '';
   final sourceID = key.substring(firstSlash + 1, lastSlash);
-  final series = jsonEncode([
-    'calendar',
-    deviceID,
-    calendarID,
-    sourceID,
-  ]);
+  final series = jsonEncode(['calendar', deviceID, calendarID, sourceID]);
   return _OccurrenceIdentity(series, occurrence);
 }
 
@@ -455,15 +501,11 @@ _OccurrenceIdentity? _appleOccurrenceIdentity(Entry entry) {
   if (occurrence == null) return null;
   final calendarID = _nonEmptyString(identity['calendarID']) ?? '';
   final sourceTitle = _nonEmptyString(identity['sourceTitle']) ?? '';
-  final eventID = _nonEmptyString(identity['eventID']) ??
+  final eventID =
+      _nonEmptyString(identity['eventID']) ??
       _nonEmptyString(identity['localEventID']);
   if (eventID == null) return null;
-  final series = jsonEncode([
-    'apple',
-    calendarID,
-    sourceTitle,
-    eventID,
-  ]);
+  final series = jsonEncode(['apple', calendarID, sourceTitle, eventID]);
   return _OccurrenceIdentity(series, occurrence);
 }
 
@@ -526,9 +568,7 @@ DateTime? _parsedProviderOccurrence(String occurrence) {
   if (RegExp(r'^-?\d{9,19}$').hasMatch(occurrence)) {
     final value = int.tryParse(occurrence);
     if (value != null) {
-      return _safeEpochDate(
-        occurrence.length >= 12 ? value : value * 1000,
-      );
+      return _safeEpochDate(occurrence.length >= 12 ? value : value * 1000);
     }
   }
   if (occurrence.startsWith('time:')) {
@@ -562,7 +602,10 @@ DateTime _logicalOccurrenceDate(
 
 /// A routine family is defined by explicit lineage or a provider's recurring
 /// series identity. Titles and repeat rules are deliberately not used.
-List<Entry> activeEntryFrontier(List<Entry> entries) {
+List<Entry> activeEntryFrontier(
+  List<Entry> entries, {
+  DateTime? prioritizingSchedulesOn,
+}) {
   final groups = _IdentityGroups();
   final occurrenceKeys = <String, Set<String>>{};
   final identitiesByEntry = <String, List<_OccurrenceIdentity>>{};
@@ -584,13 +627,15 @@ List<Entry> activeEntryFrontier(List<Entry> entries) {
       occurrenceKeys.putIfAbsent(own, () => <String>{}).add(identity.key);
     }
     if (previous != null) {
-      occurrenceKeys.putIfAbsent(own, () => <String>{}).add(
-        jsonEncode([
-          'lineageSibling',
-          previous.toUpperCase(),
-          occurrence?.toUtc().millisecondsSinceEpoch.toString() ?? entry.id,
-        ]),
-      );
+      occurrenceKeys
+          .putIfAbsent(own, () => <String>{})
+          .add(
+            jsonEncode([
+              'lineageSibling',
+              previous.toUpperCase(),
+              occurrence?.toUtc().millisecondsSinceEpoch.toString() ?? entry.id,
+            ]),
+          );
     }
   }
 
@@ -609,8 +654,7 @@ List<Entry> activeEntryFrontier(List<Entry> entries) {
   }
 
   final active = <Entry>[];
-  for (final MapEntry(key: family, value: candidates)
-      in openByFamily.entries) {
+  for (final MapEntry(key: family, value: candidates) in openByFamily.entries) {
     final completed = completedOccurrences[family] ?? const <String>{};
     final remaining = candidates.where((entry) {
       final own = 'entry:${entry.id.toUpperCase()}';
@@ -628,7 +672,7 @@ List<Entry> activeEntryFrontier(List<Entry> entries) {
     // A cycle has no root. Its members remain eligible and use the same stable
     // provider-occurrence ordering as multiple roots from a deleted ancestor.
     final frontier = roots.isEmpty ? remaining : roots;
-    frontier.sort((a, b) {
+    int compareFrontier(Entry a, Entry b) {
       final left = _logicalOccurrenceDate(
         a,
         identitiesByEntry['entry:${a.id.toUpperCase()}'],
@@ -646,18 +690,43 @@ List<Entry> activeEntryFrontier(List<Entry> entries) {
       if (updated != 0) return updated;
       final created = a.createdAt.compareTo(b.createdAt);
       return created == 0 ? a.id.compareTo(b.id) : created;
-    });
+    }
+
+    // Calendar providers may expose a whole recurring series as independent
+    // records. Keep the actionable frontier on today's actual schedule when
+    // one exists, even if an older occurrence would otherwise sort first.
+    final currentSchedules = prioritizingSchedulesOn == null
+        ? const <Entry>[]
+        : remaining
+              .where((entry) => entry.scheduleOccurs(prioritizingSchedulesOn))
+              .toList();
+    if (currentSchedules.isNotEmpty) {
+      currentSchedules.sort(compareFrontier);
+      active.add(currentSchedules.first);
+      continue;
+    }
+    frontier.sort(compareFrontier);
     active.add(frontier.first);
   }
   return active..sort(entryOrder);
 }
 
 class TaskBoard {
-  TaskBoard(this.entries, this.now);
+  TaskBoard(this.entries, this.now)
+    : _openEntries = activeEntryFrontier(entries),
+      _focusOpenEntries = activeEntryFrontier(
+        entries,
+        prioritizingSchedulesOn: now,
+      );
   final List<Entry> entries;
   final DateTime now;
-  List<Entry> get open =>
-      activeEntryFrontier(entries);
+  final List<Entry> _openEntries;
+  final List<Entry> _focusOpenEntries;
+  List<Entry> get open => _openEntries;
+  List<Entry> get routines => [
+    ...open.where((entry) => entry.isRoutineSeriesMember),
+    ...finishedToday.where((entry) => entry.isRoutineSeriesMember),
+  ];
   List<Entry> get overdue => open.where((e) => e.overdue(now)).toList();
   List<Entry> get finishedToday =>
       entries
@@ -689,20 +758,43 @@ class TaskBoard {
     ...open.where((e) => !e.overdue(now)),
     ...finishedToday,
   ];
-  List<Entry> get focus => [
-    ...overdue,
-    ...open.where(
-      (e) =>
-          !e.overdue(now) &&
-          (e.onDay(now) ||
-              // Planned days mark a one-off task as "today"; routines with a
-              // repeat rule must not be re-counted through this field.
-              e.repeatRule == 'never' && e.plannedDays.contains(dayOf(now)) ||
-              e.attention == null ||
-              e.attention!.isBefore(dayOf(now))),
-    ),
-    ...finishedToday,
-  ];
+
+  /// Entries that should appear in the planning page's today column. This
+  /// includes items previously deferred from focus so they remain editable.
+  List<Entry> get today => focusToday;
+  List<Entry> get focusToday => _focusOpenEntries.where((entry) {
+    if (entry.overdue(now)) return false;
+    if (entry.kind == EntryKind.schedule) return entry.scheduleOccurs(now);
+    final day = dayOf(now);
+    final tomorrow = DateTime(day.year, day.month, day.day + 1);
+    return entry.due != null && sameDay(entry.due!, now) ||
+        entry.start != null &&
+            entry.end != null &&
+            entry.start!.isBefore(tomorrow) &&
+            entry.end!.isAfter(day) ||
+        entry.plannedDays.any((planned) => sameDay(planned, now));
+  }).toList();
+  Set<String> get focusTodayIDs => focusToday.map((e) => e.id).toSet();
+  List<Entry> get focus {
+    final todayEntries = focusToday;
+    final todayIDs = todayEntries.map((entry) => entry.id).toSet();
+    return [
+      ..._focusOpenEntries.where((entry) => entry.overdue(now)),
+      ...todayEntries,
+      ..._focusOpenEntries.where((entry) {
+        if (entry.kind == EntryKind.schedule || entry.overdue(now)) {
+          return false;
+        }
+        if (todayIDs.contains(entry.id)) return false;
+        final attention = entry.attention;
+        return attention == null || attention.isBefore(dayOf(now));
+      }),
+      ...finishedToday.where(
+        (entry) =>
+            entry.kind != EntryKind.schedule || entry.scheduleOccurs(now),
+      ),
+    ].where((entry) => !entry.isInPlanning).toList();
+  }
 }
 
 class Archive {
@@ -913,6 +1005,9 @@ void validateEntry(Entry e) {
   e.body;
   e.category;
   e.completed;
+  if (e.data['isInPlanning'] != null && e.data['isInPlanning'] is! bool) {
+    throw const FormatException('规划状态无效。');
+  }
   e.createdAt;
   e.updatedAt;
   for (final key in [

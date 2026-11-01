@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'pomodoro_store.dart';
 import 'store.dart';
+import 'theme.dart';
 
 class PomodoroPage extends StatefulWidget {
   const PomodoroPage({
@@ -312,6 +313,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
   ) => LayoutBuilder(
     builder: (context, constraints) {
       final color = Theme.of(context).colorScheme;
+      final palette = MikanseiPalette.of(context);
       final elapsed = focus.activeElapsedSeconds;
       final displayed = run.mode == PomodoroMode.countdown
           ? focus.activeRemainingSeconds.ceilToDouble()
@@ -320,10 +322,10 @@ class _PomodoroPageState extends State<PomodoroPage> {
       final wide = constraints.maxWidth >= 680;
       final clockSize = (constraints.maxWidth * .22).clamp(88.0, 176.0);
       return Card(
-        color: color.primaryContainer,
+        color: palette.accent.withValues(alpha: .12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: color.outline.withValues(alpha: .35)),
+          side: BorderSide(color: palette.accent, width: 1.5),
         ),
         child: SizedBox(
           height: wide ? 520 : 420,
@@ -336,7 +338,7 @@ class _PomodoroPageState extends State<PomodoroPage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.center_focus_strong, color: color.primary),
+                        Icon(Icons.center_focus_strong, color: palette.accent),
                         const SizedBox(width: 9),
                         Expanded(
                           child: Text(

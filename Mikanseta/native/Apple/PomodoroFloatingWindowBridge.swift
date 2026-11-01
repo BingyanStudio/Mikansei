@@ -69,17 +69,20 @@ final class PomodoroFloatingWindowBridge: NSObject, NSWindowDelegate {
     }
 
     private func makeContentView() -> NSView {
-        let root = NSView()
-        root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor(calibratedRed: 0.96, green: 0.93, blue: 0.87, alpha: 1).cgColor
+        let root = NSVisualEffectView()
+        root.material = .windowBackground
+        root.blendingMode = .behindWindow
+        root.state = .followsWindowActiveState
 
         subjectLabel.font = .systemFont(ofSize: 17, weight: .semibold)
+        subjectLabel.textColor = .labelColor
         subjectLabel.lineBreakMode = .byTruncatingTail
         subjectLabel.maximumNumberOfLines = 1
         subjectLabel.alignment = .left
         subjectLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         clockLabel.font = .monospacedDigitSystemFont(ofSize: 100, weight: .bold)
+        clockLabel.textColor = .labelColor
         clockLabel.alignment = .center
         clockLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 

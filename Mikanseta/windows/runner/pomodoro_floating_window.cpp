@@ -79,7 +79,7 @@ bool RegisterWindowClass() {
   window_class.hInstance = GetModuleHandle(nullptr);
   window_class.lpszClassName = kWindowClass;
   window_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
-  window_class.hbrBackground = reinterpret_cast<HBRUSH>(static_cast<INT_PTR>(COLOR_WINDOW + 1));
+  window_class.hbrBackground = GetSysColorBrush(COLOR_WINDOW);
   registered = RegisterClassW(&window_class) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS;
   return registered;
 }
@@ -88,7 +88,7 @@ bool RegisterWindowClass() {
 PomodoroFloatingWindow::PomodoroFloatingWindow(HWND owner,
                                                ActionHandler action_handler)
     : owner_(owner), action_handler_(std::move(action_handler)) {
-  background_ = CreateSolidBrush(RGB(245, 237, 222));
+  background_ = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
 }
 
 PomodoroFloatingWindow::~PomodoroFloatingWindow() {
@@ -310,9 +310,16 @@ LRESULT PomodoroFloatingWindow::HandleMessage(HWND window, UINT message,
                    SWP_NOZORDER | SWP_NOACTIVATE);
       return 0;
     }
+    case WM_SYSCOLORCHANGE: {
+      if (background_ != nullptr) DeleteObject(background_);
+      background_ = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
+      RedrawWindow(window, nullptr, nullptr,
+                   RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN);
+      return 0;
+    }
     case WM_CTLCOLORSTATIC: {
       HDC dc = reinterpret_cast<HDC>(wparam);
-      SetTextColor(dc, RGB(56, 41, 30));
+      SetTextColor(dc, GetSysColor(COLOR_WINDOWTEXT));
       SetBkMode(dc, TRANSPARENT);
       return reinterpret_cast<LRESULT>(background_);
     }

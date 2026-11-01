@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mikansei_neutral_surface">#F1F3F1</color>
+    <color name="mikansei_text_primary">#202521</color>
+    <color name="mikansei_text_secondary">#626A65</color>
+    <color name="mikansei_accent">#1F634C</color>
+</resources>

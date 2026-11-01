@@ -3,7 +3,7 @@
     android:id="@+id/pomodoro_widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5EDDE"
+    android:background="@color/mikansei_neutral_surface"
     android:orientation="vertical"
     android:padding="12dp">
 
@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Mikanseta 专注"
-        android:textColor="#805734"
+        android:textColor="@color/mikansei_text_secondary"
         android:textSize="14sp"
         android:textStyle="bold" />
 
@@ -24,7 +24,7 @@
         android:maxLines="2"
         android:paddingTop="6dp"
         android:text="开始一段专注"
-        android:textColor="#38291E"
+        android:textColor="@color/mikansei_text_primary"
         android:textSize="16sp"
         android:textStyle="bold" />
 
@@ -33,11 +33,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fontFamily="monospace"
-        android:gravity="center_vertical"
+        android:gravity="center"
+        android:includeFontPadding="false"
         android:paddingTop="4dp"
         android:text="00:00"
-        android:textColor="#805734"
-        android:textSize="28sp"
+        android:textColor="@color/mikansei_accent"
+        android:textSize="44sp"
         android:textStyle="bold" />
 
     <Chronometer
@@ -45,11 +46,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:fontFamily="monospace"
-        android:gravity="center_vertical"
+        android:gravity="center"
+        android:includeFontPadding="false"
         android:paddingTop="4dp"
         android:text="00:00"
-        android:textColor="#805734"
-        android:textSize="28sp"
+        android:textColor="@color/mikansei_accent"
+        android:textSize="44sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
@@ -61,35 +63,33 @@
         android:ellipsize="end"
         android:maxLines="2"
         android:text="打开应用设置主题和计时方式"
-        android:textColor="#68503A"
+        android:textColor="@color/mikansei_text_secondary"
         android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="vertical">
 
         <Button
             android:id="@+id/pomodoro_widget_primary"
-            android:layout_width="0dp"
-            android:layout_height="42dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:minHeight="44dp"
             android:text="开始专注"
             android:textAllCaps="false"
-            android:textSize="12sp" />
+            android:textSize="14sp" />
 
         <Button
             android:id="@+id/pomodoro_widget_finish"
-            android:layout_width="0dp"
-            android:layout_height="42dp"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:minWidth="0dp"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="6dp"
+            android:minHeight="44dp"
             android:text="结束"
             android:textAllCaps="false"
-            android:textSize="12sp"
+            android:textSize="14sp"
             android:visibility="gone" />
     </LinearLayout>
 </LinearLayout>

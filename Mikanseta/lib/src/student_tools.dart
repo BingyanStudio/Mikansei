@@ -9,6 +9,7 @@ import 'domain.dart';
 import 'store.dart';
 import 'editor.dart';
 import 'system_services.dart' show requestReminderAccess;
+import 'theme.dart';
 
 class Course {
   Course(this.data);
@@ -556,6 +557,14 @@ class _CoursesPageState extends State<CoursesPage> {
           ),
           ...widget.store.courses.map(
             (c) => ListTile(
+              leading: CircleAvatar(
+                backgroundColor: MikanseiPalette.of(context).homework
+                    .withValues(alpha: .12),
+                child: Icon(
+                  Icons.menu_book_outlined,
+                  color: MikanseiPalette.of(context).homework,
+                ),
+              ),
               title: Text(c.name),
               subtitle: Text(
                 '${c.label}\n${dateLabel(c.first, time: false)}—${dateLabel(c.last, time: false)} · ${c.data['platform']}',
@@ -572,6 +581,9 @@ class _CoursesPageState extends State<CoursesPage> {
                           isNew: true,
                         ),
                       ),
+                style: TextButton.styleFrom(
+                  foregroundColor: MikanseiPalette.of(context).homework,
+                ),
                 child: const Text('登记作业'),
               ),
             ),

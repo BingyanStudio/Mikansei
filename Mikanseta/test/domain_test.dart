@@ -134,6 +134,71 @@ void main() {
     );
   });
   test(
+    'legacy planning defaults false and malformed planning state is rejected',
+    () {
+      final legacyData = Map<String, dynamic>.of(task('旧档案', 0, null).data)
+        ..remove('isInPlanning');
+      expect(Entry(legacyData).isInPlanning, false);
+
+      final malformed = Archive(
+        entries: [
+          Entry({...legacyData, 'isInPlanning': 'false'}),
+        ],
+      );
+      expect(() => Archive.decode(malformed.encode()), throwsFormatException);
+    },
+  );
+  test('today focus includes schedules crossing midnight and prefers today routine occurrence', () {
+    final yesterday = DateTime(2026, 10, 12, 23, 30);
+    final tomorrow = DateTime(2026, 10, 14, 9);
+    final crossing =
+        Entry.create(title: '跨午夜日程', kind: EntryKind.schedule, now: now).change(
+          {
+            'plannedStart': isoDate(yesterday),
+            'plannedEnd': isoDate(DateTime(2026, 10, 13, 0, 30)),
+          },
+          now: now,
+        );
+    expect(crossing.scheduleOccurs(DateTime(2026, 10, 12)), true);
+    expect(crossing.scheduleOccurs(now), true);
+    expect(crossing.scheduleOccurs(DateTime(2026, 10, 14)), false);
+
+    final seriesID = jsonEncode(['calendar', 'shared-series']);
+    Entry providerOccurrence(String title, DateTime start, String occurrence) =>
+        Entry.create(title: title, kind: EntryKind.schedule, now: now).change({
+          'plannedStart': isoDate(start),
+          'plannedEnd': isoDate(start.add(const Duration(hours: 1))),
+          'routineSeriesID': seriesID,
+          'routineOccurrenceID': occurrence,
+        }, now: now);
+    final oldOccurrence = providerOccurrence(
+      '旧日历 occurrence',
+      DateTime(2026, 10, 12, 9),
+      'day:2026-10-12',
+    );
+    final currentOccurrence = providerOccurrence(
+      '今天的日历 occurrence',
+      DateTime(2026, 10, 13, 11),
+      'day:2026-10-13',
+    );
+    expect(
+      activeEntryFrontier([oldOccurrence, currentOccurrence]).single.id,
+      oldOccurrence.id,
+    );
+    final board = TaskBoard([crossing, oldOccurrence, currentOccurrence], now);
+    expect(board.focusTodayIDs, contains(crossing.id));
+    expect(board.focusTodayIDs, contains(currentOccurrence.id));
+    expect(board.focusTodayIDs, isNot(contains(oldOccurrence.id)));
+    expect(board.routines.map((entry) => entry.id), contains(oldOccurrence.id));
+    expect(currentOccurrence.isRoutineSeriesMember, true);
+    expect(
+      TaskBoard([
+        providerOccurrence('明日日程', tomorrow, 'day:2026-10-14'),
+      ], now).focus,
+      isEmpty,
+    );
+  });
+  test(
     'completion stops timer and checks every step; reopen preserves progress',
     () {
       final step = StepItem(title: '上传文件');
@@ -325,6 +390,34 @@ void main() {
     await store.settled;
   });
   test(
+    'a generated routine occurrence starts outside the planning section',
+    () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final entry = task(
+        '每日事项',
+        0,
+        now,
+      ).change({'repeatRule': 'daily', 'isInPlanning': true}, now: now);
+      store.save(entry);
+
+      store.toggle(entry.id);
+      await store.settled;
+
+      final successor = store.entries.singleWhere(
+        (candidate) => candidate.data['previousOccurrenceID'] == entry.id,
+      );
+      expect(successor.isInPlanning, false);
+      expect(
+        Archive.decode(storage.content!).entries
+            .singleWhere((candidate) => candidate.id == successor.id)
+            .isInPlanning,
+        false,
+      );
+    },
+  );
+  test(
     'corrupt local storage becomes read-only and never overwrites original',
     () async {
       final storage = MemoryStorage()..content = 'broken';
@@ -438,10 +531,11 @@ void main() {
     final urgent = task('明日紧急', 2, now.add(const Duration(days: 1)));
     final manual0 = task('手动第一', 0, null).change({'sortOrder': 0}, now: now);
     final manual1 = task('手动第二', 0, null).change({'sortOrder': 1}, now: now);
-    expect(
-      [urgent, manual1, manual0]..sort(entryOrder),
-      [manual0, manual1, urgent],
-    );
+    expect([urgent, manual1, manual0]..sort(entryOrder), [
+      manual0,
+      manual1,
+      urgent,
+    ]);
     expect(
       TaskBoard([urgent, manual1, manual0], now).visible.map((e) => e.title),
       ['手动第一', '手动第二', '明日紧急'],
@@ -466,43 +560,164 @@ void main() {
       await store.settled;
       expect(store.find(planned.id)!.plannedDays, [dayOf(now)]);
       expect(store.find(planned.id)!.onDay(now), false);
-      expect(
-        TaskBoard(store.entries, now).focus.map((e) => e.title),
-        ['计划今天'],
-      );
-      final routine = task('每日例程', 0, now.add(const Duration(days: 3))).change({
-        'repeatRule': 'daily',
-        'plannedDays': [dayKey(now)],
-      }, now: now);
+      expect(TaskBoard(store.entries, now).focus.map((e) => e.title), ['计划今天']);
+      final routine = task(
+        '每日例程',
+        0,
+        now.add(const Duration(days: 3)),
+      ).change({'repeatRule': 'daily'}, now: now);
       expect(TaskBoard([routine], now).focus, isEmpty);
     },
   );
-  test('setPlannedTime keeps kind task and survives an archive roundtrip',
-      () async {
+  test(
+    'moving out of focus persists and restore returns eligible work',
+    () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final entry = task('先放到规划', 0, null);
+      store.save(entry);
+      await store.settled;
+      expect(TaskBoard(store.entries, now).focus.map((e) => e.id), [entry.id]);
+
+      expect(store.moveToPlanning(entry.id), true);
+      await store.settled;
+      expect(store.find(entry.id)!.isInPlanning, true);
+      expect(TaskBoard(store.entries, now).focus, isEmpty);
+      expect(
+        Archive.decode(storage.content!).entries.single.isInPlanning,
+        true,
+      );
+
+      expect(store.restoreFromPlanning(entry.id), true);
+      await store.settled;
+      expect(store.find(entry.id)!.isInPlanning, false);
+      expect(TaskBoard(store.entries, now).focus.map((e) => e.id), [entry.id]);
+    },
+  );
+  test(
+    'new planned days and time remove an item from the deferred section',
+    () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final entry = task('重新安排', 0, null);
+      store.save(entry);
+      await store.settled;
+      expect(store.moveToPlanning(entry.id), true);
+      await store.settled;
+      expect(store.setPlannedDays(entry.id, [now]), true);
+      await store.settled;
+      expect(store.find(entry.id)!.isInPlanning, false);
+      expect(TaskBoard(store.entries, now).focus.map((e) => e.id), [entry.id]);
+
+      expect(store.moveToPlanning(entry.id), true);
+      await store.settled;
+      expect(
+        store.setPlannedTime(
+          entry.id,
+          now.add(const Duration(hours: 1)),
+          now.add(const Duration(hours: 2)),
+        ),
+        true,
+      );
+      await store.settled;
+      expect(store.find(entry.id)!.isInPlanning, false);
+      expect(store.find(entry.id)!.start, now.add(const Duration(hours: 1)));
+      expect(store.setPlannedTime(entry.id, now, now), false);
+    },
+  );
+  test('notes cannot retain a task planning marker', () async {
+    final store = EntryStore(MemoryStorage(), clock: () => now);
+    await store.load();
+    final note = Entry.create(
+      title: '想法',
+      kind: EntryKind.note,
+      now: now,
+    ).change({'isInPlanning': true}, now: now);
+
+    store.save(note);
+    await store.settled;
+
+    expect(store.find(note.id)!.isInPlanning, false);
+  });
+  test('calendar cleanup keeps imported entries with planning state', () async {
     final storage = MemoryStorage();
     final store = EntryStore(storage, clock: () => now);
     await store.load();
-    final entry = task('定时作业', 1, null);
-    store.save(entry);
+    store.setAndroidCalendarSettings({'deviceID': 'device', 'selected': []});
     await store.settled;
-    store.setPlannedTime(entry.id, now, now.add(const Duration(minutes: 30)));
-    await store.settled;
-    final stored = store.find(entry.id)!;
-    expect(stored.kind, EntryKind.task);
-    expect(stored.start, now);
-    expect(stored.end, now.add(const Duration(minutes: 30)));
-    expect(
-      () => store.setPlannedTime(
-        entry.id,
-        now.add(const Duration(minutes: 30)),
-        now,
-      ),
-      throwsFormatException,
+
+    final schedule = Entry.create(
+      title: '导入后调整过',
+      kind: EntryKind.schedule,
+      now: now,
     );
-    final decoded = Archive.decode(storage.content!).entries.single;
-    expect(decoded.kind, EntryKind.task);
-    expect(decoded.data, stored.data);
+    final snapshot = {
+      for (final key in [
+        'title',
+        'body',
+        'location',
+        'plannedStart',
+        'plannedEnd',
+        'plannedAllDay',
+        'dueDate',
+      ])
+        key: schedule.data[key],
+      'kind': schedule.kind.name,
+    };
+    final link = {
+      'deviceID': 'device',
+      'key': 'calendar/event/occurrence',
+      'calendarID': 'calendar',
+      'snapshot': snapshot,
+    };
+    store.save(
+      Entry({
+        ...schedule.data,
+        'plannedDays': [dayKey(now)],
+        'androidCalendarLink': link,
+      }),
+    );
+    store.save(
+      Entry({
+        ...schedule.data,
+        'id': newId(),
+        'isInPlanning': true,
+        'androidCalendarLink': link,
+      }),
+    );
+    await store.settled;
+    expect(store.cleanableCalendarEntries, isEmpty);
   });
+  test(
+    'setPlannedTime keeps kind task and survives an archive roundtrip',
+    () async {
+      final storage = MemoryStorage();
+      final store = EntryStore(storage, clock: () => now);
+      await store.load();
+      final entry = task('定时作业', 1, null);
+      store.save(entry);
+      await store.settled;
+      store.setPlannedTime(entry.id, now, now.add(const Duration(minutes: 30)));
+      await store.settled;
+      final stored = store.find(entry.id)!;
+      expect(stored.kind, EntryKind.task);
+      expect(stored.start, now);
+      expect(stored.end, now.add(const Duration(minutes: 30)));
+      expect(
+        store.setPlannedTime(
+          entry.id,
+          now.add(const Duration(minutes: 30)),
+          now,
+        ),
+        false,
+      );
+      final decoded = Archive.decode(storage.content!).entries.single;
+      expect(decoded.kind, EntryKind.task);
+      expect(decoded.data, stored.data);
+    },
+  );
   test('reorder writes consecutive sortOrder that drives the board', () async {
     final storage = MemoryStorage();
     final store = EntryStore(storage, clock: () => now);
@@ -521,9 +736,10 @@ void main() {
     expect(store.find(one.id)!.sortOrder, 1);
     expect(store.find(two.id)!.sortOrder, 2);
     expect(storage.writes.length, writesBefore + 1);
-    expect(
-      TaskBoard(store.entries, now).visible.map((e) => e.title),
-      ['三号', '一号', '二号'],
-    );
+    expect(TaskBoard(store.entries, now).visible.map((e) => e.title), [
+      '三号',
+      '一号',
+      '二号',
+    ]);
   });
 }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'theme.dart';
+
 /// Capsule segmented control matching the native Mikansei picker: a soft
 /// rounded container with the selected segment filled in the accent color.
 class SegmentedStrip<T> extends StatelessWidget {
@@ -25,11 +27,11 @@ class SegmentedStrip<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final palette = MikanseiPalette.of(context);
     final content = Container(
       padding: padding,
       decoration: BoxDecoration(
-        color: colors.surfaceContainer,
+        color: palette.track,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -50,10 +52,11 @@ class SegmentedStrip<T> extends StatelessWidget {
 
   Widget _segment(BuildContext context, T choice) {
     final colors = Theme.of(context).colorScheme;
+    final palette = MikanseiPalette.of(context);
     final selected = choice == selection;
     final segment = Material(
       key: identifier == null ? null : ValueKey(identifier!(choice)),
-      color: selected ? colors.primary : Colors.transparent,
+      color: selected ? palette.accent : Colors.transparent,
       borderRadius: BorderRadius.circular(11),
       child: InkWell(
         borderRadius: BorderRadius.circular(11),
@@ -71,7 +74,7 @@ class SegmentedStrip<T> extends StatelessWidget {
             style: TextStyle(
               fontSize: 13,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? colors.onPrimary : colors.onSurfaceVariant,
+              color: selected ? palette.onAccent : colors.onSurfaceVariant,
             ),
           ),
         ),

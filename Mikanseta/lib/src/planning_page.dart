@@ -7,9 +7,9 @@ import 'domain.dart';
 import 'haptics.dart';
 import 'segmented_strip.dart';
 import 'store.dart';
+import 'theme.dart';
 
-/// 全屏规划页。日程规划把未完成待办涂到月历日期上（plannedDays）；小时规划把
-/// 当天待办拖进 24 小时时间轴（plannedStart/plannedEnd，条目保持待办类型）。
+/// 全屏规划页。待办可安排日期或拖入时间轴；日程仍只按执行时段显示。
 /// 循环条目的日期由重复规则生成，这里只提示并跳去现有编辑器。
 class PlanningPage extends StatefulWidget {
   const PlanningPage({
@@ -128,6 +128,14 @@ class _PlanningPageState extends State<PlanningPage>
   Entry? get selected =>
       selectedTaskId == null ? null : widget.store.find(selectedTaskId!);
 
+  List<Entry> get deferredCandidates =>
+      widget.store.entries
+          .where(
+            (entry) => entry.isTask && !entry.completed && entry.isInPlanning,
+          )
+          .toList()
+        ..sort(entryOrder);
+
   void pick(Entry task) {
     setState(() {
       selectedTaskId = task.id;
@@ -142,11 +150,10 @@ class _PlanningPageState extends State<PlanningPage>
   void savePlan() {
     final entry = selected;
     if (entry == null) return;
-    widget.store.setPlannedDays(
-      entry.id,
-      [for (final key in draft) DateTime.parse(key)],
-    );
-    AppHaptics.confirm();
+    final saved = widget.store.setPlannedDays(entry.id, [
+      for (final key in draft) DateTime.parse(key),
+    ]);
+    if (saved) AppHaptics.confirm();
   }
 
   DateTime? _dateAt(Offset local, double cellWidth) {
@@ -181,10 +188,9 @@ class _PlanningPageState extends State<PlanningPage>
     if (widget.store.readOnly) return;
     final box = gridKey.currentContext!.findRenderObject() as RenderBox;
     final local = box.globalToLocal(details.offset);
-    final minute =
-        ((local.dy / PlanningPage.hourHeight * 60 / 15).floor() * 15)
-            .clamp(0, 24 * 60 - 30)
-            .toInt();
+    final minute = ((local.dy / PlanningPage.hourHeight * 60 / 15).floor() * 15)
+        .clamp(0, 24 * 60 - 30)
+        .toInt();
     final start = DateTime(day.year, day.month, day.day, 0, minute);
     widget.store.setPlannedTime(
       details.data.id,
@@ -225,6 +231,7 @@ class _PlanningPageState extends State<PlanningPage>
                 },
               ),
             ),
+            deferredSection(),
             Expanded(child: mode == 'days' ? daysMode() : hoursMode()),
           ],
         ),
@@ -232,13 +239,91 @@ class _PlanningPageState extends State<PlanningPage>
     ),
   );
 
+  Widget deferredSection() {
+    final deferred = deferredCandidates;
+    if (deferred.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              '待重新规划 · ${deferred.length}',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          SizedBox(
+            height: 78,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              itemCount: deferred.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final entry = deferred[index];
+                final isSelected = entry.id == selectedTaskId;
+                final palette = MikanseiPalette.of(context);
+                return Container(
+                  width: 214,
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? palette.accent.withValues(alpha: .1)
+                        : palette.card,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isSelected ? palette.accent : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => pick(entry),
+                          child: Text(
+                            entry.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: widget.store.readOnly
+                            ? null
+                            : () {
+                                if (widget.store.restoreFromPlanning(
+                                  entry.id,
+                                )) {
+                                  AppHaptics.confirm();
+                                }
+                              },
+                        child: const Text('移回今日'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget daysMode() {
-    final candidates = TaskBoard(
-      widget.store.entries,
-      widget.store.clock(),
-    ).open;
+    final board = TaskBoard(widget.store.entries, widget.store.clock());
+    final byID = {for (final entry in board.open) entry.id: entry};
+    for (final entry in deferredCandidates) {
+      byID[entry.id] = entry;
+    }
+    final candidates = byID.values.toList()..sort(entryOrder);
     final selectedEntry = selected;
-    final routine = selectedEntry != null && selectedEntry.repeatRule != 'never';
+    final routine = selectedEntry?.isRoutineSeriesMember ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -283,83 +368,117 @@ class _PlanningPageState extends State<PlanningPage>
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
             children: [
-              Row(
-                children: [
-                  IconButton(
-                    tooltip: '上个月',
-                    onPressed: () => setState(() {
-                      month = DateTime(month.year, month.month - 1);
-                    }),
-                    icon: const Icon(Icons.chevron_left),
-                  ),
-                  Expanded(
-                    child: Text(
-                      '${month.year} 年 ${month.month} 月',
-                      textAlign: TextAlign.center,
+              if (selectedEntry?.kind != EntryKind.schedule) ...[
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: '上个月',
+                      onPressed: () => setState(() {
+                        month = DateTime(month.year, month.month - 1);
+                      }),
+                      icon: const Icon(Icons.chevron_left),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: '下个月',
-                    onPressed: () => setState(() {
-                      month = DateTime(month.year, month.month + 1);
-                    }),
-                    icon: const Icon(Icons.chevron_right),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      final now = widget.store.clock();
-                      setState(() => month = DateTime(now.year, now.month));
-                    },
-                    child: const Text('本月'),
-                  ),
-                ],
-              ),
-              Row(
-                children: ['一', '二', '三', '四', '五', '六', '日']
-                    .map(
-                      (label) => Expanded(
-                        child: Center(
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                    Expanded(
+                      child: Text(
+                        '${month.year} 年 ${month.month} 月',
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: '下个月',
+                      onPressed: () => setState(() {
+                        month = DateTime(month.year, month.month + 1);
+                      }),
+                      icon: const Icon(Icons.chevron_right),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        final now = widget.store.clock();
+                        setState(() => month = DateTime(now.year, now.month));
+                      },
+                      child: const Text('本月'),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: ['一', '二', '三', '四', '五', '六', '日']
+                      .map(
+                        (label) => Expanded(
+                          child: Center(
+                            child: Text(
+                              label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                    .toList(),
-              ),
-              LayoutBuilder(
-                builder: (context, limits) {
-                  final cellWidth = limits.maxWidth / 7;
-                  final interactive =
-                      selectedEntry != null &&
-                      !routine &&
-                      !widget.store.readOnly;
-                  return GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onPanDown: interactive
-                        ? (details) =>
-                              paintCell(details.localPosition, cellWidth, start: true)
-                        : null,
-                    onPanUpdate: interactive
-                        ? (details) =>
-                              paintCell(details.localPosition, cellWidth, start: false)
-                        : null,
-                    child: paintCalendar(),
-                  );
-                },
-              ),
+                      )
+                      .toList(),
+                ),
+                LayoutBuilder(
+                  builder: (context, limits) {
+                    final cellWidth = limits.maxWidth / 7;
+                    final interactive =
+                        selectedEntry != null &&
+                        !routine &&
+                        selectedEntry.kind != EntryKind.schedule &&
+                        !widget.store.readOnly;
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onPanDown: interactive
+                          ? (details) => paintCell(
+                              details.localPosition,
+                              cellWidth,
+                              start: true,
+                            )
+                          : null,
+                      onPanUpdate: interactive
+                          ? (details) => paintCell(
+                              details.localPosition,
+                              cellWidth,
+                              start: false,
+                            )
+                          : null,
+                      child: paintCalendar(),
+                    );
+                  },
+                ),
+              ],
               if (selectedEntry == null)
                 const Padding(
                   padding: EdgeInsets.only(top: 12),
                   child: Text('先在上方选择一个待办，再涂选日期。'),
                 )
-              else if (routine) ...[
+              else if (selectedEntry.calendarRoutine) ...[
+                const SizedBox(height: 12),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: Icon(
+                      Icons.autorenew_outlined,
+                      color: MikanseiPalette.of(context).accent,
+                    ),
+                    title: const Text('常态 · 日历来源重复'),
+                    subtitle: Text(
+                      selectedEntry.start == null
+                          ? '重复日期由来源日历管理。'
+                          : '本次执行：${dateLabel(selectedEntry.start!)}'
+                                '${selectedEntry.end != null && selectedEntry.end!.isAfter(selectedEntry.start!) ? '–${dateLabel(selectedEntry.end!)}' : ''}',
+                    ),
+                    trailing: TextButton(
+                      onPressed: widget.store.readOnly
+                          ? null
+                          : () => widget.onEdit(selectedEntry),
+                      child: const Text('编辑本次'),
+                    ),
+                  ),
+                ),
+              ] else if (routine &&
+                  selectedEntry.kind != EntryKind.schedule) ...[
                 const SizedBox(height: 12),
                 Card(
                   margin: EdgeInsets.zero,
@@ -368,8 +487,53 @@ class _PlanningPageState extends State<PlanningPage>
                     title: Text('按重复规则自动规划：${selectedEntry.routineLabel}'),
                     subtitle: const Text('日期随循环规则出现，无需手工涂色。'),
                     trailing: TextButton(
-                      onPressed: () => widget.onEdit(selectedEntry),
+                      onPressed: widget.store.readOnly
+                          ? null
+                          : () => widget.onEdit(selectedEntry),
                       child: const Text('编辑重复'),
+                    ),
+                  ),
+                ),
+              ] else if (selectedEntry.kind == EntryKind.schedule) ...[
+                const SizedBox(height: 12),
+                Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_month_outlined,
+                              color: MikanseiPalette.of(context).accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '日程按执行时段显示',
+                              style: Theme.of(context).textTheme.titleSmall,
+                            ),
+                          ],
+                        ),
+                        if (selectedEntry.start != null) ...[
+                          const SizedBox(height: 10),
+                          Text('开始：${dateLabel(selectedEntry.start!)}'),
+                          if (selectedEntry.end != null &&
+                              selectedEntry.end!.isAfter(selectedEntry.start!))
+                            Text('结束：${dateLabel(selectedEntry.end!)}'),
+                        ],
+                        const SizedBox(height: 8),
+                        const Text('日程会在执行时段覆盖的日期显示。'),
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: widget.store.readOnly
+                              ? null
+                              : () => widget.onEdit(selectedEntry),
+                          icon: const Icon(Icons.edit_calendar_outlined),
+                          label: const Text('调整日程时间'),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -413,6 +577,7 @@ class _PlanningPageState extends State<PlanningPage>
 
   Widget dayCell(DateTime date) {
     final scheme = Theme.of(context).colorScheme;
+    final palette = MikanseiPalette.of(context);
     final key = dayKey(date);
     final painted = draft.contains(key);
     final outside = date.month != month.month;
@@ -424,21 +589,38 @@ class _PlanningPageState extends State<PlanningPage>
         margin: const EdgeInsets.all(3),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: painted ? scheme.primary : null,
+          color: painted ? palette.accent : null,
           borderRadius: BorderRadius.circular(12),
-          border: today && !painted ? Border.all(color: scheme.primary) : null,
+          border: today ? Border.all(color: palette.error, width: 1.5) : null,
         ),
-        child: Text(
-          '${date.day}',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: painted || today ? FontWeight.w600 : null,
-            color: painted
-                ? scheme.onPrimary
-                : outside
-                ? scheme.onSurfaceVariant
-                : scheme.onSurface,
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '${date.day}',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: painted || today ? FontWeight.w600 : null,
+                color: painted
+                    ? palette.onAccent
+                    : today
+                    ? palette.error
+                    : outside
+                    ? scheme.onSurfaceVariant
+                    : scheme.onSurface,
+              ),
+            ),
+            if (today)
+              Text(
+                '今',
+                style: TextStyle(
+                  fontSize: 9,
+                  height: 1,
+                  color: painted ? palette.onAccent : palette.error,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -447,9 +629,10 @@ class _PlanningPageState extends State<PlanningPage>
   Widget hoursMode() {
     final now = widget.store.clock();
     final scheme = Theme.of(context).colorScheme;
+    final palette = MikanseiPalette.of(context);
     final hourHeight = PlanningPage.hourHeight;
     final board = TaskBoard(widget.store.entries, day);
-    final todos = board.focus
+    final todos = board.today
         .where((e) => !e.completed && e.start == null)
         .toList();
     final items = calendarItems(widget.store.entries, day);
@@ -563,13 +746,26 @@ class _PlanningPageState extends State<PlanningPage>
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: scheme.surfaceContainer,
+                              color:
+                                  (item.owner.completed
+                                          ? palette.completed
+                                          : item.deadline
+                                          ? palette.warm
+                                          : palette.accent)
+                                      .withValues(alpha: .12),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${item.deadline ? 'DDL ${clockLabel(item.start)}' : '全天'} '
                               '${item.entry.title}',
-                              style: const TextStyle(fontSize: 11),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: item.owner.completed
+                                    ? palette.completed
+                                    : item.deadline
+                                    ? palette.warm
+                                    : palette.accent,
+                              ),
                             ),
                           ),
                         ),
@@ -658,7 +854,8 @@ class _PlanningPageState extends State<PlanningPage>
 
   Widget _planBlock(TimelineBlock block, double laneWidth, ColorScheme scheme) {
     final item = block.item;
-    final isSchedule = item.entry.kind == EntryKind.schedule;
+    final palette = MikanseiPalette.of(context);
+    final semantic = item.owner.completed ? palette.completed : palette.accent;
     final hourHeight = PlanningPage.hourHeight;
     return Positioned(
       top: block.start / 60 * hourHeight,
@@ -666,12 +863,10 @@ class _PlanningPageState extends State<PlanningPage>
       width: math.max(8, laneWidth - 4),
       height: math.max(30, (block.end - block.start) / 60 * hourHeight - 2),
       child: Material(
-        color: isSchedule ? scheme.primaryContainer : scheme.secondaryContainer,
+        color: semantic.withValues(alpha: .16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-          side: isSchedule
-              ? BorderSide.none
-              : BorderSide(color: scheme.secondary),
+          side: BorderSide(color: semantic.withValues(alpha: .75)),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
@@ -680,11 +875,11 @@ class _PlanningPageState extends State<PlanningPage>
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             child: Row(
               children: [
-                if (!isSchedule) ...[
+                if (item.entry.kind != EntryKind.schedule) ...[
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: scheme.secondary,
+                      color: semantic,
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -692,7 +887,7 @@ class _PlanningPageState extends State<PlanningPage>
                       style: TextStyle(
                         fontSize: 9,
                         height: 1.5,
-                        color: scheme.onSecondary,
+                        color: palette.onAccent,
                       ),
                     ),
                   ),
@@ -705,9 +900,7 @@ class _PlanningPageState extends State<PlanningPage>
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 12,
-                      color: isSchedule
-                          ? scheme.onPrimaryContainer
-                          : scheme.onSecondaryContainer,
+                      color: scheme.onSurface,
                       decoration: item.owner.completed
                           ? TextDecoration.lineThrough
                           : null,
@@ -799,7 +992,7 @@ class _TodoCard extends StatelessWidget {
                     'DDL ${dateLabel(entry.due!)}',
                     style: TextStyle(
                       fontSize: 11,
-                      color: scheme.onSurfaceVariant,
+                      color: MikanseiPalette.of(context).warm,
                     ),
                   ),
                 ),

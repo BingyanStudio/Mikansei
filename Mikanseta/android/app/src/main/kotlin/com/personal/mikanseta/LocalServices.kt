@@ -354,8 +354,7 @@ object LocalServices {
             views.setTextViewText(R.id.pomodoro_widget_subject, subject)
             val timer = when (mode) {
                 "countdown" -> {
-                    if (runningSince == null) formatWidgetClock(remaining) + " · 已暂停"
-                    else formatWidgetClock(remaining) + " · 至 ${formatWidgetTime(System.currentTimeMillis() + (remaining * 1000).toLong())}"
+                    formatWidgetClock(remaining)
                 }
                 "countUp" -> formatWidgetClock(elapsed)
                 else -> "00:00"
@@ -374,20 +373,34 @@ object LocalServices {
             val options = manager.getAppWidgetOptions(widgetId)
             val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)
             val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0)
-            val compact = (minHeight in 1..175) || (minWidth in 1..219)
+            val compact = (minHeight in 1..275) || (minWidth in 1..239)
+            val clockCharacters = when {
+                mode == "countUp" && runningSince != null && elapsed >= 3600 ->
+                    (elapsed.toLong() / 3600).toString().length + 8
+                mode == "countUp" && runningSince != null -> 7
+                mode == "countUp" && elapsed >= 3600 ->
+                    (elapsed.toLong() / 3600).toString().length + 6
+                mode == "countdown" && remaining >= 3600 ->
+                    (remaining.toLong() / 3600).toString().length + 6
+                else -> 5
+            }
+            val clockWidth = (minWidth - if (compact) 16 else 24).coerceAtLeast(120)
+            val clockTextSize = (clockWidth.toFloat() / (clockCharacters * 0.6f))
+                .coerceIn(24f, if (compact) 40f else 60f)
             views.setViewVisibility(R.id.pomodoro_widget_heading, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
             views.setViewVisibility(R.id.pomodoro_widget_status, if (compact) android.view.View.GONE else android.view.View.VISIBLE)
             views.setTextViewTextSize(R.id.pomodoro_widget_subject, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 14f else 16f)
             views.setInt(R.id.pomodoro_widget_subject, "setMaxLines", if (compact) 1 else 2)
-            views.setTextViewTextSize(R.id.pomodoro_widget_timer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 18f else 28f)
+            views.setTextViewTextSize(R.id.pomodoro_widget_timer, android.util.TypedValue.COMPLEX_UNIT_SP, clockTextSize)
+            views.setTextViewTextSize(R.id.pomodoro_widget_chronometer, android.util.TypedValue.COMPLEX_UNIT_SP, clockTextSize)
             views.setViewPadding(R.id.pomodoro_widget_subject, 0, if (compact) 1 else 6, 0, 0)
             views.setViewPadding(R.id.pomodoro_widget_timer, 0, if (compact) 1 else 4, 0, 0)
-            views.setTextViewTextSize(R.id.pomodoro_widget_status, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 9f else 12f)
+            views.setTextViewTextSize(R.id.pomodoro_widget_status, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 11f else 12f)
             views.setInt(R.id.pomodoro_widget_status, "setMaxLines", if (compact) 1 else 2)
             views.setViewPadding(R.id.pomodoro_widget_status, 0, 0, 0, if (compact) 1 else 0)
-            views.setViewPadding(R.id.pomodoro_widget_root, if (compact) 8 else 12, if (compact) 8 else 12, if (compact) 8 else 12, if (compact) 8 else 12)
+            views.setViewPadding(R.id.pomodoro_widget_root, if (compact) 6 else 12, if (compact) 6 else 12, if (compact) 6 else 12, if (compact) 6 else 12)
             views.setTextViewText(R.id.pomodoro_widget_status, status)
-            views.setTextViewText(R.id.pomodoro_widget_timer, if (compact && mode == "countdown" && runningSince != null) formatWidgetClock(remaining) + " · 打开刷新" else timer)
+            views.setTextViewText(R.id.pomodoro_widget_timer, timer)
             views.setChronometer(R.id.pomodoro_widget_chronometer, SystemClock.elapsedRealtime(), "%s", false)
             if (Build.VERSION.SDK_INT >= 24) {
                 views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, false)
@@ -399,7 +412,6 @@ object LocalServices {
                 if (Build.VERSION.SDK_INT >= 24) {
                     views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, true)
                 }
-                views.setTextViewTextSize(R.id.pomodoro_widget_chronometer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 18f else 28f)
                 views.setViewVisibility(R.id.pomodoro_widget_timer, android.view.View.GONE)
                 views.setViewVisibility(R.id.pomodoro_widget_chronometer, android.view.View.VISIBLE)
             }
@@ -409,7 +421,6 @@ object LocalServices {
                     views.setChronometerCountDown(R.id.pomodoro_widget_chronometer, false)
                 }
                 views.setChronometer(R.id.pomodoro_widget_chronometer, base, "↑ %s", true)
-                views.setTextViewTextSize(R.id.pomodoro_widget_chronometer, android.util.TypedValue.COMPLEX_UNIT_SP, if (compact) 20f else 28f)
                 views.setViewVisibility(R.id.pomodoro_widget_timer, android.view.View.GONE)
                 views.setViewVisibility(R.id.pomodoro_widget_chronometer, android.view.View.VISIBLE)
             }
@@ -513,7 +524,7 @@ class RingingService:Service(){
  }
  override fun onDestroy(){handler.removeCallbacksAndMessages(null);player?.release();player=null;activeID=null;super.onDestroy()}
 }
-class AlarmScreen:Activity(){override fun onCreate(state:Bundle?){super.onCreate(state);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)};val event=JSONObject(intent.getStringExtra("event")?:"{}");val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(40,100,40,40);setBackgroundColor(0xfff5edde.toInt())};box.addView(TextView(this).apply{text=event.optString("title");textSize=28f;setTextColor(0xff38291e.toInt())});for(pair in listOf("稍后提醒" to true,"停止" to false)){box.addView(Button(this).apply{text=pair.first;setOnClickListener{LocalServices.action(this@AlarmScreen,event.getString("id"),pair.second);finish()}})};setContentView(box)}}
+class AlarmScreen:Activity(){override fun onCreate(state:Bundle?){super.onCreate(state);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)};val event=JSONObject(intent.getStringExtra("event")?:"{}");val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(40,100,40,40);setBackgroundColor(resources.getColor(R.color.mikansei_neutral_surface))};box.addView(TextView(this).apply{text=event.optString("title");textSize=28f;setTextColor(resources.getColor(R.color.mikansei_text_primary))});for(pair in listOf("稍后提醒" to true,"停止" to false)){box.addView(Button(this).apply{text=pair.first;setOnClickListener{LocalServices.action(this@AlarmScreen,event.getString("id"),pair.second);finish()}})};setContentView(box)}}
 open class BaseWidget:AppWidgetProvider(){override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){LocalServices.updateWidgets(c,ids,javaClass.simpleName)}}
 class ChecklistWidget:BaseWidget()
 class QuickAddWidget:BaseWidget()

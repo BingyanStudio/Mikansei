@@ -60,17 +60,19 @@ class NativeStorage implements ArchiveStorage {
 const String guideMikanseta = '''
 # 欢迎使用 Mikanseta
 
-这是一个学生向的待办与日程工具，牛皮浅棕主题。
+这是 Mikansei 的 Flutter 版本 Mikanseta。它沿用同一套事项、计划和归档数据；手机与电脑上的入口布局会按屏幕调整。
 
 ## 快速上手
+- 主导航有 **待办、日程、笔记** 三页；待办页按类型和状态筛选，日程页可切换今日聚焦、列表和日历
 - 点右上角 **＋** 新建事项：待办、作业、日程、笔记四种类型
-- 点左侧圆圈完成事项；完成态会划线并进入「今日已完成」
+- 点事项左侧圆圈完成事项；完成态会划线并进入「今日已完成」
 - 点卡片上的 ▶ 开始专注计时，同一时间只计一件事
 
 ## 规划
-- 「今日」页点 **规划**：
+- 在 **日程 → 今日聚焦** 点 **规划**：
   - **日程规划**：在月历上涂色，决定"哪几天做"（常态 Routine 会自动规划）
   - **小时规划**：把左侧待办拖进时间轴，决定"今天哪个时段做"，类型仍是待办，可同步系统日历
+- 在今日聚焦卡片上左滑可将暂不安排的事项移入规划；规划页可恢复到今日聚焦
 - 列表里**长按拖动**卡片可调整顺序
 
 ## 同步与备份
@@ -82,9 +84,9 @@ const String guideMikanseta = '''
 - 笔记是全页编辑，像备忘录一样；正文支持 **Markdown**，点右上角眼睛图标可切换预览
 
 ## 介绍
-- **Mikanseta** 是 Mikansei 的独立 Flutter 测试版，牛皮浅棕主题，清单操作放在首位：手机用底部导航，电脑用侧边导航与键盘快捷键（**⌘/Ctrl + N** 添加、**⌘/Ctrl + F** 搜索）
+- **Mikanseta** 是 Mikansei 的 Flutter 版本，使用同一产品的事项与日历逻辑，并保留跨版本可读的数据。界面以绿色作主色、以中性色作页面底色；待办和日程用绿色、作业用蓝紫色、笔记用暖橙色，DDL 与优先级用提示色，正在做的事项以淡绿强调，完成项转为中性色。手机使用底部导航，电脑使用侧边导航与键盘快捷键（**⌘/Ctrl + N** 添加、**⌘/Ctrl + F** 搜索）
 - 系统功能需要对应权限：iPhone 实时活动需 iOS 17、原生闹钟需 iOS 26；Mac 用系统通知；安卓的锁屏展示是常驻通知
-- 迁移进度、功能边界与最新动态都在「设置」页内查看
+- 系统提醒、日历导入、备份与同步选项都在「设置」页内查看
 ''';
 
 class EntryStore extends ChangeNotifier {
@@ -181,7 +183,7 @@ class EntryStore extends ChangeNotifier {
   bool readOnly = false;
   bool saveFailed = false;
   bool saving = false;
-  String displayVersion = '0.6.0 (17)';
+  String displayVersion = '0.7.0 (18)';
   String? error;
   String? serviceError;
 
@@ -453,6 +455,8 @@ class EntryStore extends ChangeNotifier {
           e.estimate != null ||
           e.platform.isNotEmpty ||
           e.repeatRule != 'never' ||
+          e.isInPlanning ||
+          e.plannedDays.isNotEmpty ||
           e.data['reminder'] != null) {
         return false;
       }
@@ -568,14 +572,38 @@ class EntryStore extends ChangeNotifier {
   void retrySave() => _commit(_archive);
   void save(Entry entry) {
     if (readOnly) return;
-    validateEntry(entry);
-    final previous = find(entry.id);
-    final next = entries.where((e) => e.id != entry.id).toList()..add(entry);
-    if (!entry.calendarRoutine &&
-        entry.completed &&
+    var saved = entry;
+    validateEntry(saved);
+    if (saved.kind == EntryKind.note && saved.isInPlanning) {
+      saved = saved.change({'isInPlanning': false}, now: clock());
+    }
+    final previous = find(saved.id);
+    if (previous?.isInPlanning == true && saved.isInPlanning) {
+      final oldPlan = previous!;
+      final startChanged = oldPlan.start != saved.start;
+      final endChanged = oldPlan.end != saved.end;
+      final allDayChanged = oldPlan.allDay != saved.allDay;
+      List<String> normalizedDays(Entry entry) =>
+          entry.plannedDays.map(dayKey).toSet().toList()..sort();
+      final oldDays = jsonEncode(normalizedDays(oldPlan));
+      final newDays = jsonEncode(normalizedDays(saved));
+      final hasNewDays = saved.plannedDays.isNotEmpty && oldDays != newDays;
+      final hasValidNewTime =
+          saved.start != null &&
+          saved.end != null &&
+          saved.end!.isAfter(saved.start!) &&
+          (startChanged || endChanged || allDayChanged);
+      // A concrete new plan returns the deferred item to the focus board.
+      if (hasNewDays || hasValidNewTime) {
+        saved = Entry({...saved.data, 'isInPlanning': false});
+      }
+    }
+    final next = entries.where((e) => e.id != saved.id).toList()..add(saved);
+    if (!saved.calendarRoutine &&
+        saved.completed &&
         previous?.completed != true &&
-        !next.any((e) => e.data['previousOccurrenceID'] == entry.id)) {
-      final successor = entry.nextOccurrence(clock());
+        !next.any((e) => e.data['previousOccurrenceID'] == saved.id)) {
+      final successor = saved.nextOccurrence(clock());
       if (successor != null) next.add(successor);
     }
     _commit(_archive.withEntries(next));
@@ -594,24 +622,56 @@ class EntryStore extends ChangeNotifier {
 
   /// Planning fields: plannedDays holds date-only keys ('yyyy-MM-dd'),
   /// deduplicated and ascending.
-  void setPlannedDays(String id, List<DateTime> days) {
+  bool setPlannedDays(String id, List<DateTime> days) {
+    if (readOnly) return false;
     final entry = find(id);
-    if (entry == null) return;
+    if (entry == null || !entry.isTask) return false;
     final keys = days.map((d) => dayKey(dayOf(d))).toSet().toList()..sort();
-    save(entry.change({'plannedDays': keys}, now: clock()));
+    save(
+      entry.change({
+        'plannedDays': keys.isEmpty ? null : keys,
+        if (keys.isNotEmpty) 'isInPlanning': false,
+      }, now: clock()),
+    );
+    return true;
   }
 
   /// Planned time window for tasks. The entry kind stays untouched; the
   /// end-after-start check is delegated to validateEntry via save().
-  void setPlannedTime(String id, DateTime start, DateTime end) {
+  bool setPlannedTime(String id, DateTime start, DateTime end) {
+    if (readOnly || !end.isAfter(start)) return false;
     final entry = find(id);
-    if (entry == null || !entry.isTask) return;
+    if (entry == null || !entry.isTask) return false;
     save(
       entry.change({
         'plannedStart': isoDate(start),
         'plannedEnd': isoDate(end),
+        'plannedAllDay': false,
+        'isInPlanning': false,
       }, now: clock()),
     );
+    return true;
+  }
+
+  bool moveToPlanning(String id) {
+    if (readOnly) return false;
+    final entry = find(id);
+    if (entry == null ||
+        !entry.isTask ||
+        entry.completed ||
+        entry.isInPlanning) {
+      return false;
+    }
+    save(entry.change({'isInPlanning': true}, now: clock()));
+    return true;
+  }
+
+  bool restoreFromPlanning(String id) {
+    if (readOnly) return false;
+    final entry = find(id);
+    if (entry == null || !entry.isTask || !entry.isInPlanning) return false;
+    save(entry.change({'isInPlanning': false}, now: clock()));
+    return true;
   }
 
   /// Drag ordering: assign 0..n sortOrder to the given entries in the given

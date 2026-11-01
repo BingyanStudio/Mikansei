@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'domain.dart';
 import 'haptics.dart';
 import 'store.dart';
+import 'theme.dart';
 
 /// Apple-Notes style full-page editor for 笔记. Tasks, schedules and homework
 /// keep the dialog editor; only notes open this page, so an accidental tap
@@ -131,6 +132,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       'dueDate': null,
       'repeatRule': 'never',
       'reminder': null,
+      'isInPlanning': false,
       'isCompleted': false,
       'completedAt': null,
       'startedAt': null,
@@ -215,6 +217,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           IconButton(
             tooltip: preview ? '编辑' : '预览',
             onPressed: () => setState(() => preview = !preview),
+            color: MikanseiPalette.of(context).warm,
             icon: Icon(preview ? Icons.visibility_off : Icons.visibility),
           ),
           Padding(
@@ -222,6 +225,11 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
             child: FilledButton.tonal(
               key: const ValueKey('note-save'),
               onPressed: saving ? null : _save,
+              style: FilledButton.styleFrom(
+                foregroundColor: MikanseiPalette.of(context).warm,
+                backgroundColor: MikanseiPalette.of(context).warm
+                    .withValues(alpha: .13),
+              ),
               child: Text(saving ? '保存中…' : '保存'),
             ),
           ),
@@ -316,7 +324,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                     stepDone[i] ? Icons.check_circle : Icons.circle_outlined,
                     size: 22,
                     color: stepDone[i]
-                        ? Theme.of(context).colorScheme.primary
+                        ? MikanseiPalette.of(context).warm
                         : Theme.of(context).colorScheme.outline,
                   ),
                 ),

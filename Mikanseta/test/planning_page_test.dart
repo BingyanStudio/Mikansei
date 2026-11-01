@@ -14,7 +14,7 @@ void main() {
     return store;
   }
 
-  // 从今日页 AppBar 进入全屏规划页。
+  // 从「日程 → 今日聚焦」进入全屏规划页。
   Future<void> pumpPlanning(WidgetTester tester, EntryStore store) async {
     tester.view.physicalSize = const Size(390, 900);
     tester.view.devicePixelRatio = 1;
@@ -22,13 +22,17 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(MikansetaApp(store: store));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('规划'));
+    await tester.tap(find.byKey(const ValueKey('main-tab-schedule')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('planning-open')));
     await tester.pumpAndSettle();
   }
 
   testWidgets('planning page opens day and hour modes', (tester) async {
     final store = await loaded();
-    store.save(Entry.create(title: '背单词'));
+    store.save(
+      Entry.create(title: '背单词').change({'dueDate': isoDate(store.clock())}),
+    );
     await pumpPlanning(tester, store);
     expect(find.text('日程规划'), findsOneWidget);
     expect(find.text('小时规划'), findsOneWidget);
@@ -70,8 +74,11 @@ void main() {
     );
     final paintedDecoration =
         tester
-            .widget<Container>(find.byKey(ValueKey('plan-day-${dayKey(dayA)}')))
-            .decoration! as BoxDecoration;
+                .widget<Container>(
+                  find.byKey(ValueKey('plan-day-${dayKey(dayA)}')),
+                )
+                .decoration!
+            as BoxDecoration;
     expect(
       paintedDecoration.color,
       Theme.of(paintedContext).colorScheme.primary,
@@ -89,7 +96,8 @@ void main() {
 
   testWidgets('hour planning drags a todo onto the timeline', (tester) async {
     final store = await loaded();
-    final entry = Entry.create(title: '拖我');
+    final entry = Entry.create(title: '拖我')
+        .change({'dueDate': isoDate(store.clock())});
     store.save(entry);
     await pumpPlanning(tester, store);
     await tester.tap(find.text('小时规划'));
@@ -107,7 +115,8 @@ void main() {
     // 落点换算：时间轴初始停在 7 点（timelineStartHour），落点在拖放区中心。
     const hourHeight = PlanningPage.hourHeight;
     final gridDy =
-        dropRect.center.dy - dropRect.top +
+        dropRect.center.dy -
+        dropRect.top +
         PlanningPage.timelineStartHour * hourHeight;
     final minute = ((gridDy / hourHeight * 60 / 15).floor() * 15)
         .clamp(0, 24 * 60 - 30)
@@ -124,7 +133,9 @@ void main() {
     expect(saved.end, expectedStart.add(const Duration(minutes: 30)));
     // 左栏待办消失，时间轴出现块。
     expect(find.text('拖我'), findsNothing);
-    expect(find.textContaining('拖我'), findsOneWidget);
+    final expectedTime =
+        '${expectedStart.hour.toString().padLeft(2, '0')}:${expectedStart.minute.toString().padLeft(2, '0')} 拖我';
+    expect(find.text(expectedTime), findsOneWidget);
     expect(tester.takeException(), null);
     await tester.pumpWidget(const SizedBox());
     await store.settled;

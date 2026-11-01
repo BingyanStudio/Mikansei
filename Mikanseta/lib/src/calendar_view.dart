@@ -7,6 +7,19 @@ import 'domain.dart';
 import 'haptics.dart';
 import 'segmented_strip.dart';
 import 'store.dart';
+import 'theme.dart';
+
+Color calendarItemColor(BuildContext context, CalendarItem item) {
+  final palette = MikanseiPalette.of(context);
+  if (item.owner.completed) return palette.completed;
+  return item.deadline ? palette.warm : palette.accent;
+}
+
+Color calendarItemFill(BuildContext context, CalendarItem item) =>
+    calendarItemColor(
+      context,
+      item,
+    ).withValues(alpha: item.owner.completed ? .14 : .17);
 
 class CalendarItem {
   const CalendarItem(
@@ -159,6 +172,23 @@ class ScheduleCalendar extends StatefulWidget {
   final void Function(DateTime start, DateTime end) onCreate;
   @override
   State<ScheduleCalendar> createState() => _ScheduleCalendarState();
+}
+
+class _CalendarLegend extends StatelessWidget {
+  const _CalendarLegend({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(Icons.circle, size: 8, color: color),
+      const SizedBox(width: 4),
+      Text(label, style: Theme.of(context).textTheme.bodySmall),
+    ],
+  );
 }
 
 class _ScheduleCalendarState extends State<ScheduleCalendar> {
@@ -319,6 +349,9 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                                 : i.allDay
                                 ? '全天'
                                 : '${clockLabel(i.start)}–${clockLabel(i.end!)}',
+                            style: TextStyle(
+                              color: calendarItemColor(context, i),
+                            ),
                           ),
                           onTap: () => widget.onOpen(i.owner),
                         ),
@@ -369,16 +402,23 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                             month.month,
                             1 - (month.weekday - 1) + index,
                           );
-                          final has = calendarItems(
+                          final markers = calendarItems(
                             widget.store.entries,
                             date,
-                            showCompleted: false,
-                          ).isNotEmpty;
+                            showCompleted: completed,
+                          );
+                          final has = markers.any(
+                            (item) => !item.owner.completed,
+                          );
                           final active = sameDay(date, selected),
+                              today = sameDay(date, widget.store.clock()),
                               scheme = Theme.of(context).colorScheme;
+                          final palette = MikanseiPalette.of(context);
                           return Semantics(
                             label:
-                                '${date.month} 月 ${date.day} 日${has ? '，有未完成事项' : ''}',
+                                '${date.month} 月 ${date.day} 日'
+                                '${today ? '，今天' : ''}'
+                                '${has ? '，有未完成事项' : ''}',
                             button: true,
                             selected: active,
                             child: InkWell(
@@ -407,8 +447,14 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                               child: Container(
                                 margin: const EdgeInsets.all(3),
                                 decoration: BoxDecoration(
-                                  color: active ? scheme.primary : null,
+                                  color: active ? palette.accent : null,
                                   borderRadius: BorderRadius.circular(12),
+                                  border: today
+                                      ? Border.all(
+                                          color: palette.error,
+                                          width: 1.5,
+                                        )
+                                      : null,
                                 ),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -417,20 +463,48 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                                       '${date.day}',
                                       style: TextStyle(
                                         color: active
-                                            ? scheme.onPrimary
+                                            ? palette.onAccent
+                                            : today
+                                            ? palette.error
                                             : date.month == month.month
                                             ? scheme.onSurface
                                             : scheme.onSurfaceVariant,
                                       ),
                                     ),
-                                    Text(
-                                      has ? '•' : '',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: active
-                                            ? scheme.onPrimary
-                                            : scheme.primary,
-                                      ),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        for (final marker in markers.take(3))
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 1,
+                                            ),
+                                            child: Container(
+                                              width: 5,
+                                              height: 5,
+                                              decoration: BoxDecoration(
+                                                color: calendarItemColor(
+                                                  context,
+                                                  marker,
+                                                ),
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                        if (today && markers.isEmpty)
+                                          Text(
+                                            '今',
+                                            style: TextStyle(
+                                              fontSize: 8,
+                                              height: 1,
+                                              color: active
+                                                  ? palette.onAccent
+                                                  : palette.error,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -452,6 +526,26 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                           ),
                         ],
                       ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Wrap(
+                          spacing: 14,
+                          children: [
+                            _CalendarLegend(
+                              color: MikanseiPalette.of(context).accent,
+                              label: '执行',
+                            ),
+                            _CalendarLegend(
+                              color: MikanseiPalette.of(context).warm,
+                              label: 'DDL',
+                            ),
+                            _CalendarLegend(
+                              color: MikanseiPalette.of(context).completed,
+                              label: '已完成',
+                            ),
+                          ],
+                        ),
+                      ),
                       const Text('长按日期添加；日视图空白处长按并拖动选择时段。'),
                       if (items.isEmpty)
                         const Padding(
@@ -467,6 +561,9 @@ class _ScheduleCalendarState extends State<ScheduleCalendar> {
                                 : i.allDay
                                 ? '全天'
                                 : '${clockLabel(i.start)}–${clockLabel(i.end!)}',
+                            style: TextStyle(
+                              color: calendarItemColor(context, i),
+                            ),
                           ),
                           onTap: () => widget.onOpen(i.owner),
                         ),
@@ -740,13 +837,17 @@ class _TimelineCalendarState extends State<TimelineCalendar>
                                       width: columnWidth,
                                       margin: const EdgeInsets.all(2),
                                       padding: const EdgeInsets.all(5),
-                                      color: scheme.secondaryContainer,
+                                      color: calendarItemFill(context, item),
                                       child: Text(
                                         '${item.deadline ? 'DDL ${clockLabel(item.start)}' : '全天'} ${item.entry.title}',
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 11,
+                                          color: calendarItemColor(
+                                            context,
+                                            item,
+                                          ),
                                           decoration: item.owner.completed
                                               ? TextDecoration.lineThrough
                                               : null,
@@ -906,7 +1007,7 @@ class _TimelineCalendarState extends State<TimelineCalendar>
                                   (b.end - b.start) / 60 * hourHeight - 2,
                                 ),
                                 child: Material(
-                                  color: scheme.primaryContainer,
+                                  color: calendarItemFill(context, b.item),
                                   borderRadius: BorderRadius.circular(6),
                                   child: InkWell(
                                     onTap: () => widget.onOpen(b.item.owner),
@@ -916,7 +1017,7 @@ class _TimelineCalendarState extends State<TimelineCalendar>
                                         '${clockLabel(b.item.start)} ${b.item.entry.title}',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: scheme.onPrimaryContainer,
+                                          color: scheme.onSurface,
                                           decoration: b.item.owner.completed
                                               ? TextDecoration.lineThrough
                                               : null,

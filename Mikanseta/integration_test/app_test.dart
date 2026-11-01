@@ -20,23 +20,30 @@ void main() {
       expect(store.readOnly, false);
       await tester.pumpWidget(MikansetaApp(store: store));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('添加事项'));
+      await tester.tap(find.byKey(const ValueKey('add-entry')));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byKey(const ValueKey('entry-title')),
         '验证测试版作业',
       );
-      await tester.tap(find.text('备注、Checklist 与更多信息'));
       await tester.pumpAndSettle();
-      final checklist = find.byWidgetPredicate(
-        (widget) =>
-            widget is TextField && widget.decoration?.labelText == 'Checklist',
-      );
-      await tester.ensureVisible(checklist);
-      await tester.enterText(checklist, '完成练习\n上传作业');
+      await tester.tap(find.text('补充分类、备注、Checklist 与提醒'));
+      await tester.pumpAndSettle();
+      for (final title in ['完成练习', '上传作业']) {
+        final stepField = find.byWidgetPredicate(
+          (widget) =>
+              widget is TextField && widget.decoration?.hintText == '添加清单项',
+        );
+        await tester.ensureVisible(stepField);
+        await tester.enterText(stepField, title);
+        await tester.tap(find.byTooltip('添加清单项'));
+        await tester.pumpAndSettle();
+      }
       await tester.tap(find.byKey(const ValueKey('save-entry')));
       await tester.pumpAndSettle();
       final id = store.entries.single.id;
+      final stepIDs = store.find(id)!.steps.map((step) => step.id).toList();
+      expect(store.find(id)!.steps.map((step) => step.title), ['完成练习', '上传作业']);
       await tester.tap(find.text('完成练习'));
       await tester.pumpAndSettle();
       expect(find.byType(Dialog), findsNothing);
@@ -44,11 +51,16 @@ void main() {
       await store.settled;
       final progress = EntryStore(storage);
       await progress.load();
+      expect(progress.find(id)!.steps.map((step) => step.id), stepIDs);
       expect(progress.find(id)!.steps.map((step) => step.done), [true, false]);
       expect(progress.find(id)!.completed, false);
+      await tester.ensureVisible(find.byTooltip('开始计时'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('开始计时'));
       await tester.pumpAndSettle();
       expect(store.running?.id, id);
+      await tester.ensureVisible(find.byTooltip('标记完成'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('标记完成'));
       await tester.pumpAndSettle();
       expect(find.text('今日已完成'), findsOneWidget);
@@ -57,13 +69,25 @@ void main() {
       final restored = EntryStore(storage);
       await restored.load();
       expect(restored.find(id)!.completed, true);
+      expect(restored.find(id)!.steps.map((step) => step.id), stepIDs);
+      expect(restored.find(id)!.steps.map((step) => step.done), [true, true]);
       expect(restored.board.finishedToday.single.id, id);
-      await tester.tap(find.text('我的清单'));
-      await tester.pumpAndSettle();
       expect(find.text('验证测试版作业'), findsOneWidget);
-      await tester.tap(find.text('设置'));
+      await tester.tap(find.byKey(const ValueKey('settings-entry')));
       await tester.pumpAndSettle();
-      expect(find.text('Flutter 测试版 · 牛皮浅棕'), findsOneWidget);
+      expect(find.byKey(const ValueKey('back-to-main')), findsOneWidget);
+      final settingsScrollable = find
+          .descendant(
+            of: find.byType(ListView).last,
+            matching: find.byType(Scrollable),
+          )
+          .first;
+      await tester.scrollUntilVisible(
+        find.text('账户同步'),
+        200,
+        scrollable: settingsScrollable,
+      );
+      expect(find.text('账户同步'), findsOneWidget);
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox());
     } finally {
