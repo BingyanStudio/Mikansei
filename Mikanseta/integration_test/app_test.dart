@@ -75,10 +75,9 @@ void main() {
       expect(find.text('验证测试版作业'), findsOneWidget);
       await tester.tap(find.byKey(const ValueKey('settings-entry')));
       await tester.pumpAndSettle();
-      final settingsContext = tester.element(
-        find.byKey(const ValueKey('settings-entry')),
-      );
-      final desktop = MediaQuery.sizeOf(settingsContext).width >= 760;
+      // The settings page removes the header action that opened it. Detect the
+      // desktop navigation from the UI that remains visible on that page.
+      final desktop = find.byType(NavigationRail).evaluate().isNotEmpty;
       if (desktop) {
         final railFinder = find.byType(NavigationRail);
         expect(railFinder, findsOneWidget);

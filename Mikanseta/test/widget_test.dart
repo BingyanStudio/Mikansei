@@ -649,6 +649,27 @@ void main() {
     expect(entry.start!.hour, 0);
     expect(entry.end!.day, 21);
     expect(entry.end!.isAfter(entry.start!), true);
+
+    await tester.tap(find.byKey(const ValueKey('settings-entry')));
+    await tester.pumpAndSettle();
+    final settingsRail = find.byType(NavigationRail);
+    expect(settingsRail, findsOneWidget);
+    expect(tester.widget<NavigationRail>(settingsRail).selectedIndex, 5);
+    await tester.tap(find.byKey(const ValueKey('desktop-tab-0')));
+    await tester.pumpAndSettle();
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
+      0,
+    );
+    await tester.tap(find.byKey(const ValueKey('settings-entry')));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('账户同步'),
+      200,
+      scrollable: settingsScrollable(),
+    );
+    expect(find.text('账户同步'), findsOneWidget);
+
     expect(tester.takeException(), null);
     await tester.pumpWidget(const SizedBox());
     await store.settled;
