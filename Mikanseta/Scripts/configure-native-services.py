@@ -20,9 +20,10 @@ def configure(platform):
  app=next((key for key,value in objects.items() if value.get('isa')=='PBXNativeTarget' and value.get('productType')=='com.apple.product-type.application'))
  target=objects[app];sources=next(objects[k] for k in target['buildPhases'] if objects[k]['isa']=='PBXSourcesBuildPhase');resources=next(objects[k] for k in target['buildPhases'] if objects[k]['isa']=='PBXResourcesBuildPhase')
  main=objects[objects[project['rootObject']]['mainGroup']]
- def addFile(path,phase,tag):
+ def addFile(path,phase,tag,ref_id=None,build_id=None):
   rel=str(path.relative_to(ROOT));ref=uid('ref'+rel);build=uid(tag+rel)
-  typ='audio.wav' if path.suffix=='.wav' else 'sourcecode.swift'
+  ref=ref_id or ref;build=build_id or build
+  typ='audio.wav' if path.suffix=='.wav' else 'text.xml' if path.suffix=='.xcprivacy' else 'sourcecode.swift'
   objects[ref]={'isa':'PBXFileReference','lastKnownFileType':typ,'name':path.name,'path':'../../'+rel,'sourceTree':'SOURCE_ROOT'}
   objects[build]={'isa':'PBXBuildFile','fileRef':ref}
   if build not in phase['files']:phase['files'].append(build)
@@ -37,6 +38,9 @@ def configure(platform):
  for cfg in configs:
   if platform=='ios':cfg['CODE_SIGN_ENTITLEMENTS']='Runner/Mikanseta.entitlements'
  if platform=='ios':
+  app_privacy=addFile(MKS/'ios/Runner/PrivacyInfo.xcprivacy',resources,'ios-app-privacy','A1B2C3D4E5F60718293A4B5C','A1B2C3D4E5F60718293A4B5D')
+  runner_group=next(objects[k] for k in main['children'] if objects[k].get('isa')=='PBXGroup' and objects[k].get('path')=='Runner')
+  if app_privacy not in runner_group['children']:runner_group['children'].append(app_privacy)
   team=next((c['DEVELOPMENT_TEAM'] for c in configs if c.get('DEVELOPMENT_TEAM')),'');bundle=next(c['PRODUCT_BUNDLE_IDENTIFIER'] for c in configs if c.get('PRODUCT_BUNDLE_IDENTIFIER'))
   for c in configs:c['MIKANSETA_SHARED_KEYCHAIN_SUFFIX']=bundle+'.shared'
   w=uid('widgets-target');ws=uid('widgets-sources');wr=uid('widgets-resources');wf=uid('widgets-frameworks');cl=uid('widgets-configs');product=uid('widgets-product')
@@ -44,7 +48,8 @@ def configure(platform):
   objects[wr]={'isa':'PBXResourcesBuildPhase','buildActionMask':'2147483647','files':[],'runOnlyForDeploymentPostprocessing':'0'}
   objects[wf]={'isa':'PBXFrameworksBuildPhase','buildActionMask':'2147483647','files':[],'runOnlyForDeploymentPostprocessing':'0'}
   widgetFiles=list((MKS/'ios/Widgets').glob('*.swift'))+core+[MKS/'native/Apple/Ported'/f'{p}.swift' for p in ['AppRoute','WidgetSnapshotStore','PomodoroSnapshotStore','DeadlineActivityAttributes','ReminderAlarmMetadata','FocusClock']]
-  wg=uid('widgets-group');objects[wg]={'isa':'PBXGroup','name':'Mikanseta Widgets','children':[addFile(p,objects[ws],'widget') for p in widgetFiles],'sourceTree':'<group>'}
+  widget_privacy=addFile(MKS/'ios/Widgets/PrivacyInfo.xcprivacy',objects[wr],'widget-privacy','B1C2D3E4F5A60718293A4B5C','B1C2D3E4F5A60718293A4B5D')
+  wg=uid('widgets-group');objects[wg]={'isa':'PBXGroup','name':'Mikanseta Widgets','children':[addFile(p,objects[ws],'widget') for p in widgetFiles]+[widget_privacy],'sourceTree':'<group>'}
   if wg not in main['children']:main['children'].append(wg)
   objects[product]={'isa':'PBXFileReference','explicitFileType':'wrapper.app-extension','path':'MikansetaWidgets.appex','sourceTree':'BUILT_PRODUCTS_DIR','includeInIndex':'0'}
   products=objects[objects[project['rootObject']]['productRefGroup']]

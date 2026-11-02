@@ -1,10 +1,10 @@
 # Changelog
 
-## 原生 Mikansei 番茄专注锁屏实时活动 · 未发布 · 2026-11-02
+## 原生 Mikansei 0.7.1（15）/ TestFlight 内部版 0.7.1（9）· 2026-11-02
 
-新增原生番茄专注的锁屏 Live Activity 与 Dynamic Island，使用系统 timer 文本显示倒计时或正计时，并呈现主题、暂停 / 继续和结束并保存入口。恢复活动时复用当前 session；到期、收起及系统八小时活动期限均有明确状态，实时活动权限关闭时可前往系统设置，同时保留本机计时与历史。现有 DDL 实时活动保持独立。
+原生番茄专注新增锁屏 Live Activity 与 Dynamic Island，以系统 timer 文本显示倒计时或正计时，并呈现主题、大号计时、暂停 / 继续和结束并保存入口。恢复活动时复用当前 session；倒计时到期、手动收起及 ActivityKit 八小时期限均有明确状态；关闭实时活动权限时仍可使用本机计时和历史。现有 DDL 实时活动保持独立。
 
-源码 iOS App + Widget 在 iOS SDK 26.5 `generic/platform=iOS` 下完成无签名 Debug 构建；未做真机显示验收，未签名或归档、打 tag 或上传 TestFlight。当前安装的原生 Mikansei `0.7.0 (8)` 不含此未发布改动；版本字段未变。构建与验证边界见 [验证记录](../VALIDATION.md)。
+源码目标为 `0.7.1 (15)`；tag `v0.7.1` 指向提交 `49bd08c7ce592b1a0df37355aefdb269dd70f00d`。Xcode Cloud Build `a48a5822-75bd-44a5-aec8-11f381332e4e` 的正式 check `125276357665` 成功，0 errors、0 test failures、0 analysis findings、4 warnings。TestFlight `0.7.1 (9)` 已分发到内部组 `Mikansei`（2 位受邀者），状态“正在测试”，上传时间为 2026-11-02 20:27（上海时间）；[App Store Connect build 详情](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/testflight/ios/86b69993-c5ef-44e1-84b6-2fd5cd669ae5)。这是内部测试，不代表用户已安装 Build 9；未做真机目视验收、外部测试审核或公开分发。App Store Connect 的新许可协议提示待 Account Holder 处理，但没有阻挡本次内部分发。源码与 archive 核对详情见 [0.7.1 发布记录](RELEASE_0.7.1.md) 和 [验证记录](../VALIDATION.md)。
 
 ## Mikanseta 0.7.0+18 — 核心操作对应，公开预发布
 

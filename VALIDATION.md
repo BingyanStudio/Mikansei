@@ -1,19 +1,20 @@
 # 验证记录
 
-## 原生 Mikansei 0.7.1（15）TestFlight 准备 · 2026-11-02
+## 原生 Mikansei 0.7.1（15）→ TestFlight 内部版 0.7.1（9）· 2026-11-02
 
-- **版本与身份**：原生 iOS 源码和归档为 `0.7.1 (15)`；保留 Team `6PVAPR495F`、App `net.bingyan.KikuchiHeinrich.mikansei`、Widget `.widgets` Bundle ID 与现有数据路径。TestFlight / 云端 build 可能重编号，须以 App Store Connect / TestFlight 实际显示为准；此前用户确认的安装版仍为 `0.7.0 (8)`。
-- **更新范围**：专注计时新增锁屏与灵动岛 Live Activity，显示主题和大号计时，提供暂停 / 继续、结束保存入口与手动收起后重新显示；现有 DDL Live Activity 独立保留。倒计时、正计时、倒计时到期与八小时系统时限列入测试说明：[中文](Documentation/TestFlight/WHAT_TO_TEST.txt) · [English](Documentation/TestFlight/WHAT_TO_TEST_EN.txt)。
-- **无签名设备 SDK Archive**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，Release，`generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`；`ARCHIVE SUCCEEDED`，产物约 32 MB。日志：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.log`；archive：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.xcarchive`；result bundle：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.xcresult`。
-- **发布核对**：`Scripts/check_xcode_cloud_release.py` source check 与 `--archive` 检查通过；归档 App / Widget 的版本、build、Bundle ID 一致，App 图标、隐私清单与仅 App 内的公开客户端配置检查通过。`plutil -lint Mikansei.xcodeproj/project.pbxproj`、`git diff --check` 通过。未运行自动化测试。
-- **未完成项**：未做签名、真机目视验收、TestFlight 上传或处理状态核实；无签名归档不可安装或分发。Build `15` 是本地源码目标与 archive 版本，不代表云端 build 编号。
+- **源码与身份**：源码版本 / build 为 `0.7.1 (15)`；保留 Team `6PVAPR495F`、App `net.bingyan.KikuchiHeinrich.mikansei`、Widget `.widgets` Bundle ID 与现有数据路径。Tag `v0.7.1` 指向提交 `49bd08c7ce592b1a0df37355aefdb269dd70f00d`。
+- **功能**：专注计时新增锁屏与灵动岛 Live Activity，显示主题和大号计时，提供暂停 / 继续、结束保存入口与手动收起后重新显示；现有 DDL Live Activity 独立保留。倒计时、正计时、倒计时到期与八小时系统时限列入测试说明：[中文](Documentation/TestFlight/WHAT_TO_TEST.txt) · [English](Documentation/TestFlight/WHAT_TO_TEST_EN.txt)。
+- **Xcode Cloud**：Build `a48a5822-75bd-44a5-aec8-11f381332e4e` 的正式 check `125276357665` 成功，0 errors、0 test failures、0 analysis findings、4 warnings；正式 check 替代临时 check `125273877479`。
+- **TestFlight**：已将 `0.7.1 (9)` 分发至内部测试组 `Mikansei`，2 位受邀者，状态“正在测试”；上传时间 2026-11-02 20:27（上海时间）。[App Store Connect build 详情](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/testflight/ios/86b69993-c5ef-44e1-84b6-2fd5cd669ae5)。源码目标 `15` 与 TestFlight 实际 build `9` 不同；不代表用户已安装新版本。
+- **本地无签名归档**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，Release，`generic/platform=iOS`，`CODE_SIGNING_ALLOWED=NO`；`ARCHIVE SUCCEEDED`，约 32 MB。归档：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.xcarchive`；日志：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.log`；result bundle：`/private/tmp/Mikansei-0.7.1-TestFlight-LunaMax-20261102-archive.xcresult`。`Scripts/check_xcode_cloud_release.py` 的 source 与 archive 检查通过，App / Widget 版本、身份、图标、隐私清单及仅 App 内的公开客户端配置正确。该无签名产物不可安装或上传，独立于已成功分发的 Cloud archive。
+- **验收边界与后台提示**：未做真机目视验收，未确认用户已安装 Build 9；本次仅为内部 TestFlight，未完成外部测试审核或公开分发。App Store Connect 显示有新许可协议待 Account Holder 处理；已确认该提示未阻挡本次内部 TestFlight 分发。
 
-## 原生番茄专注锁屏实时活动 · 未发布 · 2026-11-02
+## 原生番茄专注锁屏实时活动实现与设备验收边界 · 2026-11-02
 
 - **实现**：原生番茄计时接入 ActivityKit，开始时申请 Live Activity；锁屏与 Dynamic Island 使用系统 `timerInterval` 呈现倒计时 / 正计时，并在暂停、继续、结束后按 session 更新或结束对应活动。活动内容保留主题与大号计时；链接沿用已注册的 `mikansei://pomodoro` 路由。DDL Live Activity 仍由独立管理器管理。
 - **恢复与边界**：应用启动或回到前台时复用或重建当前 session；手动收起会按可观察到的 ActivityKit dismissed 状态持久抑制，并提供“重新显示”。系统实时活动关闭时给出设置入口，手机本地计时与历史仍可用。倒计时到期和 ActivityKit 八小时期限分别显示到期提示或要求打开 App；不承诺后台自动归档或声音提醒。
 - **构建检查**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，`Debug`、`generic/platform=iOS`、`CODE_SIGNING_ALLOWED=NO`；原生 App 与内嵌 `MikanseiWidgets` `BUILD SUCCEEDED`。日志：`/private/tmp/Mikansei-PomodoroLiveActivity-Host-LunaMax-20261102.log`。`Scripts/check_xcode_cloud_release.py` source check 通过；构建产物包含 Widget 扩展，App `Info.plist` 的 `NSSupportsLiveActivities` 为 `true`。
-- **设备 / 分发边界**：源码和 archive 现为 `0.7.1 (15)`，设备 SDK 无签名 Release archive 已通过（见顶部记录）；仍未进行真机目视验收、签名或 TestFlight 上传。用户当前 TestFlight `0.7.0 (8)` 不包含本轮改动，需后续确认真实设备布局、手动收起恢复及系统期限表现。
+- **设备 / 分发边界**：源码 `0.7.1 (15)` 已通过 Cloud 分发至 TestFlight 内部组，实际 build 为 `0.7.1 (9)`（见顶部记录）。没有真机目视验收证据，也没有确认用户已安装 Build 9；此前确认的 `0.7.0 (8)` 不含本轮功能。真实设备布局、手动收起恢复及系统期限表现仍待检查。
 
 ## 原生 Mikansei 0.7.0（14）TestFlight 基线记录 · 2026-11-02
 
