@@ -1,5 +1,18 @@
 # 验证记录
 
+## 原生番茄专注锁屏实时活动 · 未发布 · 2026-11-02
+
+- **实现**：原生番茄计时接入 ActivityKit，开始时申请 Live Activity；锁屏与 Dynamic Island 使用系统 `timerInterval` 呈现倒计时 / 正计时，并在暂停、继续、结束后按 session 更新或结束对应活动。活动内容保留主题与大号计时；链接沿用已注册的 `mikansei://pomodoro` 路由。DDL Live Activity 仍由独立管理器管理。
+- **恢复与边界**：应用启动或回到前台时复用或重建当前 session；手动收起会按可观察到的 ActivityKit dismissed 状态持久抑制，并提供“重新显示”。系统实时活动关闭时给出设置入口，手机本地计时与历史仍可用。倒计时到期和 ActivityKit 八小时期限分别显示到期提示或要求打开 App；不承诺后台自动归档或声音提醒。
+- **构建检查**：Xcode 26.5 / iOS SDK 26.5，scheme `Mikansei`，`Debug`、`generic/platform=iOS`、`CODE_SIGNING_ALLOWED=NO`；原生 App 与内嵌 `MikanseiWidgets` `BUILD SUCCEEDED`。日志：`/private/tmp/Mikansei-PomodoroLiveActivity-Host-LunaMax-20261102.log`。`Scripts/check_xcode_cloud_release.py` source check 通过；构建产物包含 Widget 扩展，App `Info.plist` 的 `NSSupportsLiveActivities` 为 `true`。
+- **未发布 / 未验收**：源码版本仍为 `0.7.0 (14)`；本轮未签名、未做 Archive、未运行自动化测试、未在模拟器或真机目视验收锁屏 / Dynamic Island、未打 tag 或上传新的 TestFlight。用户现有 TestFlight `0.7.0 (8)` 不包含本轮源码改动。需后续在设备上确认实际布局、手动收起恢复及系统期限表现。
+
+## 原生 Mikansei 0.7.0（14）与 TestFlight 现况 · 2026-11-02
+
+- 原生源码版本仍为 `0.7.0 (14)`；用户确认从 TestFlight 安装的原生 Mikansei 版本为 `0.7.0 (8)`。这是两项独立记录，不能从源码构建号推断云端 build number。
+- Xcode Cloud 在提交 `cfe17a1d1cb04fff7de86106f469362a338a966d` 上的 `Mikansei | Internal TestFlight Build | Archive - iOS` check 为 `SUCCESS`。此证据确认该归档检查成功，但不能单独证明它与用户安装的 Build 8 一一对应；[归档详情](https://appstoreconnect.apple.com/teams/69a6de96-390e-47e3-e053-5b8c7c11a4d1/apps/6827965680/ci/builds/512d9cb8-3cd6-490e-b206-5bd0ff5378f1/action/47b42543-8bda-46f8-a1d8-1c6465bc0b95)。
+- Mikanseta `0.7.0 (18)` 是独立 Flutter App；iOS App + Widget 只有 unsigned Release 构建记录，尚未上传 TestFlight。身份与准备缺口见 [Mikanseta TestFlight 准备说明](Documentation/TestFlight/MIKANSETA_READINESS.md)。
+
 ## Mikanseta 0.7.0+18 公开预发布 · 2026-11-01
 
 - **发布状态**：[GitHub Release `mikanseta-v0.7.0`](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 已公开，标记为 prerelease（`draft=false`、`prerelease=true`）；tag 指向源码提交 `cfe17a1d1cb04fff7de86106f469362a338a966d`。原生 Mikansei 版本保持 `0.7.0 (14)`。
@@ -7,7 +20,7 @@
 - **自动化与兼容性**：Flutter 全套 107 项、全库分析、domain 34 项、Swift → Dart → Swift 备份往返通过；桌面设置导航专测通过（日志 `/private/tmp/Mikanseta-desktop-navigation-final-test.log`）。Windows CI [run 41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 在提交 `cfe17a1` 上成功。早期 run `41303398033` 和下一轮曾因集成测试 locator 未适配设置页导航而失败，已修正测试并在最终 run 通过。
 - **Android**：最终 Release APK `64,007,120` bytes，构建用时 27.1 秒；签名证书与旧 Android 0.4.2 (8) 包一致，摘要见 Release 附件。日志 `/private/tmp/Mikanseta-release-0.7.0-android-published.log`。本轮没有在个人设备上安装升级验收。
 - **macOS**：universal App 同时包含 x86_64 与 arm64，59.2 MB；ZIP 为 `24,998,133` bytes。`codesign --verify --deep --strict` 通过，App 未公证。日志 `/private/tmp/Mikanseta-release-0.7.0-macos.log`。
-- **iOS**：浅色图标和公开客户端配置构建的 unsigned Release，主 App + Widget 为 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。没有更新 TestFlight；该产物不是可直接安装的通用 IPA。
+- **iOS**：Mikanseta 浅色图标和公开客户端配置构建的 unsigned Release，主 App + Widget 为 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。Mikanseta 尚未上传 TestFlight；该产物不是可直接安装的通用 IPA。
 - **视觉与设备边界**：8 张合成界面预览中文可读、没有布局溢出。构建、CI 安装检查和合成预览不等于个人 Android、macOS、Windows 或 iOS 设备上的逐项交互验收；实际设备行为仍需后续确认。
 
 ## Mikanseta Flutter 0.7.0+18：核心操作与布局重构 · 2026-11-01

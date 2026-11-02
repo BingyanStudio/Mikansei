@@ -1,9 +1,12 @@
 import SwiftUI
+import UIKit
 
 struct PomodoroFocusView: View {
     @EnvironmentObject private var coordinator: PomodoroCoordinator
+    @EnvironmentObject private var activityManager: PomodoroActivityManager
     @EnvironmentObject private var store: EntryStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var subject = ""
     @State private var mode: PomodoroMode = .countdown
     @State private var durationMinutes = 25
@@ -22,6 +25,7 @@ struct PomodoroFocusView: View {
             VStack(alignment: .leading, spacing: 22) {
                 if let active = coordinator.active { activeSession(active) }
                 else { startForm }
+                activityNotice
                 history
             }
             .padding(.horizontal, 20)
@@ -50,6 +54,38 @@ struct PomodoroFocusView: View {
             Button("继续专注", role: .cancel) { }
         } message: {
             Text("本次已专注的时间会保存在本机历史中，完成次数不会增加。")
+        }
+    }
+
+    @ViewBuilder
+    private var activityNotice: some View {
+        if !activityManager.isTesting && (!activityManager.authorizationEnabled || coordinator.active != nil || activityManager.error != nil) {
+            VStack(alignment: .leading, spacing: 8) {
+                if !activityManager.authorizationEnabled {
+                    Label("系统实时活动未开启", systemImage: "rectangle.slash")
+                        .font(.footnote.weight(.semibold))
+                    Text("手机上的计时和历史照常工作。开启实时活动后，锁屏和灵动岛会显示本次专注。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("打开 Mikansei 设置") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                    }
+                    .font(.caption.weight(.semibold))
+                } else if activityManager.isCurrentActivityDismissed, let active = coordinator.active {
+                    Label("锁屏实时活动已收起，手机计时仍在继续。", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.footnote.weight(.medium))
+                    Button("重新显示") { activityManager.showAgain(active) }
+                        .font(.caption.weight(.semibold))
+                } else {
+                    Label(activityManager.status, systemImage: "timer")
+                        .font(.footnote.weight(.medium))
+                        .foregroundStyle(activityManager.error == nil ? Color.secondary : Color.orange)
+                    if let error = activityManager.error {
+                        Text(error).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
         }
     }
 

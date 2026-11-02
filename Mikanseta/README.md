@@ -1,10 +1,10 @@
 # Mikanseta · Mikansei 的 Flutter 版本
 
-**当前版本：0.7.0+18。** Mikanseta 与原生 Mikansei 是同一产品的两个版本，共用事项语义与 JSON 归档格式。手机默认打开「待办」，主导航为**待办、日程、笔记**；日程包含「今日聚焦、列表、日历」和规划入口。Mikanseta `0.7.0 (18)` 已作为公开预发布发布；原生 Mikansei 仍为 `0.7.0 (14)`。
+**当前版本：0.7.0+18。** Mikanseta 与原生 Mikansei 是同一产品的两个版本，共用事项语义与 JSON 归档格式。手机默认打开「待办」，主导航为**待办、日程、笔记**；日程包含「今日聚焦、列表、日历」和规划入口。Mikanseta `0.7.0 (18)` 已作为公开预发布发布；原生 Mikansei 源码仍为 `0.7.0 (14)`，用户确认其 TestFlight 安装版本为 `0.7.0 (8)`。
 
 [GitHub Release 与说明](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0)：[Android APK](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Android.apk) · [macOS ZIP](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-macOS.zip) · [Windows 安装版](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Windows-x64-Setup.exe) · [Windows 免安装版](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/Mikanseta-Windows-x64.zip) · [SHA-256 校验](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/SHA256SUMS.txt) · [构建信息](https://github.com/BingyanStudio/Mikansei/releases/download/mikanseta-v0.7.0/build-info.json)。
 
-本轮更新了手机和桌面布局，并使用浅色调的眨眼笑脸 Mikanseta 图标。应用内主图 `MikansetaArtwork` 是独立插图，原生 Mikansei App 图标没有替换。Flutter 全套 107 项、全库分析、domain 34 项、原版备份往返与桌面设置导航专测通过；Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 通过。macOS ZIP 签名检查通过但未公证；iOS unsigned App + Widget 构建成功，本轮没有更新 TestFlight。个人设备上的安装升级与逐项交互尚未验收。完整映射、边界和日志见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)、[验证记录](VALIDATION.md) 和[发布验证记录](../Documentation/RELEASE_MIKANSETA_0.7.0.md)。
+本轮更新了手机和桌面布局，并使用浅色调的眨眼笑脸 Mikanseta 图标。应用内主图 `MikansetaArtwork` 是独立插图，原生 Mikansei App 图标没有替换。Flutter 全套 107 项、全库分析、domain 34 项、原版备份往返与桌面设置导航专测通过；Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 通过。macOS ZIP 签名检查通过但未公证；Mikanseta iOS unsigned App + Widget 构建成功，尚未上传 Mikanseta 的 TestFlight。个人设备上的安装升级与逐项交互尚未验收。完整映射、边界和日志见[原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)、[验证记录](VALIDATION.md)、[发布验证记录](../Documentation/RELEASE_MIKANSETA_0.7.0.md) 和 [TestFlight 准备说明](../Documentation/TestFlight/MIKANSETA_READINESS.md)。
 
 Mikanseta 的数据目录和安装标识与原生版分开；两端可通过备份互读，也可使用已配置的账户同步或共享文件夹同步。这里的 Flutter 版本不是独立的迁移项目。
 

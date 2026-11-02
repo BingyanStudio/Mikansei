@@ -4,11 +4,11 @@
 
 ## 0.7.0+18：公开预发布与最终验证 · 2026-11-01
 
-- **GitHub Release**：[Mikanseta 0.7.0 (18)](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 已公开为预发布（`draft=false`、`prerelease=true`），tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`；原生 Mikansei 仍为 `0.7.0 (14)`。六项资产（Android APK、macOS ZIP、Windows Setup EXE、Windows ZIP、`SHA256SUMS.txt`、`build-info.json`）的 Release 大小与摘要均和本地产物匹配。
+- **GitHub Release**：[Mikanseta 0.7.0 (18)](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 已公开为预发布（`draft=false`、`prerelease=true`），tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`；原生 Mikansei 源码仍为 `0.7.0 (14)`，用户确认从 TestFlight 安装的原生版本为 `0.7.0 (8)`。Xcode Cloud 对上述提交的原生 `Archive - iOS` check 为 `SUCCESS`，但不能据此单独确认归档与已安装 Build 8 一一对应。六项资产（Android APK、macOS ZIP、Windows Setup EXE、Windows ZIP、`SHA256SUMS.txt`、`build-info.json`）的 Release 大小与摘要均和本地产物匹配。
 - **最终自动化检查**：Flutter 套件 107 项、全库 `flutter analyze`、domain 34 项、Swift → Dart → Swift 备份往返与桌面设置导航专测均通过。专测日志 `/private/tmp/Mikanseta-desktop-navigation-final-test.log`。Windows CI [run 41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 成功，源码提交 `cfe17a1`。更早的 run 因测试未适配设置页导航而失败，测试修正后通过；不是产品代码失败。
 - **Android Release**：64,007,120 bytes，27.1 秒构建；`com.personal.mikanseta` 发布证书与旧 0.4.2 (8) 包一致，可按相同签名与 application ID 直接覆盖更新。校验摘要与构建信息见 [Release 页面](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0)。日志 `/private/tmp/Mikanseta-release-0.7.0-android-published.log`。个人设备升级仍未实测。
 - **macOS Release**：universal App 59.2 MB，包含 arm64 与 x86_64；发布 ZIP 为 24,998,133 bytes。`codesign --verify --deep --strict` 通过；尚未公证。日志 `/private/tmp/Mikanseta-release-0.7.0-macos.log`。Apple Silicon 与 Intel 用户设备上的实际启动尚未分别验收。
-- **iOS Release**：浅色图标与公开客户端配置对应的 unsigned App + Widget，版本 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。本轮没有更新 TestFlight，也没有发布通用 IPA；需要用户自己的签名部署或未来实际上传 TestFlight 后安装。
+- **iOS Release**：Mikanseta 浅色图标与公开客户端配置对应的 unsigned App + Widget，版本 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功。日志 `/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。Mikanseta 尚未上传 TestFlight，也没有发布通用 IPA；需要完成 Mikanseta 自身的签名和分发后才能从其 TestFlight 安装。
 - **界面预览**：8 张合成内存数据截图覆盖手机浅 / 深色、320 点宽且系统文字放大 1.5 倍、桌面、日程、编辑与笔记；中文显示正常且没有布局溢出。预览不是设备 UI 验收。
 
 ## 0.7.0+18：发布前核心操作与布局验证快照 · 2026-11-01
@@ -17,7 +17,7 @@
 - **Flutter 自动化测试**：现有 9 个测试文件共 107 项通过；临时预览测试不属于套件。日志：`/private/tmp/mikanseta-final-nine-tests.log`。单独 `domain_test.dart` 的 34 项也通过，日志：`/private/tmp/mikanseta-domain-test.log`。
 - **备份兼容**：`./Scripts/verify-backup.sh` 通过 Swift → Dart → Swift 原版备份往返。日志：`/private/tmp/mikanseta-verify-backup.log`；Swift 编译有既有 HTTP pipelining 弃用警告，不影响往返结果。
 - **平台构建**：iOS unsigned Release（App + Widget）通过，27.0 MB，App / Widget 版本均为 `0.7.0 (18)`；macOS universal Release 通过，56.9 MB，含 arm64 与 x86_64；Android debug APK 构建通过，包名 `com.personal.mikanseta`、版本码 18，未安装到设备。日志分别为 `/private/tmp/Mikanseta-parity-ios-final.log`、`/private/tmp/Mikanseta-parity-macos-final.log`、`/private/tmp/Mikanseta-parity-android-debug-final.log`。
-- **工程身份**：配置脚本执行后核对 Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 均保留；原生 Mikansei 仍为 `0.7.0 (14)`。
+- **工程身份**：配置脚本执行后核对 Team、App / Widget Bundle ID、日历 / AlarmKit / Live Activity 配置及权限 entitlement 均保留；原生 Mikansei 源码版本仍为 `0.7.0 (14)`，用户确认从 TestFlight 安装版本为 `0.7.0 (8)`。
 - **视觉预览**：8 张合成数据截图覆盖手机浅 / 深色、320 点宽且文字放大 1.5 倍、桌面、日程、编辑器与笔记。中文显示正常，未发现布局溢出；预览由主代理复核。PNG 位于 `/private/tmp/Mikanseta-Parity-Preview/`，临时测试文件已删除。
 - **当时状态**：记录此快照时 Windows CI run `41303398033` 尚在执行，Android 仅有 debug 构建且 Release 尚未发布。之后测试 locator 修正，最终 CI run `41305090339` 成功，0.7.0 Release 已公开；最终信息见上方。
 - 操作映射、数据语义与平台能力边界见 [Mikanseta 原生操作对应说明](../Documentation/MIKANSETA_PARITY.md)。

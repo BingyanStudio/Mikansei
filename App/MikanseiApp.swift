@@ -6,6 +6,7 @@ struct MikanseiApp: App {
     @StateObject private var notifications: NotificationManager
     @StateObject private var store: EntryStore
     @StateObject private var pomodoro: PomodoroCoordinator
+    @StateObject private var pomodoroActivity: PomodoroActivityManager
     @StateObject private var cloud: CloudAccountManager
     @StateObject private var calendarSync = CalendarSyncManager()
     @StateObject private var deadlineActivity = DeadlineActivityManager()
@@ -15,9 +16,11 @@ struct MikanseiApp: App {
     init() {
         let notifications = NotificationManager()
         let store = EntryStore(notifications: notifications)
+        let pomodoroActivity = PomodoroActivityManager()
         _notifications = StateObject(wrappedValue: notifications)
         _store = StateObject(wrappedValue: store)
-        _pomodoro = StateObject(wrappedValue: PomodoroCoordinator())
+        _pomodoro = StateObject(wrappedValue: PomodoroCoordinator(activityManager: pomodoroActivity))
+        _pomodoroActivity = StateObject(wrappedValue: pomodoroActivity)
         _cloud = StateObject(wrappedValue: CloudAccountManager(workspace: store))
     }
     var body: some Scene {
@@ -25,6 +28,7 @@ struct MikanseiApp: App {
             RootView()
                 .environmentObject(store)
                 .environmentObject(pomodoro)
+                .environmentObject(pomodoroActivity)
                 .environmentObject(cloud)
                 .environmentObject(notifications)
                 .environmentObject(calendarSync)

@@ -101,11 +101,14 @@ struct RootView: View {
                 store.refreshNotifications()
                 if store.syncReady { store.retrySave() }
                 pomodoro.refresh()
+                pomodoro.reconcileActivity()
                 deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
                 if editing == nil && noteEditing == nil { Task { await calendarSync.sync(store: store, requestAccess: true) } }
             }
         }
         .task {
+            pomodoro.refresh()
+            pomodoro.reconcileActivity()
             if editing == nil && noteEditing == nil { await calendarSync.sync(store: store, requestAccess: true) }
             deadlineActivity.refresh(entries: store.readOnly ? [] : store.entries)
             if store.syncReady { store.retrySave() }

@@ -116,6 +116,8 @@ def check_source(root):
         raise ReleaseCheckError("The generated public client configuration is missing or invalid.")
     for path in ("App/PrivacyInfo.xcprivacy", "Widgets/PrivacyInfo.xcprivacy"):
         read_plist(root / path)
+    if read_plist(root / "App/Info.plist").get("NSSupportsLiveActivities") is not True:
+        raise ReleaseCheckError("Main app must enable Live Activities in App/Info.plist.")
     return targets, expected
 
 
@@ -125,6 +127,8 @@ def check_archive(root, archive, targets, expected):
     widget = app / "PlugIns" / "MikanseiWidgets.appex"
     app_info = read_plist(app / "Info.plist")
     widget_info = read_plist(widget / "Info.plist")
+    if app_info.get("NSSupportsLiveActivities") is not True:
+        raise ReleaseCheckError("Archived main app must enable Live Activities.")
     for name, info, bundle in (
         ("Mikansei", app_info, app), ("MikanseiWidgets", widget_info, widget)
     ):

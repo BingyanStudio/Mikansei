@@ -319,6 +319,7 @@ struct MikanseiWidgets: WidgetBundle {
     var body: some Widget {
         PomodoroWidget()
         DeadlineLiveActivity()
+        PomodoroLiveActivity()
         if #available(iOS 26.0, *) { ReminderAlarmActivity() }
     }
 }

@@ -1,14 +1,20 @@
 # Changelog
 
+## 原生 Mikansei 番茄专注锁屏实时活动 · 未发布 · 2026-11-02
+
+新增原生番茄专注的锁屏 Live Activity 与 Dynamic Island，使用系统 timer 文本显示倒计时或正计时，并呈现主题、暂停 / 继续和结束并保存入口。恢复活动时复用当前 session；到期、收起及系统八小时活动期限均有明确状态，实时活动权限关闭时可前往系统设置，同时保留本机计时与历史。现有 DDL 实时活动保持独立。
+
+源码 iOS App + Widget 在 iOS SDK 26.5 `generic/platform=iOS` 下完成无签名 Debug 构建；未做真机显示验收，未签名或归档、打 tag 或上传 TestFlight。当前安装的原生 Mikansei `0.7.0 (8)` 不含此未发布改动；版本字段未变。构建与验证边界见 [验证记录](../VALIDATION.md)。
+
 ## Mikanseta 0.7.0+18 — 核心操作对应，公开预发布
 
 将 Mikanseta 明确为 Mikansei 的 Flutter 版本，并将手机主导航、日程视图、今日聚焦分组、卡片编辑、规划移入 / 恢复和日历语义色对齐原生操作。新增持久化规划标记；旧归档缺省为未规划，循环新事项重置规划状态。Flutter 主界面布局已适配手机和桌面；Mikanseta 图标采用浅色调和眨眼笑脸，应用内主图 `MikansetaArtwork` 是独立插图，原生 Mikansei 图标未替换。原生 `0.7.0 (14)` 版本不变。
 
-Mikanseta `0.7.0+18` 已在 [BingyanStudio/Mikansei](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 作为公开预发布；tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`。Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339)、Flutter 107 项、全库分析、domain 34 项、备份往返、桌面设置导航专测通过。Android、macOS 和 Windows 四个安装资产，以及 SHA-256 和 `build-info.json` 已发布并与本地产物核对一致。macOS 包通过严格代码签名校验但未公证；iOS unsigned App + Widget 已构建，本轮没有更新 TestFlight。设备交互与覆盖升级未逐项实测，详见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)、[发布说明](RELEASE_MIKANSETA_0.7.0.md) 与 [操作对应说明](MIKANSETA_PARITY.md)。
+Mikanseta `0.7.0+18` 已在 [BingyanStudio/Mikansei](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 作为公开预发布；tag 指向 `cfe17a1d1cb04fff7de86106f469362a338a966d`。Windows CI [41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339)、Flutter 107 项、全库分析、domain 34 项、备份往返、桌面设置导航专测通过。Android、macOS 和 Windows 四个安装资产，以及 SHA-256 和 `build-info.json` 已发布并与本地产物核对一致。macOS 包通过严格代码签名校验但未公证；Mikanseta iOS unsigned App + Widget 已构建，尚未上传 Mikanseta 的 TestFlight。设备交互与覆盖升级未逐项实测，详见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)、[发布说明](RELEASE_MIKANSETA_0.7.0.md)、[TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md) 与 [操作对应说明](MIKANSETA_PARITY.md)。
 
 ## 0.7.0 (14) — 构建通过，待设备验收
 
-新增独立的番茄专注计时：主题必填，可选关联未完成任务，支持倒计时和不限时正计时、暂停 / 继续 / 结束与历史记录。计时使用时间戳恢复，专注数据独立保存在本机 `pomodoro.json`，不进入待办备份或清单云同步。iOS 主屏幕只注册番茄专注小组件，适配系统小 / 中 / 大尺寸；DDL 与闹钟 Live Activity 保留为单独功能。计时数字作为主视觉居中显示，适配空间允许时暂停 / 继续在结束并保存上方。原生 Mikansei iOS App + Widgets 与 Mac universal Release 最新界面构建通过；Mac 隔离预览验证了约 266×248 小窗的显示与计时操作。Mikanseta `dart analyze lib` 无问题，最新界面的 iOS、macOS 与 Android debug 构建均通过。Windows CI 在时钟界面源码提交 `454ba5a` 上通过，包含分析、既有测试、集成、x64 构建 / 打包、安装器 Release 启动和产物上传。未新增测试；本机未运行自动化测试。真实设备与 Widget 宿主验收待完成，尚未上传 TestFlight。Mikanseta macOS 产物为无 Team ID 的 ad-hoc 签名。详见 [0.7.0 发布准备记录](RELEASE_0.7.0.md) 和 [专注计时说明](POMODORO.md)。
+新增独立的番茄专注计时：主题必填，可选关联未完成任务，支持倒计时和不限时正计时、暂停 / 继续 / 结束与历史记录。计时使用时间戳恢复，专注数据独立保存在本机 `pomodoro.json`，不进入待办备份或清单云同步。iOS 主屏幕只注册番茄专注小组件，适配系统小 / 中 / 大尺寸；DDL 与闹钟 Live Activity 保留为单独功能。计时数字作为主视觉居中显示，适配空间允许时暂停 / 继续在结束并保存上方。原生 Mikansei iOS App + Widgets 与 Mac universal Release 最新界面构建通过；Mac 隔离预览验证了约 266×248 小窗的显示与计时操作。Mikanseta `dart analyze lib` 无问题，最新界面的 iOS、macOS 与 Android debug 构建均通过。Windows CI 在时钟界面源码提交 `454ba5a` 上通过，包含分析、既有测试、集成、x64 构建 / 打包、安装器 Release 启动和产物上传。未新增测试；本机未运行自动化测试。真实设备与 Widget 宿主验收待完成。用户确认 TestFlight 中安装的原生 Mikansei 为 `0.7.0 (8)`；原生源码版本仍为 `0.7.0 (14)`。Xcode Cloud 对提交 `cfe17a1d1cb04fff7de86106f469362a338a966d` 的 `Mikansei | Internal TestFlight Build | Archive - iOS` check 为 `SUCCESS`，但现有记录不能单独证明该归档与已安装的 Build 8 一一对应。Mikanseta `0.7.0 (18)` iOS 仍只有 unsigned App + Widget 构建，未上传 TestFlight。Mikanseta macOS 产物为无 Team ID 的 ad-hoc 签名。详见 [0.7.0 发布准备记录](RELEASE_0.7.0.md)、[Mikanseta TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md) 和 [专注计时说明](POMODORO.md)。
 
 ## 0.6.1 (13) — 待验证
 

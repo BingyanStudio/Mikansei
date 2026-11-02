@@ -1,8 +1,10 @@
 # Mikanseta 原生操作对应说明
 
-Mikanseta 是 Mikansei 的 Flutter 版本，使用同一事项语义和 JSON 归档格式；它不是另一个产品或独立迁移项目。本轮发布版本为 Mikanseta `0.7.0+18`，原生 Mikansei 的版本 `0.7.0 (14)` 保持不变。
+Mikanseta 是 Mikansei 的 Flutter 版本，使用同一事项语义和 JSON 归档格式；它不是另一个产品或独立迁移项目。本轮发布版本为 Mikanseta `0.7.0+18`，原生 Mikansei 源码版本仍为 `0.7.0 (14)`。用户确认从 TestFlight 安装的原生 Mikansei 版本为 `0.7.0 (8)`；该安装版本与源码构建号分别记录。
 
 Mikanseta 已在 [BingyanStudio/Mikansei 的 `mikanseta-v0.7.0` Release](https://github.com/BingyanStudio/Mikansei/releases/tag/mikanseta-v0.7.0) 公开预发布，tag 指向提交 `cfe17a1d1cb04fff7de86106f469362a338a966d`。版面按 Flutter 手机与桌面窗口重新适配；专属图标使用浅色调和眨眼笑脸。`MikansetaArtwork` 是独立的应用内插图，原生 Mikansei App 图标未替换。
+
+Xcode Cloud 对该提交有 `Mikansei | Internal TestFlight Build | Archive - iOS` 成功归档记录；该 check 单独不能证明归档就是用户确认安装的原生 TestFlight `0.7.0 (8)`。Mikanseta iOS `0.7.0 (18)` 目前只有 unsigned App + Widget 构建，尚未上传 TestFlight。两款 iOS App 的 bundle ID 和分发记录彼此独立，详见 [Mikanseta TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md)。
 
 ## 核心操作映射
 
@@ -33,4 +35,4 @@ Mikanseta 已在 [BingyanStudio/Mikansei 的 `mikanseta-v0.7.0` Release](https:/
 
 ## 验证状态
 
-Flutter 全套 107 项、全库分析、34 项 domain 单测、Swift → Dart → Swift 备份往返及桌面设置导航专测通过。Windows CI [run `41305090339`](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 在提交 `cfe17a1` 上成功；此前 run `41303398033` 与下一轮因测试 locator 未适配设置导航而失败，修正后通过。Android、macOS 与 Windows 安装资产、`SHA256SUMS.txt` 和 `build-info.json` 已发布，远端大小和摘要与本地产物匹配。macOS universal ZIP 通过 `codesign --verify --deep --strict`，但未公证；iOS unsigned App + Widget 构建通过，本轮没有更新 TestFlight。八张合成预览已目视检查；这不代表个人设备上的交互或升级验证。完整日志与限制见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md) 和 [0.7.0 发布说明](RELEASE_MIKANSETA_0.7.0.md)。
+Flutter 全套 107 项、全库分析、34 项 domain 单测、Swift → Dart → Swift 备份往返及桌面设置导航专测通过。Windows CI [run `41305090339`](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 在提交 `cfe17a1` 上成功；此前 run `41303398033` 与下一轮因测试 locator 未适配设置导航而失败，修正后通过。Android、macOS 与 Windows 安装资产、`SHA256SUMS.txt` 和 `build-info.json` 已发布，远端大小和摘要与本地产物匹配。macOS universal ZIP 通过 `codesign --verify --deep --strict`，但未公证；Mikanseta iOS unsigned App + Widget 构建通过，尚未上传 Mikanseta 的 TestFlight。八张合成预览已目视检查；这不代表个人设备上的交互或升级验证。完整日志与限制见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)、[0.7.0 发布说明](RELEASE_MIKANSETA_0.7.0.md) 和 [TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md)。

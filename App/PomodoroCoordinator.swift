@@ -11,9 +11,12 @@ final class PomodoroCoordinator: ObservableObject {
 
     private let localStore: PomodoroLocalStore
     private let shouldPublishWidgetSnapshot: Bool
+    private let activityManager: PomodoroActivityManager
 
-    init(fileURL: URL? = nil) {
+    init(fileURL: URL? = nil, activityManager: PomodoroActivityManager? = nil) {
         let testing = ProcessInfo.processInfo.arguments.contains("--ui-testing")
+        let activityManager = activityManager ?? PomodoroActivityManager()
+        self.activityManager = activityManager
         shouldPublishWidgetSnapshot = !testing
         let base = testing
             ? FileManager.default.temporaryDirectory.appendingPathComponent("Mikansei-UITests/Pomodoro", isDirectory: true)
@@ -26,6 +29,9 @@ final class PomodoroCoordinator: ObservableObject {
         } catch {
             readOnly = true
             self.error = error.localizedDescription
+        }
+        if !readOnly && shouldPublishWidgetSnapshot {
+            activityManager.reconcile(archive.active)
         }
     }
 
@@ -123,6 +129,12 @@ final class PomodoroCoordinator: ObservableObject {
         } catch { report(error) }
     }
 
+    /// Called when the app becomes active so a persisted session can reuse or restore its Live Activity.
+    func reconcileActivity() {
+        guard !readOnly, shouldPublishWidgetSnapshot else { return }
+        activityManager.reconcile(archive.active)
+    }
+
     @discardableResult
     func apply(_ action: PomodoroURLAction, at now: Date = Date()) -> Bool {
         switch action {
@@ -148,11 +160,18 @@ final class PomodoroCoordinator: ObservableObject {
 
     private func commit(_ mutation: (inout PomodoroArchive) throws -> Void) throws {
         guard !readOnly else { throw PomodoroCoordinatorError.readOnly }
+        let previousActive = archive.active
         let saved = try localStore.update(mutation)
         archive = saved
         saveFailed = false
         error = nil
         publishSnapshot(for: saved)
+        if let previousActive, saved.active?.id != previousActive.id {
+            activityManager.end(sessionID: previousActive.id)
+        }
+        if let active = saved.active {
+            activityManager.reconcile(active)
+        }
     }
 
     private func publishSnapshot(for archive: PomodoroArchive) {

@@ -1,6 +1,6 @@
 # Mikanseta 0.7.0 (18) 发布说明
 
-**状态：公开预发布。** GitHub Release `mikanseta-v0.7.0` 已发布，`draft=false`、`prerelease=true`。tag 指向源码提交 `cfe17a1d1cb04fff7de86106f469362a338a966d`。Mikanseta 是 Mikansei 的 Flutter 版本；原生 Mikansei 仍为 `0.7.0 (14)`，本次未更新 TestFlight。
+**状态：公开预发布。** GitHub Release `mikanseta-v0.7.0` 已发布，`draft=false`、`prerelease=true`。tag 指向源码提交 `cfe17a1d1cb04fff7de86106f469362a338a966d`。Mikanseta 是 Mikansei 的 Flutter 版本；原生 Mikansei 源码仍为 `0.7.0 (14)`，用户确认从 TestFlight 安装的原生版本为 `0.7.0 (8)`。Xcode Cloud 对该提交的原生 `Archive - iOS` check 为 `SUCCESS`；现有记录不能单独证明这个归档与已安装的 Build 8 一一对应。Mikanseta iOS 尚未上传 TestFlight，准备状态见 [TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md)。
 
 ## 下载
 
@@ -29,14 +29,14 @@ Flutter 界面按手机和桌面窗口重新布局。手机使用「待办、日
 - Windows CI [run 41305090339](https://github.com/BingyanStudio/Mikansei/actions/runs/41305090339) 在提交 `cfe17a1` 上通过。前两轮 Windows CI 失败由测试未适配设置页导航 locator 引起；测试修正后最终 run 通过。
 - 所有发布资产的远端大小和摘要均与本地产物匹配。Android APK 为 64,007,120 bytes，27.1 秒构建完成，并核实与旧 0.4.2 包使用相同发布签名。日志：`/private/tmp/Mikanseta-release-0.7.0-android-published.log`。
 - macOS universal App 为 59.2 MB；导出的 ZIP 为 24,998,133 bytes。`codesign --verify --deep --strict` 通过，但本版未公证。日志：`/private/tmp/Mikanseta-release-0.7.0-macos.log`。
-- iOS unsigned Release 主 App + Widget，版本 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功；构建包含浅色图标与公开客户端配置。本轮没有上传 TestFlight。日志：`/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。
+- Mikanseta iOS unsigned Release 主 App + Widget，版本 `0.7.0 / 18`，28.6 MB，124.8 秒构建成功；构建包含浅色图标与公开客户端配置。Mikanseta 尚未上传 TestFlight。日志：`/private/tmp/Mikanseta-release-0.7.0-ios-icons.log`。
 - 8 张合成内存数据预览覆盖手机浅 / 深色、320 点宽大字、桌面、日程、编辑与笔记；中文可读且没有布局溢出。
 
-构建、CI 安装检查和合成预览不代表个人 Android、macOS、Windows 或 iOS 设备上的逐项交互验收。本轮没有在个人设备上验证升级保留数据，也未更新 TestFlight。完整记录见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md) 与 [原生操作对应说明](MIKANSETA_PARITY.md)。
+构建、CI 安装检查和合成预览不代表个人 Android、macOS、Windows 或 iOS 设备上的逐项交互验收。本轮没有在个人设备上验证升级保留数据；Mikanseta iOS 尚未上传 TestFlight。原生 Mikansei 使用独立的 TestFlight 分发，用户确认安装版本为 `0.7.0 (8)`。完整记录见 [Mikanseta 验证记录](../Mikanseta/VALIDATION.md)、[TestFlight 准备说明](TestFlight/MIKANSETA_READINESS.md) 与 [原生操作对应说明](MIKANSETA_PARITY.md)。
 
 ## 安装与数据保留
 
 - **Android**：`applicationId` 为 `com.personal.mikanseta`，发布证书与旧版 0.4.2 (8) 相同，可按原安装方式直接覆盖，兼容覆盖会保留本机数据。不要先卸载；建议先导出 JSON 备份。若系统提示签名不匹配，先停止安装并保留旧应用。详见 [Android 安装说明](../Mikanseta/INSTALL_ANDROID.md)。
 - **macOS**：下载并解压 ZIP，以 `Mikanseta.app` 替换旧应用。数据保存在应用支持目录。App 未公证；没有在用户设备上确认首次启动体验。不要用绕过 Gatekeeper 的方式启动。详见上方 Release 版本页。
 - **Windows**：使用 Setup 覆盖更新，或完整解压 ZIP 后运行 `Mikanseta.exe`，并保留配套文件。归档保存在 AppData 应用支持目录，独立于安装目录；仍建议先导出 JSON 备份。CI 安装与启动检查通过，个人设备行为未逐项验收。详见 [Windows 安装说明](../Mikanseta/INSTALL_WINDOWS.md)。
-- **iOS**：unsigned Release 不是可直接安装到普通设备的通用 IPA。本轮没有上传 TestFlight；需由用户自行签名部署，或待后续实际上传 TestFlight 后从 TestFlight 安装。
+- **iOS**：unsigned Release 不是可直接安装到普通设备的通用 IPA。Mikanseta 尚未上传 TestFlight；需完成其独立签名与分发后，才可从 Mikanseta 的 TestFlight 安装。原生 Mikansei 有独立的 TestFlight 版本。
