@@ -1,20 +1,13 @@
-# Mikansei 0.7.1 Beta Test Notes
+# Mikansei 0.7.2 Beta Test Notes
 
 ## TestFlight update text
 
-Native Mikansei 0.7.1 adds a focus Live Activity to the Lock Screen and Dynamic Island. The Lock Screen highlights the focus subject and a large timer. Use the activity to pause or resume, or finish and save a focus session. After dismissing the activity manually, restore it from the app. The existing deadline Live Activity remains independent. Focus supports both countdown and count-up; please check countdown expiry and the Live Activity's eight-hour system limit.
+This hotfix restores registration for four iOS Home Screen widgets: Today Checklist, Quick Add, Today Progress, and Focus Timer. Confirm that all four appear in the widget gallery and can be added. Also check that deadline and focus Live Activities still work.
 
 ## What to test
 
-- Start a focus session with a subject. Check the subject and large timer on the Lock Screen and Dynamic Island. A countdown should show time remaining; count-up should show elapsed time. Dynamic Island checks require a supported device.
-- Pause and resume from the Lock Screen or Dynamic Island. Confirm the app opens to process the action and the timer remains continuous. Choose “Finish and Save” and confirm that the app saves one focus record with the correct subject, duration, and end state.
-- Dismiss the focus Live Activity manually and confirm the local timer continues. Return to the app and use “Show Again” to restore it. If Live Activities are disabled in system settings, confirm local focus sessions and history remain available.
-- Create both a deadline Live Activity and a focus Live Activity. Confirm each is displayed independently; ending or dismissing the focus activity should leave the deadline activity intact.
-- Try both countdown and count-up, including pause, resume, and finish. When a countdown expires, check the activity message and open the app to review the record. Do not expect an automatic alarm or rest cycle.
-- Note the Live Activity's eight-hour system limit. After the activity expires, it should direct the user to open the app; the app continues to manage the local timer and saved history. There is no need to wait eight hours for testing; report this state if encountered naturally.
-
-Use fictional or redacted data. Do not include a personal API key in feedback, screenshots, or logs.
-
-Report the device model, OS version, steps, and results. Redact personal information in screenshots.
-
-Feedback: kikuchiheinr@qq.com.
+- If you already have a legacy widget on the Home Screen or Lock Screen, update in place, open Mikansei once, then check that the widget and its content appear in the original location.
+- Search for Mikansei in the widget gallery and check that all four restored widgets and the Pomodoro widget can be added. Try quick add or timer controls.
+- In Settings, enable automatic display of today’s deadlines. Confirm the deadline Live Activity appears on the Lock Screen and opens the relevant item. When a focus Live Activity is also active, confirm the two activities remain independent.
+- Start a focus session with a subject. Check the Lock Screen and Dynamic Island on supported devices; try pause, resume, and finish and save.
+- Include the device model, iOS version, steps, and results in feedback. Redact personal information in screenshots.

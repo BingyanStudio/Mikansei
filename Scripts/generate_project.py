@@ -9,8 +9,8 @@ from supabase_config import write_client_resource
 ROOT = Path(__file__).resolve().parents[1]
 client_configuration = write_client_resource(ROOT)
 PROJECT = ROOT / "Mikansei.xcodeproj"
-DEFAULT_MARKETING_VERSION = "0.7.1"
-DEFAULT_BUILD_NUMBER = "15"
+DEFAULT_MARKETING_VERSION = "0.7.2"
+DEFAULT_BUILD_NUMBER = "16"
 PROJECT.mkdir(exist_ok=True)
 previous_objects = {}
 if (PROJECT / "project.pbxproj").exists():

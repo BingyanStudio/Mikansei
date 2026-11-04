@@ -317,6 +317,10 @@ struct FocusTimerWidgetView: View {
 @main
 struct MikanseiWidgets: WidgetBundle {
     var body: some Widget {
+        TodayChecklistWidget()
+        QuickAddWidget()
+        TodayProgressWidget()
+        FocusTimerWidget()
         PomodoroWidget()
         DeadlineLiveActivity()
         PomodoroLiveActivity()
